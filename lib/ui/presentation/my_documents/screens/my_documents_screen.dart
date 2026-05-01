@@ -75,6 +75,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   String _statRequested = '-';
   String _statExpiringSoon = '-';
   String _statExpired = '-';
+  String? _activeMyDocType;
   String? _activeFamilyDocType;
   List<Map<String, dynamic>> _familyRecentActivities = [];
 
@@ -477,9 +478,9 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
       // Determine family_only based on currentIndex (0 = personal, 1 = family)
       final bool familyOnly = currentIndex == 1;
-      final normalizedDocType = familyOnly
-          ? _normalizeDocType(docType ?? _activeFamilyDocType)
-          : null;
+      final normalizedDocType = _normalizeDocType(
+        docType ?? (familyOnly ? _activeFamilyDocType : _activeMyDocType),
+      );
       final familyTaggedIds =
           _loadTaggedDocumentIds(_familyTaggedDocumentIdsKey);
 
@@ -741,9 +742,15 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               }).toList()
             : mapped;
 
-        final visibleMapped = familyOnly
+        final strictVisibleMapped = familyOnly
             ? filteredMapped.where((d) => d['_isFamily'] == true).toList()
             : filteredMapped.where((d) => d['_isFamily'] != true).toList();
+
+        // Fallback: if strict client-side tagging hides all docs but API returned
+        // items, keep server-filtered data visible to avoid false empty states.
+        final visibleMapped = strictVisibleMapped.isNotEmpty
+            ? strictVisibleMapped
+            : filteredMapped;
 
         final stats = _buildDocumentsStats(
           resultEnvelope: resultEnvelope,
@@ -770,6 +777,8 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           _statExpired = stats['expired'] ?? '-';
           if (familyOnly) {
             _activeFamilyDocType = normalizedDocType;
+          } else {
+            _activeMyDocType = normalizedDocType;
           }
           _loading = false;
         });
@@ -956,7 +965,18 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             Row(
               children: [
                 Expanded(
-                  child: _buildSummaryCell(label: 'Total', value: _statTotal),
+                  child: _buildSummaryCell(
+                    label: 'Total',
+                    value: _statTotal,
+                    selected: _activeMyDocType == null,
+                    onTap: () {
+                      final keyword = _searchController.text.trim();
+                      unawaited(_fetchMyDocuments(
+                        keyword: keyword.isEmpty ? null : keyword,
+                        docType: null,
+                      ));
+                    },
+                  ),
                 ),
                 Container(
                     width: 1, height: 64.h, color: const Color(0xFFD1D1D1)),
@@ -965,6 +985,14 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                     label: 'Expiring Soon',
                     value: _statExpiringSoon,
                     dotColor: const Color(0xFFF0B321),
+                    selected: _activeMyDocType == 'expiry_soon',
+                    onTap: () {
+                      final keyword = _searchController.text.trim();
+                      unawaited(_fetchMyDocuments(
+                        keyword: keyword.isEmpty ? null : keyword,
+                        docType: 'expiry_soon',
+                      ));
+                    },
                   ),
                 ),
               ],
@@ -974,7 +1002,17 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               children: [
                 Expanded(
                   child: _buildSummaryCell(
-                      label: 'Requested', value: _statRequested),
+                    label: 'Requested',
+                    value: _statRequested,
+                    selected: _activeMyDocType == 'requested',
+                    onTap: () {
+                      final keyword = _searchController.text.trim();
+                      unawaited(_fetchMyDocuments(
+                        keyword: keyword.isEmpty ? null : keyword,
+                        docType: 'requested',
+                      ));
+                    },
+                  ),
                 ),
                 Container(
                     width: 1, height: 64.h, color: const Color(0xFFD1D1D1)),
@@ -983,6 +1021,14 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                     label: 'Expired',
                     value: _statExpired,
                     dotColor: const Color(0xFFC62828),
+                    selected: _activeMyDocType == 'expired',
+                    onTap: () {
+                      final keyword = _searchController.text.trim();
+                      unawaited(_fetchMyDocuments(
+                        keyword: keyword.isEmpty ? null : keyword,
+                        docType: 'expired',
+                      ));
+                    },
                   ),
                 ),
               ],
@@ -997,49 +1043,593 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     required String label,
     required String value,
     Color? dotColor,
+    bool selected = false,
+    VoidCallback? onTap,
   }) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(10.w, 8.h, 10.w, 7.h),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Material(
+      color: selected ? const Color(0xFFEFF7FF) : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(10.w, 8.h, 10.w, 7.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (dotColor != null) ...[
-                Container(
-                  width: 7.w,
-                  height: 7.w,
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
+              Row(
+                children: [
+                  if (dotColor != null) ...[
+                    Container(
+                      width: 7.w,
+                      height: 7.w,
+                      decoration: BoxDecoration(
+                        color: dotColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    SizedBox(width: 4.w),
+                  ],
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF262626),
+                      ),
+                    ),
                   ),
-                ),
-                SizedBox(width: 4.w),
-              ],
-              Expanded(
-                child: Text(
-                  label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF262626),
-                  ),
+                ],
+              ),
+              SizedBox(height: 4.h),
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 20.sp,
+                  height: 1,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF111111),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 4.h),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 20.sp,
-              height: 1,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF111111),
+        ),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _myDocFilterMeta(String docType) {
+    switch (docType) {
+      case 'expiry_soon':
+        return {
+          'label': 'Expired soon',
+          'value': _statExpiringSoon,
+          'background': const Color(0xFF8B2AB3),
+          'labelColor': Colors.white,
+          'valueColor': Colors.white,
+          'icon': Icons.access_time_rounded,
+          'iconColor': Colors.white,
+          'forceRedBorder': true,
+        };
+      case 'requested':
+        return {
+          'label': 'Requested',
+          'value': _statRequested,
+          'background': const Color(0xFFF6CC1B),
+          'labelColor': Colors.black,
+          'valueColor': Colors.black,
+          'icon': Icons.assignment_outlined,
+          'iconColor': Colors.black,
+          'forceRedBorder': false,
+        };
+      case 'expired':
+      default:
+        return {
+          'label': 'Expired',
+          'value': _statExpired,
+          'background': const Color(0xFFE2F3E9),
+          'labelColor': const Color(0xFFBA1719),
+          'valueColor': const Color(0xFFBA1719),
+          'icon': Icons.error_outline_rounded,
+          'iconColor': const Color(0xFFBA1719),
+          'forceRedBorder': true,
+        };
+    }
+  }
+
+  Widget _buildMyFilteredMode(String docType) {
+    final meta = _myDocFilterMeta(docType);
+    final forceRedBorder = meta['forceRedBorder'] == true;
+
+    if (docType == 'requested') {
+      return _buildMyRequestedFilteredMode(meta);
+    }
+
+    return ListView(
+      padding: EdgeInsets.only(left: 12.w, right: 12.w, top: 14.h, bottom: 8.h),
+      children: [
+        Container(
+          height: 96.h,
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+          decoration: BoxDecoration(
+            color: meta['background'] as Color,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    meta['icon'] as IconData,
+                    size: 32.sp,
+                    color: meta['iconColor'] as Color,
+                  ),
+                  SizedBox(width: 10.w),
+                  Text(
+                    meta['label'] as String,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w700,
+                      color: meta['labelColor'] as Color,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                (meta['value'] ?? '-').toString(),
+                style: GoogleFonts.poppins(
+                  fontSize: 44.sp,
+                  fontWeight: FontWeight.w700,
+                  color: meta['valueColor'] as Color,
+                  height: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 16.h),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          itemCount: _filteredDocs().length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12.w,
+            mainAxisSpacing: 12.h,
+            mainAxisExtent: 270.h,
+          ),
+          itemBuilder: (context, index) {
+            final item = _filteredDocs()[index];
+            final iconPath =
+                (item['icon'] ?? 'assets/png/other-documetns-icon.png')
+                    .toString();
+            final rawName = (item['name'] ?? '').toString().trim();
+            final rawType = (item['title'] ?? '').toString().trim();
+            final typeLabel = _toTitleCase(rawType.replaceAll('_', ' '));
+            final nameLabel = _toTitleCase(rawName.replaceAll('_', ' '));
+            final displayName =
+                _isMeaningfulDocLabel(nameLabel) ? nameLabel : typeLabel;
+            final cardDateRaw =
+                (item['expiry_date'] != null && item['expiry_date'] != false)
+                    ? item['expiry_date']
+                    : item['issue_date'];
+            final date = _formatCardDate(cardDateRaw);
+            final isRedBorderCard = forceRedBorder;
+
+            return GestureDetector(
+              onTap: () {
+                if (kDebugMode) {
+                  unawaited(_debugPrintDocumentTapApi(item));
+                }
+                unawaited(_openDocumentAttachment(item));
+              },
+              onLongPress: () {
+                _showDocumentDetailsDialog(context, item);
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24.r),
+                  border: Border.all(
+                    color: isRedBorderCard
+                        ? const Color(0xFFBA1719)
+                        : const Color(0xffD9D9D9),
+                    width: isRedBorderCard ? 2 : 1,
+                  ),
+                  color: Colors.white,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(10.w),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: 90.h,
+                        child: Image.asset(
+                          iconPath,
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          errorBuilder: (_, __, ___) => Icon(
+                            Icons.insert_drive_file_outlined,
+                            size: 44.sp,
+                            color: const Color(0xff949494),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        displayName,
+                        textAlign: TextAlign.center,
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        date,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w600,
+                          color: isRedBorderCard
+                              ? const Color(0xFFBA1719)
+                              : const Color(0xff949494),
+                        ),
+                      ),
+                      if (isRedBorderCard) ...[
+                        SizedBox(height: 8.h),
+                        Container(
+                          constraints: BoxConstraints(minHeight: 24.h),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 10.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0xFF1B1F26), Color(0xFF717171)],
+                            ),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 12.w,
+                                height: 12.w,
+                                child: Image.asset(
+                                  'assets/newapp/newicon/change_document_icon.png',
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => Icon(
+                                    Icons.swap_horiz_rounded,
+                                    color: Colors.white,
+                                    size: 12.sp,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 4.w),
+                              Text(
+                                'Change',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  height: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _requestedDocName(Map<String, dynamic> item) {
+    final rawName = (item['name'] ?? '').toString().trim();
+    final rawType =
+        (item['title'] ?? item['document_type'] ?? '').toString().trim();
+    final typeLabel = _toTitleCase(rawType.replaceAll('_', ' '));
+    final nameLabel = _toTitleCase(rawName.replaceAll('_', ' '));
+    return _isMeaningfulDocLabel(nameLabel) ? nameLabel : typeLabel;
+  }
+
+  String _requestedIdNumber(Map<String, dynamic> item) {
+    for (final key in [
+      'id_number',
+      'eid_no',
+      'emirates_id_no',
+      'emirates_id',
+      'passport_no',
+      'passport_number',
+    ]) {
+      final v = (item[key] ?? '').toString().trim();
+      if (v.isNotEmpty && v.toLowerCase() != 'null') return v;
+    }
+    return '--------';
+  }
+
+  String _requestedFromLabel(Map<String, dynamic> item) {
+    for (final key in [
+      'from',
+      'source',
+      'source_doc_type',
+      'request_source',
+      'origin_doc_type',
+    ]) {
+      final v = (item[key] ?? '').toString().trim();
+      if (v.isNotEmpty && v.toLowerCase() != 'null') {
+        return _toTitleCase(v.replaceAll('_', ' '));
+      }
+    }
+
+    final state = (item['state'] ?? '').toString().trim().toLowerCase();
+    if (state.contains('expire')) return 'Expired';
+    return '';
+  }
+
+  String _requestedFileName(Map<String, dynamic> item) {
+    for (final key in [
+      'attachment_filename',
+      'file_name',
+      'attachment_name',
+      'name',
+    ]) {
+      final v = (item[key] ?? '').toString().trim();
+      if (v.isNotEmpty && v.toLowerCase() != 'null') return v;
+    }
+    return 'Attachment';
+  }
+
+  Widget _buildMyRequestedFilteredMode(Map<String, dynamic> meta) {
+    final docs = _filteredDocs();
+
+    return ListView(
+      padding: EdgeInsets.only(left: 12.w, right: 12.w, top: 14.h, bottom: 8.h),
+      children: [
+        Container(
+          height: 96.h,
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+          decoration: BoxDecoration(
+            color: meta['background'] as Color,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    meta['icon'] as IconData,
+                    size: 30.sp,
+                    color: meta['iconColor'] as Color,
+                  ),
+                  SizedBox(width: 10.w),
+                  Text(
+                    meta['label'] as String,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w700,
+                      color: meta['labelColor'] as Color,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                (meta['value'] ?? '-').toString(),
+                style: GoogleFonts.poppins(
+                  fontSize: 44.sp,
+                  fontWeight: FontWeight.w700,
+                  color: meta['valueColor'] as Color,
+                  height: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 12.h),
+        GestureDetector(
+          onTap: () {
+            unawaited(_showDocumentDialogByType(DocumentDialogType.my));
+          },
+          child: Container(
+            height: 58.h,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8E8E8),
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(color: const Color(0xFFADADAD), width: 1),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.badge_outlined,
+                    size: 22.sp, color: const Color(0xFF757575)),
+                SizedBox(width: 8.w),
+                Text(
+                  'Add New Documents',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF7A7A7A),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+        SizedBox(height: 12.h),
+        if (docs.isEmpty)
+          Padding(
+            padding: EdgeInsets.only(top: 8.h),
+            child: _buildEmptyState(
+              icon: Icons.folder_off_rounded,
+              title: 'No Requested Documents',
+              subtitle: 'There are no requested documents to display.',
+            ),
+          )
+        else
+          ...docs.map((item) {
+            final docName = _requestedDocName(item);
+            final idNo = _requestedIdNumber(item);
+            final dateRaw =
+                (item['expiry_date'] != null && item['expiry_date'] != false)
+                    ? item['expiry_date']
+                    : item['issue_date'];
+            final expiryDate = _formatCardDate(dateRaw);
+            final source = _requestedFromLabel(item);
+            final iconPath =
+                (item['icon'] ?? 'assets/png/other-documetns-icon.png')
+                    .toString();
+            final fileName = _requestedFileName(item);
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: 10.h),
+              child: GestureDetector(
+                onTap: () {
+                  if (kDebugMode) {
+                    unawaited(_debugPrintDocumentTapApi(item));
+                  }
+                  unawaited(_openDocumentAttachment(item));
+                },
+                onLongPress: () {
+                  _showDocumentDetailsDialog(context, item);
+                },
+                child: Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDADADA),
+                    borderRadius: BorderRadius.circular(14.r),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Documents Name | $docName',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              'ID number | $idNo',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black,
+                              ),
+                            ),
+                            SizedBox(height: 3.h),
+                            Text(
+                              'Expiry date | $expiryDate',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFFBA1719),
+                              ),
+                            ),
+                            if (source.isNotEmpty) ...[
+                              SizedBox(height: 3.h),
+                              RichText(
+                                text: TextSpan(
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black,
+                                  ),
+                                  children: [
+                                    const TextSpan(text: 'from | '),
+                                    TextSpan(
+                                      text: source,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFFF0B321),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Container(
+                        width: 128.w,
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 8.w, vertical: 8.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEDEDED),
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                        child: Column(
+                          children: [
+                            Image.asset(
+                              iconPath,
+                              width: 34.w,
+                              height: 34.w,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.insert_drive_file_outlined,
+                                size: 30.sp,
+                                color: const Color(0xFF1AAE78),
+                              ),
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              fileName,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.5.sp,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF2E2E2E),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+      ],
     );
   }
 
@@ -1082,6 +1672,46 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 42.sp,
+            color: const Color(0xFF3B4352),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF3B4352),
+            ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF7B8290),
+              height: 1.35,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1138,6 +1768,23 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       onWillPop: () async {
         // If Family tab has an active stats filter, clear it first and stay
         // on Family tab (do not jump to My Documents tab).
+        if (currentIndex == 0 && _activeMyDocType != null) {
+          setState(() {
+            _activeMyDocType = null;
+            _loading = true;
+            _error = null;
+          });
+
+          final keyword = _searchController.text.trim();
+          unawaited(
+            _fetchMyDocuments(
+              keyword: keyword.isEmpty ? null : keyword,
+              docType: null,
+            ),
+          );
+          return false;
+        }
+
         if (currentIndex == 1 && _activeFamilyDocType != null) {
           setState(() {
             _activeFamilyDocType = null;
@@ -1201,6 +1848,9 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                       setState(() {
                         currentIndex = index;
                         if (shouldFetchDocs) {
+                          if (index == 0) {
+                            _activeMyDocType = null;
+                          }
                           if (index == 1) {
                             _activeFamilyDocType = null;
                           }
@@ -1348,6 +1998,14 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
   /// Builds the original "My Documents" personal documents content.
   Widget _buildMyDocumentsContent() {
+    if ((_activeMyDocType == 'expired' ||
+            _activeMyDocType == 'expiry_soon' ||
+            _activeMyDocType == 'requested') &&
+        !_loading &&
+        _error == null) {
+      return _buildMyFilteredMode(_activeMyDocType!);
+    }
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -1355,7 +2013,41 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           child: Column(
             children: [
               _buildDocumentsSummaryCard(),
-              SizedBox(height: 8.h),
+              SizedBox(height: 10.h),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: GestureDetector(
+                  onTap: () {
+                    unawaited(_showDocumentDialogByType(DocumentDialogType.my));
+                  },
+                  child: Container(
+                    height: 58.h,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14.r),
+                      border:
+                          Border.all(color: const Color(0xFFADADAD), width: 1),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.badge_outlined,
+                            size: 22.sp, color: const Color(0xFF757575)),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Add New Documents',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF7A7A7A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 10.h),
               if (_loading)
                 const Padding(
                   padding: EdgeInsets.all(40),
@@ -2047,14 +2739,22 @@ class _DocumentDialogState extends State<DocumentDialog> {
     'Certifications',
   ];
 
-  static const Map<String, int> _fallbackTypeIds = {
-    'Passport': 1,
-    'Labor Card': 2,
-    'Medical Insurance': 3,
-    'Emirates ID': 4,
-    'photo': 5,
-    'CV': 6,
-    'Certifications': 7,
+  // Safety fallback based on backend-provided document_types response.
+  static const Map<String, int> _knownTypeIdsByNormalizedName = {
+    'passport': 1,
+    'emiratesid': 2,
+    'laborcard': 3,
+    'medicalinsurance': 4,
+    'drivinglicense': 6,
+    'visa': 10,
+    'noc': 11,
+    'contract': 89,
+    'universitycertificate': 93,
+    'cv': 94,
+    'residence': 147,
+    'photo': 172,
+    'pension': 175,
+    'family': 176,
   };
 
   final TextEditingController _idController = TextEditingController();
@@ -2244,6 +2944,132 @@ class _DocumentDialogState extends State<DocumentDialog> {
     }
   }
 
+  int? _findDocumentTypeIdLocally(String selectedType) {
+    if (selectedType.trim().isEmpty) return null;
+
+    final direct = _documentTypeIds[selectedType];
+    if (direct != null) return direct;
+
+    final selectedToken = _normalizeToken(selectedType);
+    for (final entry in _documentTypeIds.entries) {
+      if (_normalizeToken(entry.key) == selectedToken) {
+        return entry.value;
+      }
+    }
+
+    // Fallback when dropdown is available but ids map is temporarily empty.
+    final known = _knownTypeIdsByNormalizedName[selectedToken];
+    if (known != null) return known;
+
+    return null;
+  }
+
+  Future<int?> _resolveDocumentTypeId(String selectedType) async {
+    var id = _findDocumentTypeIdLocally(selectedType);
+    if (id != null) return id;
+
+    // Try refreshing types once in case dropdown data arrived without ids.
+    await _loadDocumentTypes();
+    id = _findDocumentTypeIdLocally(selectedType);
+    if (id != null) return id;
+
+    // Final fallback: query API directly and resolve by normalized name.
+    try {
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      if (token.isEmpty) return null;
+
+      final url = Uri.parse('https://erp.elrace.com/api/document_types');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {
+          'family_only': _familyOnly,
+        },
+      });
+
+      final response = await http.post(url, headers: headers, body: body);
+      if (response.statusCode != 200) return null;
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) return null;
+
+      final result = (decoded['result'] is Map)
+          ? Map<String, dynamic>.from(decoded['result'] as Map)
+          : (decoded['status'] != null)
+              ? Map<String, dynamic>.from(decoded)
+              : <String, dynamic>{};
+      final statusToken = _normalizeToken(result['status']);
+      if (!(statusToken == 'success' ||
+          statusToken == 'ok' ||
+          statusToken == 'true')) {
+        return null;
+      }
+
+      final names = <String>[];
+      final idsByName = <String, int>{};
+      final data = result['data'];
+
+      if (data is List) {
+        for (final item in data) {
+          _addDocumentTypeFromRaw(item, names, idsByName);
+        }
+      } else if (data is Map) {
+        for (final entry in data.entries) {
+          final key = entry.key.toString().trim();
+          final value = entry.value;
+
+          if (value is Map || value is String) {
+            _addDocumentTypeFromRaw(value, names, idsByName);
+            continue;
+          }
+
+          final keyAsId = int.tryParse(key);
+          final valueText = (value ?? '').toString().trim();
+          final valueAsId = int.tryParse(valueText);
+
+          if (keyAsId != null && valueText.isNotEmpty) {
+            if (!names.contains(valueText)) {
+              names.add(valueText);
+            }
+            idsByName[valueText] = keyAsId;
+            continue;
+          }
+
+          if (valueAsId != null && key.isNotEmpty) {
+            if (!names.contains(key)) {
+              names.add(key);
+            }
+            idsByName[key] = valueAsId;
+          }
+        }
+      }
+
+      if (idsByName.isNotEmpty && mounted) {
+        setState(() {
+          _documentTypeIds
+            ..clear()
+            ..addAll(idsByName);
+          if (names.isNotEmpty) {
+            _types
+              ..clear()
+              ..addAll(names);
+            if (_selectedType == null || !_types.contains(_selectedType)) {
+              _selectedType = _types.first;
+            }
+          }
+        });
+      }
+
+      return _findDocumentTypeIdLocally(selectedType);
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   void dispose() {
     _idController.dispose();
@@ -2327,6 +3153,25 @@ class _DocumentDialogState extends State<DocumentDialog> {
         successToken == 'success';
   }
 
+  String _safeAttachmentFilename({
+    required String selectedType,
+    String? pickedName,
+    String? pickedPath,
+  }) {
+    final direct = (pickedName ?? '').trim();
+    if (direct.isNotEmpty) return direct;
+
+    final path = (pickedPath ?? '').trim();
+    final fileNameFromPath =
+        path.isNotEmpty ? path.split(Platform.pathSeparator).last : '';
+    if (fileNameFromPath.isNotEmpty) return fileNameFromPath;
+
+    final normalizedType = selectedType.trim().isEmpty
+        ? 'document'
+        : selectedType.trim().replaceAll(RegExp(r'\s+'), '_').toLowerCase();
+    return '$normalizedType.pdf';
+  }
+
   String _extractUploadMessage(dynamic decodedBody) {
     if (decodedBody is! Map) return 'Upload failed';
 
@@ -2340,6 +3185,21 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
     final error = decodedBody['error'];
     if (error is Map) {
+      final errorData = error['data'];
+      if (errorData is Map) {
+        final dataMessage = errorData['message']?.toString();
+        if (dataMessage != null && dataMessage.trim().isNotEmpty) {
+          return dataMessage.trim();
+        }
+
+        final debugText = errorData['debug']?.toString() ?? '';
+        final parsedDebugMessage =
+            _extractValidationMessageFromDebug(debugText);
+        if (parsedDebugMessage.isNotEmpty) {
+          return parsedDebugMessage;
+        }
+      }
+
       final errorMessage = error['message']?.toString();
       if (errorMessage != null && errorMessage.trim().isNotEmpty) {
         return errorMessage.trim();
@@ -2347,6 +3207,28 @@ class _DocumentDialogState extends State<DocumentDialog> {
     }
 
     return 'Upload failed';
+  }
+
+  String _extractValidationMessageFromDebug(String debugText) {
+    final text = debugText.trim();
+    if (text.isEmpty) return '';
+
+    final lines = text
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList(growable: false);
+
+    for (final line in lines.reversed) {
+      if (line.startsWith('ValidationError:')) {
+        return line.replaceFirst('ValidationError:', '').trim();
+      }
+      if (line.startsWith('Exception:')) {
+        return line.replaceFirst('Exception:', '').trim();
+      }
+    }
+
+    return '';
   }
 
   int? _extractUploadedDocumentId(dynamic decodedBody) {
@@ -2637,16 +3519,19 @@ class _DocumentDialogState extends State<DocumentDialog> {
     final id = _idController.text.trim();
     final selectedType = (_selectedType ?? '').trim();
     if (selectedType.isEmpty) {
+      debugPrint('⛔ Upload stopped: selectedType is empty');
       _sliderKey.currentState?.resetSlider();
       _showErrorDialog('Please select document type.');
       return;
     }
     if (_showIdAndExpiry && id.isEmpty) {
+      debugPrint('⛔ Upload stopped: ID number is empty');
       _sliderKey.currentState?.resetSlider();
       _showErrorDialog('Please fill in ID number.');
       return;
     }
     if ((_attachedFilePath ?? '').isEmpty) {
+      debugPrint('⛔ Upload stopped: attachment path is empty');
       _sliderKey.currentState?.resetSlider();
       _showErrorDialog('Please attach a file.');
       return;
@@ -2667,6 +3552,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
       if (token.isEmpty) {
         print('❌ Error: auth token is empty!');
+        debugPrint('⛔ Upload stopped: auth token is empty');
         _sliderKey.currentState?.resetSlider();
         _showErrorDialog('Session expired. Please login again.');
         return;
@@ -2677,25 +3563,30 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
       if (selectedType.isEmpty) {
         print('❌ Error: selectedType is null or empty!');
+        debugPrint('⛔ Upload stopped: selectedType became empty unexpectedly');
         return;
       }
 
-      int? documentTypeId =
-          _documentTypeIds[selectedType] ?? _fallbackTypeIds[selectedType];
+      final documentTypeId = await _resolveDocumentTypeId(selectedType);
+      debugPrint(
+          '🔎 Resolved documentTypeId for "$selectedType": $documentTypeId');
+      debugPrint(
+          '🔎 Current document type map size: ${_documentTypeIds.length}');
       if (documentTypeId == null) {
-        final selectedTypeToken = _normalizeToken(selectedType);
-        for (final entry in _documentTypeIds.entries) {
-          if (_normalizeToken(entry.key) == selectedTypeToken) {
-            documentTypeId = entry.value;
-            break;
-          }
-        }
+        debugPrint('⛔ Upload stopped: could not resolve document_type_id');
+        _sliderKey.currentState?.resetSlider();
+        _showErrorDialog(
+          'document_type_id is missing for "$selectedType". Please refresh document types and try again.',
+        );
+        return;
       }
 
       // Read file and convert to base64
       final file = File(_attachedFilePath!);
+      debugPrint('📎 Upload file path: ${file.path}');
       final bytes = await file.readAsBytes();
       final base64File = base64Encode(bytes);
+      debugPrint('📎 Upload file size bytes: ${bytes.length}');
 
       final headers = {
         'Content-Type': 'application/json',
@@ -2703,32 +3594,22 @@ class _DocumentDialogState extends State<DocumentDialog> {
         'Authorization': 'Bearer $token',
       };
 
+      final attachmentFilename = _safeAttachmentFilename(
+        selectedType: selectedType,
+        pickedName: _attachedFileName,
+        pickedPath: _attachedFilePath,
+      );
+      debugPrint('📎 attachment_filename used: $attachmentFilename');
+
       final params = <String, dynamic>{
-        // Use human-readable name for better grouping/display in fetched list.
         'name': selectedType,
-        'document_type': selectedType,
-        'description': 'Document uploaded via mobile app',
+        'description': 'Uploaded from mobile app',
         'attachment': base64File,
-        'attachment_filename': _attachedFileName,
-        // Keep upload scope explicit for backend routing.
+        'attachment_filename': attachmentFilename,
         'family_only': _familyOnly,
       };
 
-      if (documentTypeId != null) {
-        params['document_type_id'] = documentTypeId;
-      }
-
-      if (widget.type == DocumentDialogType.family) {
-        params['document_scope'] = 'family';
-      } else if (widget.type == DocumentDialogType.company) {
-        params['document_scope'] = 'company';
-      } else {
-        params['document_scope'] = 'my';
-      }
-
-      if (_showIdAndExpiry && id.isNotEmpty) {
-        params['id_number'] = id;
-      }
+      params['document_type_id'] = documentTypeId;
 
       final selectedDate = _expiryDate?.toIso8601String().split('T')[0];
       if (selectedDate != null && selectedDate.isNotEmpty) {
@@ -2738,6 +3619,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
       final body = jsonEncode({
         'jsonrpc': '2.0',
+        'id': null,
         'params': params,
       });
 
@@ -2748,6 +3630,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
         safeDebugParams['attachment'] = '[base64 omitted, length=$len]';
       }
       print('📦 Request params: ${jsonEncode(safeDebugParams)}');
+      debugPrint('🚀 Upload HTTP POST started: ${url.toString()}');
       final response = await http.post(url, headers: headers, body: body);
       final data = jsonDecode(response.body);
 

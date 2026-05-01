@@ -361,16 +361,17 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
     final items = <MyActionItem>[];
     var page = 1;
     const maxPages = 100;
+    const pageSize = 10;
 
     while (page <= maxPages) {
       final pageItems = await _repo.fetchByType(
         type,
         page: page,
-        perPage: MyActionsRepository.defaultPerPage,
+        perPage: pageSize,
       );
       items.addAll(pageItems);
 
-      if (pageItems.length < MyActionsRepository.defaultPerPage) {
+      if (pageItems.length < pageSize) {
         break;
       }
       page++;
