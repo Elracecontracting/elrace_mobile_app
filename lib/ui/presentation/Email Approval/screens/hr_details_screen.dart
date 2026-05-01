@@ -1425,11 +1425,14 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
               overflow: TextOverflow.visible,
               style: GoogleFonts.poppins(
                 fontSize: 12.sp,
-                fontWeight: comment.trim().isEmpty ? FontWeight.w400 : FontWeight.w500,
+                fontWeight:
+                    comment.trim().isEmpty ? FontWeight.w400 : FontWeight.w500,
                 color: comment.trim().isEmpty
                     ? const Color(0xFFAAAAAA)
                     : const Color(0xFF3B3B3B),
-                fontStyle: comment.trim().isEmpty ? FontStyle.italic : FontStyle.normal,
+                fontStyle: comment.trim().isEmpty
+                    ? FontStyle.italic
+                    : FontStyle.normal,
               ),
             ),
           ),
@@ -3232,12 +3235,12 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                         top: false,
                         child: Padding(
                           padding: EdgeInsets.symmetric(
-                              horizontal: 20.w, vertical: 14.w),
+                              horizontal: 38.w, vertical: 10.w),
                           child: isReferenceLayoutRequest
                               ? Container(
                                   width: double.infinity,
                                   padding: EdgeInsets.symmetric(
-                                      horizontal: 14.w, vertical: 12.w),
+                                      horizontal: 10.w, vertical: 8.w),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFD7D7D7),
                                     borderRadius: BorderRadius.circular(24.r),
@@ -3250,12 +3253,12 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                       variant:
                                           ApprovalActionButtonsVariant.pill,
                                       pillWidth: pillWidth,
-                                      pillHeight: 36.w,
-                                      pillSpacing: 24.w,
+                                      pillHeight: 33.w,
+                                      pillSpacing: 20.w,
                                       pillBorderRadius:
                                           BorderRadius.circular(20.r),
                                       pillTextStyle: GoogleFonts.poppins(
-                                        fontSize: 17.sp,
+                                        fontSize: 15.sp,
                                         fontWeight: FontWeight.w500,
                                         color: Colors.white,
                                         height: 1,
@@ -3273,12 +3276,12 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                     userIds: [userId],
                                     variant: ApprovalActionButtonsVariant.pill,
                                     pillWidth: pillWidth,
-                                    pillHeight: 36.w,
-                                    pillSpacing: 24.w,
+                                    pillHeight: 33.w,
+                                    pillSpacing: 20.w,
                                     pillBorderRadius:
                                         BorderRadius.circular(20.r),
                                     pillTextStyle: GoogleFonts.poppins(
-                                      fontSize: 17.sp,
+                                      fontSize: 15.sp,
                                       fontWeight: FontWeight.w500,
                                       color: Colors.white,
                                       height: 1,

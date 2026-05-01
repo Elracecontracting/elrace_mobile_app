@@ -1426,7 +1426,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                           top: false,
                           child: Padding(
                             padding: EdgeInsets.symmetric(
-                                horizontal: 38.w, vertical: 10.w),
+                                horizontal: 38.w, vertical: 8.w),
                             child: ApprovalActionButtons(
                               requestId: widget.requestId,
                               type: widget.type,
@@ -1436,11 +1436,11 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                               useProvidedComment: true,
                               commentProvider: () => apiComment,
                               pillWidth: pillWidth,
-                              pillHeight: 36.w,
-                              pillSpacing: 24.w,
+                              pillHeight: 33.w,
+                              pillSpacing: 20.w,
                               pillBorderRadius: BorderRadius.circular(20.r),
                               pillTextStyle: GoogleFonts.poppins(
-                                fontSize: 17.sp,
+                                fontSize: 15.sp,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.white,
                                 height: 1,

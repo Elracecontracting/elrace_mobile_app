@@ -229,11 +229,13 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       final response = await http.Response.fromStream(streamed);
 
       // raw response logging
-      debugPrint('\n==== INVOICE DETAILS RESPONSE (status: ${response.statusCode}) ====');
+      debugPrint(
+          '\n==== INVOICE DETAILS RESPONSE (status: ${response.statusCode}) ====');
       final rawBody = response.body;
       const chunk = 800;
       for (var i = 0; i < rawBody.length; i += chunk) {
-        debugPrint(rawBody.substring(i, i + chunk > rawBody.length ? rawBody.length : i + chunk));
+        debugPrint(rawBody.substring(
+            i, i + chunk > rawBody.length ? rawBody.length : i + chunk));
       }
       debugPrint('=========================\n');
 
@@ -1159,11 +1161,11 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                         top: false,
                         child: Padding(
                           padding: EdgeInsets.symmetric(
-                              horizontal: 20.w, vertical: 12.w),
+                              horizontal: 38.w, vertical: 10.w),
                           child: Container(
                             width: double.infinity,
                             padding: EdgeInsets.symmetric(
-                                horizontal: 14.w, vertical: 12.w),
+                                horizontal: 10.w, vertical: 8.w),
                             decoration: BoxDecoration(
                               color: const Color(0xFFD7D7D7),
                               borderRadius: BorderRadius.circular(24.r),
@@ -1176,11 +1178,11 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                 variant: ApprovalActionButtonsVariant.pill,
                                 showHrApproveConfirmation: true,
                                 pillWidth: pillWidth,
-                                pillHeight: 36.w,
-                                pillSpacing: 24.w,
+                                pillHeight: 33.w,
+                                pillSpacing: 20.w,
                                 pillBorderRadius: BorderRadius.circular(20.r),
                                 pillTextStyle: GoogleFonts.poppins(
-                                  fontSize: 17.sp,
+                                  fontSize: 15.sp,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                   height: 1,
