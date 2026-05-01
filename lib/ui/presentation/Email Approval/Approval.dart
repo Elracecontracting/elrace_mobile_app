@@ -151,6 +151,64 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     }).toList();
   }
 
+  String _pickCommentValue(Map<String, dynamic> item) {
+    final candidates = <dynamic>[
+      item['comment'],
+      item['comments'],
+      item['note'],
+      item['description'],
+      item['approval_comment'],
+      item['reject_reason'],
+      item['rejection_reason'],
+      item['manager_comment'],
+    ];
+
+    for (final value in candidates) {
+      if (value == null || value == false || value == true) continue;
+      final text = value.toString().trim();
+      if (text.isEmpty) continue;
+      final normalized = text.toLowerCase();
+      if (normalized == 'null' || normalized == 'false' || normalized == 'true') {
+        continue;
+      }
+      return text;
+    }
+
+    return '';
+  }
+
+  List<Map<String, dynamic>> _normalizeCategoryItems(
+    List<dynamic> rawItems, {
+    required String categoryLabel,
+  }) {
+    return rawItems
+        .whereType<Map>()
+        .map((raw) {
+          final map = Map<String, dynamic>.from(raw);
+          final typeValue = map['type']?.toString().trim();
+          map['category'] = categoryLabel;
+          map['type'] = (typeValue != null && typeValue.isNotEmpty)
+              ? typeValue
+              : categoryLabel;
+
+          final existingComment = map['comment'];
+          final hasMeaningfulComment = existingComment != null &&
+              existingComment != false &&
+              existingComment != true &&
+              existingComment.toString().trim().isNotEmpty &&
+              existingComment.toString().toLowerCase() != 'null' &&
+              existingComment.toString().toLowerCase() != 'false' &&
+              existingComment.toString().toLowerCase() != 'true';
+
+          if (!hasMeaningfulComment) {
+            map['comment'] = _pickCommentValue(map);
+          }
+
+          return map;
+        })
+        .toList(growable: false);
+  }
+
   Future<List<dynamic>> _fetchCategoryData(String groupType) async {
     final token = SharedPref.getLoginData().result?.token;
 
@@ -162,10 +220,23 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     final url = Uri.parse("https://erp.elrace.com/api/my_approvals_grouped");
 
+    final params = <String, dynamic>{"group_type": groupType};
+    if (groupType == 'rfq' || groupType == 'invoice') {
+      params['comment'] = '';
+    }
+
     final body = jsonEncode({
       "jsonrpc": "2.0",
-      "params": {"group_type": groupType},
+      "params": params,
     });
+
+    if (groupType == 'rfq' || groupType == 'invoice') {
+      final escapedBody = body.replaceAll("'", r"'\\''");
+      debugPrint('🧪 [MyApproval][$groupType] cURL:');
+      debugPrint(
+        "curl -X GET '$url' -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Authorization: Bearer $token' --data '$escapedBody'",
+      );
+    }
 
     final request = http.Request('GET', url)
       ..headers.addAll(headers)
@@ -176,15 +247,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     debugPrint('[$groupType] status=${response.statusCode}');
 
-    if (groupType == 'petty_cash') {
-      debugPrint('🧾 [MyApproval][petty_cash] Raw response start');
+    if (groupType == 'petty_cash' || groupType == 'rfq' || groupType == 'invoice') {
+      debugPrint('🧾 [MyApproval][$groupType] Raw response start');
       const chunkSize = 800;
       final raw = response.body;
       for (var i = 0; i < raw.length; i += chunkSize) {
         final end = (i + chunkSize < raw.length) ? i + chunkSize : raw.length;
         debugPrint(raw.substring(i, end));
       }
-      debugPrint('🧾 [MyApproval][petty_cash] Raw response end');
+      debugPrint('🧾 [MyApproval][$groupType] Raw response end');
     }
 
     if (response.statusCode == 200) {
@@ -239,15 +310,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       setState(() {
         switch (categoryKey) {
           case 'hr':
-            hrItems = items.map((i) => {...i, 'category': 'HR'}).toList();
+            hrItems = _normalizeCategoryItems(items, categoryLabel: 'HR');
           case 'rfq':
-            rfqItems = items.map((i) => {...i, 'category': 'RFQ'}).toList();
+            rfqItems = _normalizeCategoryItems(items, categoryLabel: 'RFQ');
           case 'invoice':
             invoiceItems =
-                items.map((i) => {...i, 'category': 'INVOICE'}).toList();
+                _normalizeCategoryItems(items, categoryLabel: 'INVOICE');
           case 'petty_cash':
             pettyCashItems =
-                items.map((i) => {...i, 'category': 'PETTY CASH'}).toList();
+                _normalizeCategoryItems(items, categoryLabel: 'PETTY CASH');
         }
         allItems = [
           ...hrItems,
@@ -333,12 +404,21 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   Future<void> _fetchRorData() async {
     try {
       final ror = await _delayedRepo.fetchRor();
+      final hasBreakdownCounts =
+          (ror.hrCount ?? 0) > 0 ||
+          (ror.rfqCount ?? 0) > 0 ||
+          (ror.pettyCashCount ?? 0) > 0 ||
+          (ror.invoiceCount ?? 0) > 0;
+      debugPrint(
+        '🟣 [ROR SOURCE] API (${hasBreakdownCounts ? 'score+counts' : 'score-only'}) => ror=${ror.rorPercentage}%',
+      );
       if (!mounted) return;
       setState(() {
         _rorData = ror;
       });
     } catch (e) {
       debugPrint('Failed to fetch delayed ROR: $e');
+      debugPrint('🟡 [ROR SOURCE] Fallback => local tab counts + local formula');
     }
   }
 
@@ -688,6 +768,10 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         rorRfqCount: _rorData?.rfqCount,
         rorHrCount: _rorData?.hrCount,
         rorPercentage: _rorData?.rorPercentage,
+        rorHrRor: _rorData?.hrRor,
+        rorRfqRor: _rorData?.rfqRor,
+        rorInvoiceRor: _rorData?.invoiceRor,
+        rorPettyCashRor: _rorData?.pettyCashRor,
         onHrTestCasesTap: kDebugMode ? _openHrRequestTestCases : null,
         onDelayedTap: () {
           Navigator.push(

@@ -16,7 +16,7 @@ class PettyCashMyActionScreen extends StatefulWidget {
 
 class _PettyCashMyActionScreenState extends State<PettyCashMyActionScreen>
     with MyActionsPaginationMixin<PettyCashMyActionScreen> {
-  final DateFormat _updatedDateFormat = DateFormat('MM/dd/yyyy');
+  final DateFormat _updatedDateFormat = DateFormat('dd/MM/yyyy');
 
   @override
   MyActionsType get actionsType => MyActionsType.ptsh;

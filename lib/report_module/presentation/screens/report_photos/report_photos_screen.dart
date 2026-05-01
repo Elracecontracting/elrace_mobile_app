@@ -1,11 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:el_race/report_module/data/models/report_model.dart';
-import 'package:el_race/report_module/data/models/report_detail_model.dart';
-import 'package:el_race/report_module/data/models/report_item_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/data/services/pdf_service.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/image_editing_screen.dart';
@@ -22,12 +22,10 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:http/http.dart' as http;
-import 'package:gal/gal.dart';
 import 'package:el_race/report_module/core/utils/directory_operation.dart';
 import 'package:el_race/report_module/data/models/report_pdf_model.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/pdf_preview_screen.dart';
-import 'package:el_race/report_module/presentation/bottom_sheets/show_option_sheet.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 class ReportPhotosScreen extends StatefulWidget {
@@ -54,6 +52,11 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   bool _isDownloadingPhotos = false;
   final ImagePicker _picker = ImagePicker();
   List<_PhotoItem> _photoItems = [];
+
+  int get _imagesCount => _photoItems
+      .where(
+          (item) => item.imagePath != null && item.imagePath!.trim().isNotEmpty)
+      .length;
 
   @override
   void initState() {
@@ -178,93 +181,88 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
     await showDialog(
       context: context,
       barrierColor: Colors.black45,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(top: 94.h, left: 24.w),
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            color: Colors.transparent,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16.r),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                child: Container(
-                  width: 186.w,
-                  padding:
-                      EdgeInsets.symmetric(vertical: 14.h, horizontal: 12.w),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        const Color(0xFF000000).withOpacity(0.88),
-                        const Color(0xFF1A1A53).withOpacity(0.88),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16.r),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            _pickImage(ImageSource.camera);
-                          },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SvgPicture.asset(
-                                'assets/svg/camera_svgrepo.svg',
-                                width: 32.sp,
-                                height: 32.sp,
-                                colorFilter: const ColorFilter.mode(
-                                    Colors.white, BlendMode.srcIn),
-                              ),
-                              SizedBox(height: 6.h),
-                              Text(
-                                'Camera',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            _pickImage(ImageSource.gallery);
-                          },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SvgPicture.asset(
-                                'assets/svg/gallery_svgrepo.svg',
-                                width: 32.sp,
-                                height: 32.sp,
-                                colorFilter: const ColorFilter.mode(
-                                    Colors.white, BlendMode.srcIn),
-                              ),
-                              SizedBox(height: 6.h),
-                              Text(
-                                'Gallery',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16.r),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+              child: Container(
+                width: 186.w,
+                padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 12.w),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      const Color(0xFF000000).withOpacity(0.88),
+                      const Color(0xFF1A1A53).withOpacity(0.88),
                     ],
                   ),
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _pickImage(ImageSource.camera);
+                        },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SvgPicture.asset(
+                              'assets/svg/camera_svgrepo.svg',
+                              width: 32.sp,
+                              height: 32.sp,
+                              colorFilter: const ColorFilter.mode(
+                                  Colors.white, BlendMode.srcIn),
+                            ),
+                            SizedBox(height: 6.h),
+                            Text(
+                              'Camera',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _pickImage(ImageSource.gallery);
+                        },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SvgPicture.asset(
+                              'assets/svg/gallery_svgrepo.svg',
+                              width: 32.sp,
+                              height: 32.sp,
+                              colorFilter: const ColorFilter.mode(
+                                  Colors.white, BlendMode.srcIn),
+                            ),
+                            SizedBox(height: 6.h),
+                            Text(
+                              'Gallery',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -345,6 +343,16 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   }
 
   void _openPdfGenerationPage() {
+    if (_imagesCount < 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('At least 3 photos are required to generate report.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -352,7 +360,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
           reportId: widget.report.id,
           folderId: widget.folderId,
           folderName: widget.folderName,
-          reportItemsCount: _photoItems.length,
+          reportItemsCount: _imagesCount,
         ),
       ),
     );
@@ -374,71 +382,203 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
 
     setState(() => _isDownloadingPhotos = true);
 
-    int successCount = 0;
-    int failedCount = 0;
-
-    for (final item in photos) {
-      final rawPath = item.imagePath!.trim();
-      String? tempFilePath;
-
-      try {
-        String localPath = rawPath;
-        if (rawPath.startsWith('http')) {
-          final response = await http.get(Uri.parse(rawPath));
-          if (response.statusCode != 200) {
-            failedCount++;
-            continue;
-          }
-          final dir = await getTemporaryDirectory();
-          tempFilePath =
-              '${dir.path}/report_photo_${DateTime.now().millisecondsSinceEpoch}_$successCount.jpg';
-          await File(tempFilePath)
-              .writeAsBytes(response.bodyBytes, flush: true);
-          localPath = tempFilePath;
-        }
-
-        await Gal.putImage(localPath, album: 'RCC Reports');
-        successCount++;
-      } catch (_) {
-        failedCount++;
-      } finally {
-        if (tempFilePath != null) {
-          try {
-            await File(tempFilePath).delete();
-          } catch (_) {}
-        }
-      }
-    }
-
-    if (!mounted) return;
-    setState(() => _isDownloadingPhotos = false);
-
-    if (successCount > 0) {
+    try {
+      final file = await _createPhotosWordDocument(photos);
+      if (!mounted) return;
+      await Share.shareXFiles(
+        [
+          XFile(
+            file.path,
+            mimeType:
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          ),
+        ],
+        text: 'Report photos',
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$successCount photo(s) downloaded successfully.'),
+          content: Text('Word file created with ${photos.length} photo(s).'),
           backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } else {
+    } catch (e) {
+      debugPrint('Word export error: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Failed to download photos.'),
+          content: Text('Failed to create Word file.'),
           backgroundColor: Color(0xFFE81E25),
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isDownloadingPhotos = false);
+    }
+  }
+
+  Future<File> _createPhotosWordDocument(List<_PhotoItem> photos) async {
+    final images = <_WordImage>[];
+    for (int i = 0; i < photos.length; i++) {
+      final item = photos[i];
+      final bytes = item.editedBytes ?? await _readPhotoBytes(item.imagePath!);
+      final extension = _imageExtension(item.imagePath!, bytes);
+      images.add(_WordImage(
+        bytes: bytes,
+        extension: extension,
+        fileName: 'image${i + 1}.$extension',
+        relationshipId: 'rId${i + 1}',
+      ));
     }
 
-    if (failedCount > 0 && successCount > 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$failedCount photo(s) could not be downloaded.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    final archive = Archive()
+      ..addFile(_wordXmlFile('[Content_Types].xml', _wordContentTypesXml()))
+      ..addFile(_wordXmlFile('_rels/.rels', _wordRootRelationshipsXml()))
+      ..addFile(_wordXmlFile(
+        'word/_rels/document.xml.rels',
+        _wordDocumentRelationshipsXml(images),
+      ))
+      ..addFile(_wordXmlFile('word/document.xml', _wordDocumentXml(images)));
+
+    for (final image in images) {
+      archive.addFile(ArchiveFile(
+        'word/media/${image.fileName}',
+        image.bytes.length,
+        image.bytes,
+      ));
     }
+
+    final encoded = ZipEncoder().encode(archive);
+    if (encoded == null) {
+      throw StateError('Unable to encode Word archive');
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final safeReportName = widget.report.name
+        .trim()
+        .replaceAll(RegExp(r'[^A-Za-z0-9_\- ]+'), '')
+        .replaceAll(RegExp(r'\s+'), '_');
+    final fileName =
+        '${safeReportName.isEmpty ? 'report_photos' : safeReportName}_${DateTime.now().millisecondsSinceEpoch}.docx';
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsBytes(encoded, flush: true);
+    return file;
+  }
+
+  ArchiveFile _wordXmlFile(String path, String xml) {
+    final data = utf8.encode(xml);
+    return ArchiveFile(path, data.length, data);
+  }
+
+  Future<Uint8List> _readPhotoBytes(String path) async {
+    final trimmed = path.trim();
+    if (trimmed.startsWith('http')) {
+      final response = await http.get(Uri.parse(trimmed));
+      if (response.statusCode != 200) {
+        throw StateError('Unable to download image: $trimmed');
+      }
+      return response.bodyBytes;
+    }
+    return File(trimmed).readAsBytes();
+  }
+
+  String _imageExtension(String path, Uint8List bytes) {
+    final lower = path.toLowerCase().split('?').first;
+    if (lower.endsWith('.png')) return 'png';
+    if (lower.endsWith('.jpeg')) return 'jpeg';
+    if (lower.endsWith('.jpg')) return 'jpg';
+    if (bytes.length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47) {
+      return 'png';
+    }
+    return 'jpg';
+  }
+
+  String _wordContentTypesXml() =>
+      '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="jpg" ContentType="image/jpeg"/>
+  <Default Extension="jpeg" ContentType="image/jpeg"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>''';
+
+  String _wordRootRelationshipsXml() =>
+      '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>''';
+
+  String _wordDocumentRelationshipsXml(List<_WordImage> images) {
+    final relationships = images
+        .map((image) =>
+            '<Relationship Id="${image.relationshipId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${image.fileName}"/>')
+        .join();
+    return '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">$relationships</Relationships>''';
+  }
+
+  String _wordDocumentXml(List<_WordImage> images) {
+    final body = images.asMap().entries.map((entry) {
+      final index = entry.key;
+      final image = entry.value;
+      final pageBreak = index == images.length - 1
+          ? ''
+          : '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+      return '${_wordImageParagraphXml(image, index + 1)}$pageBreak';
+    }).join();
+
+    return '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" mc:Ignorable="w14 wp14">
+  <w:body>
+    $body
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="360" w:footer="360" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>''';
+  }
+
+  String _wordImageParagraphXml(_WordImage image, int id) {
+    const cx = 6400800;
+    const cy = 9144000;
+    return '''<w:p>
+  <w:pPr><w:jc w:val="center"/></w:pPr>
+  <w:r>
+    <w:drawing>
+      <wp:inline distT="0" distB="0" distL="0" distR="0">
+        <wp:extent cx="$cx" cy="$cy"/>
+        <wp:effectExtent l="0" t="0" r="0" b="0"/>
+        <wp:docPr id="$id" name="Picture $id"/>
+        <wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+            <pic:pic>
+              <pic:nvPicPr>
+                <pic:cNvPr id="$id" name="${image.fileName}"/>
+                <pic:cNvPicPr/>
+              </pic:nvPicPr>
+              <pic:blipFill>
+                <a:blip r:embed="${image.relationshipId}"/>
+                <a:stretch><a:fillRect/></a:stretch>
+              </pic:blipFill>
+              <pic:spPr>
+                <a:xfrm><a:off x="0" y="0"/><a:ext cx="$cx" cy="$cy"/></a:xfrm>
+                <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+              </pic:spPr>
+            </pic:pic>
+          </a:graphicData>
+        </a:graphic>
+      </wp:inline>
+    </w:drawing>
+  </w:r>
+</w:p>''';
   }
 
   void _openPhotoDetailDialog(int index) {
@@ -1206,22 +1346,13 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
     final fileName = _nameController.text.trim();
     if (fileName.isEmpty) return;
 
-    if (_pdfs.length >= 3) {
+    if (widget.reportItemsCount < 3) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text(
-                  'Maximum 3 PDF files allowed. Please delete one first.')),
-        );
-      }
-      return;
-    }
-
-    if (_pdfs.any((p) => p.fileName == '$fileName.pdf')) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('A report with the same name already exists.')),
+            content: Text('At least 3 photos are required to generate report.'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
       return;
@@ -1229,12 +1360,59 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
 
     setState(() {
       _isGenerating = true;
-      _generationProgress = 10;
-      _generationStatus = 'Preparing report...';
+      _generationProgress = 5;
+      _generationStatus = 'Checking report limit...';
     });
 
     try {
       final provider = Provider.of<ReportProvider>(context, listen: false);
+
+      // Re-fetch the latest list to get an accurate count before uploading.
+      final freshPdfs = await reportProvider.fetchReports(
+        empId: ReportProvider.empID,
+        reportId: widget.reportId,
+        folderId: widget.folderId,
+      );
+      if (mounted) setState(() => _pdfs = freshPdfs);
+
+      if (freshPdfs.length >= 3) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text(
+                    'Maximum 3 PDF files allowed. Please delete one first.')),
+          );
+        }
+        if (mounted)
+          setState(() {
+            _isGenerating = false;
+            _generationProgress = 0;
+            _generationStatus = '';
+          });
+        return;
+      }
+
+      if (freshPdfs.any(
+          (p) => p.fileName == fileName || p.fileName == '$fileName.pdf')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('A report with the same name already exists.')),
+          );
+        }
+        if (mounted)
+          setState(() {
+            _isGenerating = false;
+            _generationProgress = 0;
+            _generationStatus = '';
+          });
+        return;
+      }
+
+      setState(() {
+        _generationProgress = 10;
+        _generationStatus = 'Preparing report...';
+      });
 
       if (mounted) {
         setState(() {
@@ -1306,7 +1484,14 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
           );
         }
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Report generation error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Failed to generate report. Please try again.')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -1368,6 +1553,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         _pdfs[idx] = ReportPdfModel(
           fileId: current.fileId,
           id: current.id,
+          reportId: current.reportId,
           fileName: '$newName.pdf',
           createdAt: current.createdAt,
           reportLink: current.reportLink,
@@ -2446,4 +2632,18 @@ class _PhotoItem {
   String description = '';
   final TextEditingController locationController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+}
+
+class _WordImage {
+  final Uint8List bytes;
+  final String extension;
+  final String fileName;
+  final String relationshipId;
+
+  const _WordImage({
+    required this.bytes,
+    required this.extension,
+    required this.fileName,
+    required this.relationshipId,
+  });
 }

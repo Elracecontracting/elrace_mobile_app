@@ -194,12 +194,31 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     };
 
     final url = Uri.parse('https://erp.elrace.com/api/get_invoice_details');
+    final commentParam = _pick([
+      _formData['comment'],
+      widget.initialData?['comment'],
+      _formData['note'],
+      widget.initialData?['note'],
+      _formData['description'],
+      widget.initialData?['description'],
+    ]);
     final body = jsonEncode({
       'jsonrpc': '2.0',
       'params': {
         'invoice_id': int.tryParse(widget.requestId),
+        'comment': commentParam,
       },
     });
+
+    // cURL debug
+    debugPrint('\n==== INVOICE DETAILS REQUEST ====');
+    debugPrint('curl -X GET "$url" \\');
+    headers.forEach((k, v) {
+      final safe = k == 'Authorization' ? 'Bearer [TOKEN]' : v;
+      debugPrint('  -H "$k: $safe" \\');
+    });
+    debugPrint('  -d \'$body\'');
+    debugPrint('=========================\n');
 
     try {
       final request = http.Request('GET', url)
@@ -208,6 +227,15 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
+
+      // raw response logging
+      debugPrint('\n==== INVOICE DETAILS RESPONSE (status: ${response.statusCode}) ====');
+      final rawBody = response.body;
+      const chunk = 800;
+      for (var i = 0; i < rawBody.length; i += chunk) {
+        debugPrint(rawBody.substring(i, i + chunk > rawBody.length ? rawBody.length : i + chunk));
+      }
+      debugPrint('=========================\n');
 
       if (response.statusCode != 200) {
         throw Exception(

@@ -131,11 +131,12 @@ class MyActionItem {
       name: _safeString(nameRaw),
       reference:
           _safeString(json['reference'] ?? json['ref'] ?? json['number']),
-      date: _safeString(json['date'] ??
-          json['last_updated_on'] ??
-          json['accounting_date'] ??
+        date: _safeString(json['last_updated_on'] ??
           json['updated_at'] ??
-          json['create_date']),
+          json['write_date'] ??
+          json['create_date'] ??
+          json['accounting_date'] ??
+          json['date']),
       project: _safeString(json['project']),
       vendor: _safeString(json['vendor']),
       amountTotal: amountRaw is num

@@ -474,7 +474,14 @@ class HrAndPettycashCard extends StatelessWidget {
           );
 
           final pettySubtitle = _getSafeString(
-            item['client_name'] ??
+            item['emp_id']?.toString() ??
+                item['emp_code'] ??
+                item['employee_code'] ??
+                item['requester_code'] ??
+                item['employee_id']?.toString() ??
+                item['requester_id']?.toString() ??
+                item['requester_emp_id']?.toString() ??
+                item['client_name'] ??
                 item['client'] ??
                 item['vendor'] ??
                 item['partner_name'] ??

@@ -48,7 +48,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     final normalized = raw.trim().replaceFirst(' ', 'T');
     final dt = DateTime.tryParse(normalized) ?? DateTime.tryParse(raw.trim());
     if (dt == null) return raw;
-    return DateFormat('MM/dd/yyyy').format(dt);
+    return DateFormat('dd/MM/yyyy').format(dt);
   }
 
   @override

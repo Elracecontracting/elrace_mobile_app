@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class SignaturesScreen extends StatefulWidget {
   const SignaturesScreen({super.key});
@@ -44,17 +45,7 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
 
     final parsed = DateTime.tryParse(input);
     if (parsed == null) return input;
-
-    final day = parsed.day.toString().padLeft(2, '0');
-    final month = parsed.month.toString().padLeft(2, '0');
-    final year = parsed.year.toString();
-    final hour24 = parsed.hour;
-    final minute = parsed.minute.toString().padLeft(2, '0');
-    final isPm = hour24 >= 12;
-    final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
-    final period = isPm ? 'Pm' : 'Am';
-
-    return '$day/$month/$year  At $hour12:$minute $period';
+    return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
   String _extractFileNameFromUrl(String url) {

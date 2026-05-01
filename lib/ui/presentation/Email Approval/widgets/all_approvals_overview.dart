@@ -14,6 +14,11 @@ class AllApprovalsOverview extends StatelessWidget {
   final int? rorRfqCount;
   final int? rorHrCount;
   final int? rorPercentage;
+  // Per-category ROR percentages from API
+  final int? rorHrRor;
+  final int? rorRfqRor;
+  final int? rorInvoiceRor;
+  final int? rorPettyCashRor;
   final VoidCallback? onDelayedTap;
   final VoidCallback? onHrTestCasesTap;
 
@@ -29,6 +34,10 @@ class AllApprovalsOverview extends StatelessWidget {
     this.rorRfqCount,
     this.rorHrCount,
     this.rorPercentage,
+    this.rorHrRor,
+    this.rorRfqRor,
+    this.rorInvoiceRor,
+    this.rorPettyCashRor,
     this.onDelayedTap,
     this.onHrTestCasesTap,
   });
@@ -65,6 +74,10 @@ class AllApprovalsOverview extends StatelessWidget {
               pettyCashCount: rorPettyCashCount ?? pettyCashCount,
               invoiceCount: rorInvoiceCount ?? invoiceCount,
               rorPercentage: rorPercentage,
+              hrRor: rorHrRor,
+              rfqRor: rorRfqRor,
+              invoiceRor: rorInvoiceRor,
+              pettyCashRor: rorPettyCashRor,
             ),
             SizedBox(height: 14.h),
             _DelayedRequestCard(value: delayedCount, onTap: onDelayedTap),
@@ -326,6 +339,11 @@ class _CountRing extends StatelessWidget {
 }
 
 class _RorCard extends StatelessWidget {
+    // Per-category ROR % from API (override the count-based chart)
+    final int? hrRor;
+    final int? rfqRor;
+    final int? invoiceRor;
+    final int? pettyCashRor;
   final int hrCount;
   final int rfqCount;
   final int pettyCashCount;
@@ -338,11 +356,20 @@ class _RorCard extends StatelessWidget {
     required this.pettyCashCount,
     required this.invoiceCount,
     this.rorPercentage,
+    this.hrRor,
+    this.rfqRor,
+    this.invoiceRor,
+    this.pettyCashRor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final chartValues = <int>[hrCount, rfqCount, pettyCashCount, invoiceCount];
+    // Use API per-category ROR when available, fall back to item counts
+    final bool hasApiRor = hrRor != null || rfqRor != null ||
+      invoiceRor != null || pettyCashRor != null;
+    final chartValues = hasApiRor
+      ? <int>[hrRor ?? 0, rfqRor ?? 0, pettyCashRor ?? 0, invoiceRor ?? 0]
+      : <int>[hrCount, rfqCount, pettyCashCount, invoiceCount];
     final maxValue = chartValues.fold<int>(0, (m, v) => v > m ? v : m);
     final highlightedIndex = chartValues.indexOf(maxValue);
     final ror = rorPercentage ?? _calculateRorPercentage();
@@ -417,27 +444,31 @@ class _RorCard extends StatelessWidget {
                           children: [
                             _RorNeedle(
                               label: 'HR',
-                              value: hrCount,
+                              value: chartValues[0],
                               maxValue: maxValue,
                               highlight: highlightedIndex == 0,
+                              isPercentage: hasApiRor,
                             ),
                             _RorNeedle(
                               label: 'RFQ',
-                              value: rfqCount,
+                              value: chartValues[1],
                               maxValue: maxValue,
                               highlight: highlightedIndex == 1,
+                              isPercentage: hasApiRor,
                             ),
                             _RorNeedle(
                               label: 'Petty cash',
-                              value: pettyCashCount,
+                              value: chartValues[2],
                               maxValue: maxValue,
                               highlight: highlightedIndex == 2,
+                              isPercentage: hasApiRor,
                             ),
                             _RorNeedle(
-                              label: 'invoice',
-                              value: invoiceCount,
+                              label: 'Invoice',
+                              value: chartValues[3],
                               maxValue: maxValue,
                               highlight: highlightedIndex == 3,
+                              isPercentage: hasApiRor,
                             ),
                           ],
                         ),
@@ -497,12 +528,14 @@ class _RorNeedle extends StatelessWidget {
   final int value;
   final int maxValue;
   final bool highlight;
+  final bool isPercentage;
 
   const _RorNeedle({
     required this.label,
     required this.value,
     required this.maxValue,
     required this.highlight,
+    this.isPercentage = false,
   });
 
   @override
@@ -513,7 +546,7 @@ class _RorNeedle extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        _ValueBubble(value: value),
+        _ValueBubble(value: value, isPercentage: isPercentage),
         SizedBox(height: 5.h),
         Stack(
           alignment: Alignment.bottomCenter,
@@ -607,7 +640,9 @@ class _RorNeedle extends StatelessWidget {
 class _ValueBubble extends StatelessWidget {
   final int value;
 
-  const _ValueBubble({required this.value});
+  final bool isPercentage;
+
+  const _ValueBubble({required this.value, this.isPercentage = false});
 
   @override
   Widget build(BuildContext context) {
@@ -619,7 +654,7 @@ class _ValueBubble extends StatelessWidget {
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Text(
-        value.toString(),
+        isPercentage ? '$value%' : value.toString(),
         textAlign: TextAlign.center,
         style: GoogleFonts.poppins(
           fontSize: 8.sp,

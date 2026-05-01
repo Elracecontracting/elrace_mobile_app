@@ -553,8 +553,13 @@ class _ContactTileState extends State<ContactTile> {
 Widget _buildInfoSection(
     List<String> nameParts, String job, String emp, String department) {
   // Extract full name (remove ID prefix if exists)
-  String fullName =
-      nameParts.length > 1 ? nameParts.sublist(1).join(' ') : nameParts[0];
+  final nameOnly =
+      nameParts.length > 1 ? nameParts.sublist(1) : nameParts;
+  String fullName = nameOnly.length > 1
+      ? '${nameOnly.first} ${nameOnly.last}'
+      : nameOnly.isNotEmpty
+          ? nameOnly[0]
+          : '';
 
   return Padding(
     padding: const EdgeInsets.only(left: 8.0, top: 10, bottom: 10),

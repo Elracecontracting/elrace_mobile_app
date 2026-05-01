@@ -40,6 +40,9 @@ class HomeScreenPage extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreenPage>
     with WidgetsBindingObserver {
+  static bool _didAuthenticateAfterLoginThisSession = false;
+  static bool _isAuthenticatingAfterLogin = false;
+
   // bool isMuted = false; // default value
   bool isCheckedIn = false;
   final _locationBloc = LocationBloc();
@@ -63,8 +66,11 @@ class _HomeScreenState extends State<HomeScreenPage>
     _checkLocationService(); // Check location service on initialization
     _locationBloc.add(GetCurrentLocationET());
 
-    // After login: authenticate with biometric / PIN
-    if (!AppConfigService.instance.shouldSkipFaceId) {
+    // After login: authenticate with biometric / PIN once per app session.
+    // Do not ask again when returning from Contacts or other tabs to Home.
+    if (!AppConfigService.instance.shouldSkipFaceId &&
+        !_didAuthenticateAfterLoginThisSession &&
+        !_isAuthenticatingAfterLogin) {
       _authenticateAfterLogin();
     }
     // List of pages or widgets that you want to display for each navigation ite
@@ -74,8 +80,16 @@ class _HomeScreenState extends State<HomeScreenPage>
   /// If the device has no biometrics and no PIN is set yet, setup PIN first,
   /// then verify immediately.
   Future<void> _authenticateAfterLogin() async {
+    if (_didAuthenticateAfterLoginThisSession || _isAuthenticatingAfterLogin) {
+      return;
+    }
+
+    _isAuthenticatingAfterLogin = true;
     await Future.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
+    if (!mounted) {
+      _isAuthenticatingAfterLogin = false;
+      return;
+    }
 
     // Setup PIN if needed (no biometrics + no PIN)
     final needs = await UnifiedBiometricHelper.needsSetup();
@@ -83,7 +97,10 @@ class _HomeScreenState extends State<HomeScreenPage>
       await UnifiedBiometricHelper.setupPin(context);
     }
 
-    if (!mounted) return;
+    if (!mounted) {
+      _isAuthenticatingAfterLogin = false;
+      return;
+    }
 
     // Now actually authenticate (Face ID / fingerprint / PIN)
     bool authenticated = false;
@@ -105,6 +122,11 @@ class _HomeScreenState extends State<HomeScreenPage>
         await Future.delayed(const Duration(seconds: 2));
       }
     }
+
+    if (authenticated) {
+      _didAuthenticateAfterLoginThisSession = true;
+    }
+    _isAuthenticatingAfterLogin = false;
   }
 
   @override

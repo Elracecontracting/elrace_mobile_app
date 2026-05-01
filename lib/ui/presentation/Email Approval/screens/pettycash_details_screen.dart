@@ -1,9 +1,8 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_action_buttons.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/file_binary.dart';
+import 'package:el_race/ui/presentation/my_documents/screens/attachment_viewer_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -58,6 +57,21 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
   String _displayOrNA(String value) {
     final normalized = value.trim();
     return normalized.isEmpty ? 'N/A' : normalized;
+  }
+
+  String _normalizeApiComment(String value) {
+    final v = value.trim();
+    if (v.isEmpty) return '';
+    final lower = v.toLowerCase();
+    if (lower == 'no comments' ||
+        lower == 'no comment' ||
+        lower == 'n/a' ||
+        lower == 'na' ||
+        lower == '-' ||
+        lower == '--') {
+      return '';
+    }
+    return v;
   }
 
   String _formatAmount(dynamic value) {
@@ -255,6 +269,21 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
         print('[PETTYCASH] PARSED formData keys: ${formData.keys.toList()}');
         print('[PETTYCASH] PARSED formData: $formData');
         print('[PETTYCASH] PARSED attachmentIds: $attachmentList');
+        print('[PETTYCASH] COMMENT CANDIDATES: ${jsonEncode({
+          'api_comment': formData['api_comment'],
+          'comment': formData['comment'],
+          'comments': formData['comments'],
+          'note': formData['note'],
+          'notes': formData['notes'],
+          'remark': formData['remark'],
+          'remarks': formData['remarks'],
+          'description': formData['description'],
+          'manager_comment': formData['manager_comment'],
+          'approver_comment': formData['approver_comment'],
+          'reviewer_comment': formData['reviewer_comment'],
+          'request_comment': formData['request_comment'],
+          'employee_comment': formData['employee_comment'],
+        })}');
 
         setState(() {
           final merged = Map<String, dynamic>.from(_formData);
@@ -378,6 +407,23 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       normalized['amount'],
     ]);
 
+    // Keep a unified, API-driven comment field for UI + approve/reject payload.
+    normalized['api_comment'] = _normalizeApiComment(_pick([
+      normalized['api_comment'],
+      normalized['comment'],
+      normalized['comments'],
+      normalized['note'],
+      normalized['notes'],
+      normalized['remark'],
+      normalized['remarks'],
+      normalized['description'],
+      normalized['manager_comment'],
+      normalized['approver_comment'],
+      normalized['reviewer_comment'],
+      normalized['request_comment'],
+      normalized['employee_comment'],
+    ]));
+
     return normalized;
   }
 
@@ -465,26 +511,97 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     }
   }
 
-  Future<void> _viewAttachment() async {
-    if (_attachmentIds.isEmpty) return;
+  /// Extracts a plain integer attachment ID from whatever shape the item is.
+  int? _extractAttachmentId(dynamic item) {
+    if (item is int) return item;
+    if (item is Map) {
+      final raw = item['attachment_id'] ?? item['id'] ?? item['attachmentId'];
+      if (raw is int) return raw;
+      return int.tryParse(raw?.toString() ?? '');
+    }
+    return int.tryParse(item?.toString() ?? '');
+  }
 
-    final attachmentId = (_attachmentIds.first is Map)
-        ? (_attachmentIds.first['attachment_id'] ?? _attachmentIds.first)
-        : _attachmentIds.first;
+  /// Tries to extract a human-readable filename from an attachment item.
+  String _extractAttachmentHintName(dynamic item, {int fallbackIndex = 0}) {
+    if (item is Map) {
+      for (final key in ['name', 'attachment_name', 'filename', 'file_name']) {
+        final v = item[key]?.toString().trim() ?? '';
+        if (v.isNotEmpty &&
+            v.toLowerCase() != 'false' &&
+            v.toLowerCase() != 'null' &&
+            v.toLowerCase() != 'attachment_id') {
+          return v;
+        }
+      }
+    }
+    // Fall back to petty cash request name + index
+    final reqName = _safe(_formData['name']);
+    if (reqName.isNotEmpty) {
+      return '$reqName${fallbackIndex > 0 ? ' (${fallbackIndex + 1})' : ''}';
+    }
+    return 'Attachment${fallbackIndex > 0 ? ' ${fallbackIndex + 1}' : ''}';
+  }
 
-    final token = SharedPref.getLoginData().result?.token;
+  Future<Map<String, dynamic>> _fetchAttachmentDetails(int attachmentId) async {
+    final token = SharedPref.getLoginData().result?.token ?? '';
+    const endpoint = 'https://erp.elrace.com/api/get_attachment_details';
+    final url = Uri.parse(endpoint);
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'Authorization': 'Bearer $token',
     };
-
-    final data = {
+    final bodyMap = {
       'jsonrpc': '2.0',
-      'params': {
-        'attachment_id': attachmentId,
-      },
+      'params': {'attachment_id': attachmentId},
     };
+    final bodyJson = jsonEncode(bodyMap);
+
+    // ── curl log ──────────────────────────────────────────────────────
+    debugPrint(
+      "curl -X GET '$endpoint' "
+      "-H 'Content-Type: application/json' "
+      "-H 'Accept: application/json' "
+      "-H 'Authorization: Bearer $token' "
+      "--data '${bodyJson.replaceAll("'", "'\\''")}'",
+    );
+
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = bodyJson;
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+
+    debugPrint('══════ [PETTYCASH] get_attachment_details ($attachmentId) ══════');
+    debugPrint('STATUS: ${response.statusCode}');
+    debugPrint('BODY: ${response.body}');
+    debugPrint('═══════════════════════════════════════════════════════════════');
+
+    final decoded = jsonDecode(response.body) as Map;
+    final result = decoded['result'] as Map?;
+
+    if (result == null || result['status'] != 'success') {
+      throw Exception(
+        result?['message']?.toString() ??
+            decoded['error']?.toString() ??
+            'Failed to load attachment (HTTP ${response.statusCode})',
+      );
+    }
+
+    final data = result['data'];
+    if (data is! Map) throw Exception('Invalid attachment details response');
+    return Map<String, dynamic>.from(data);
+  }
+
+  Future<void> _openSingleAttachment(int attachmentId,
+      {String hintName = ''}) async {
+    bool loaderVisible = true;
+    void dismissLoader() {
+      if (!loaderVisible) return;
+      loaderVisible = false;
+      if (mounted && Navigator.canPop(context)) Navigator.of(context).pop();
+    }
 
     showDialog(
       context: context,
@@ -493,58 +610,122 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     );
 
     try {
-      final response = await Dio().fetch(
-        RequestOptions(
-          method: 'GET',
-          path: 'https://erp.elrace.com/api/get_attachment_details',
-          headers: headers,
-          data: data,
-          responseType: ResponseType.json,
-        ),
-      );
+      final details = await _fetchAttachmentDetails(attachmentId);
+      dismissLoader();
 
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.of(context).pop();
+      final publicUrl = (details['public_url'] ?? '').toString().trim();
+
+      // Prefer attachment_name from API, but fall back to petty cash request
+      // name if the API returns a raw field key like "attachment_id".
+      final rawName = (details['attachment_name'] ?? '').toString().trim();
+      final looksLikeKey = rawName.isEmpty ||
+          rawName.toLowerCase() == 'attachment_id' ||
+          rawName.toLowerCase() == 'false' ||
+          rawName.toLowerCase() == 'null';
+        final fallbackName = hintName.isNotEmpty
+          ? hintName
+          : _safe(_formData['name'], fallback: 'Petty Cash Attachment');
+        final fileName = looksLikeKey ? fallbackName : rawName;
+
+      if (publicUrl.isEmpty) {
+        throw Exception('Attachment URL is empty');
       }
 
-      final resData = response.data as Map;
-      final result = resData['result'] as Map?;
-      final dataMap = result?['data'] as Map?;
-      final binaryBase64 = dataMap?['attachment_binary_data']?.toString() ?? '';
-      final fileName = dataMap?['attachment_name']?.toString() ?? '';
-
-      if (binaryBase64.isEmpty) {
-        Fluttertoast.showToast(
-          msg: 'No binary data found.',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-        );
-        return;
-      }
-
-      final pdfBytes = base64Decode(binaryBase64);
       if (!mounted) return;
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => AttachmentPdfViewer(
-            pdfBytes: pdfBytes,
-            attchmentName: fileName,
+          builder: (_) => AttachmentViewerScreen(
+            publicUrl: publicUrl,
+            title: fileName,
           ),
         ),
       );
     } catch (e) {
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
+      dismissLoader();
+      if (!mounted) return;
       Fluttertoast.showToast(
-        msg: 'Error: $e',
+        msg: e.toString(),
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+      );
+    }
+  }
+
+  Future<void> _viewAttachment() async {
+    if (_attachmentIds.isEmpty) return;
+
+    // Collect valid integer IDs
+    // Build (id, hintName) pairs
+    final items = _attachmentIds
+        .asMap()
+        .entries
+        .map((e) {
+          final id = _extractAttachmentId(e.value);
+          if (id == null) return null;
+          final name =
+              _extractAttachmentHintName(e.value, fallbackIndex: e.key);
+          return (id: id, name: name);
+        })
+        .whereType<({int id, String name})>()
+        .toList();
+
+    if (items.isEmpty) {
+      Fluttertoast.showToast(
+        msg: 'No valid attachment IDs found.',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.CENTER,
         backgroundColor: Colors.black,
         textColor: Colors.white,
       );
+      return;
+    }
+
+    // If only one attachment, open directly
+    if (items.length == 1) {
+      await _openSingleAttachment(items.first.id, hintName: items.first.name);
+      return;
+    }
+
+    // Multiple attachments — let user pick
+    if (!mounted) return;
+    final picked = await showModalBottomSheet<({int id, String name})>(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 14.w, 16.w, 4.w),
+              child: Text(
+                'Select Attachment',
+                style: GoogleFonts.poppins(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Divider(),
+            ...items.map((item) => ListTile(
+                  leading: const Icon(Icons.picture_as_pdf_rounded),
+                  title: Text(
+                    item.name,
+                    style: GoogleFonts.poppins(fontSize: 13.sp),
+                  ),
+                  onTap: () => Navigator.of(ctx).pop(item),
+                )),
+            SizedBox(height: 8.w),
+          ],
+        ),
+      ),
+    );
+
+    if (picked != null) {
+      await _openSingleAttachment(picked.id, hintName: picked.name);
     }
   }
 
@@ -568,7 +749,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       textAlign: align,
       style: GoogleFonts.poppins(
         fontSize: 11.sp,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
         color: const Color(0xFFB4B4B4),
         letterSpacing: 0.2,
       ),
@@ -582,7 +763,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       textAlign: align,
       style: GoogleFonts.poppins(
         fontSize: size ?? 14.sp,
-        fontWeight: weight ?? FontWeight.w800,
+        fontWeight: weight ?? FontWeight.w700,
         color: color ?? const Color(0xFF0E0E0E),
         letterSpacing: 0.1,
       ),
@@ -607,7 +788,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _value(description, size: 14.sp, weight: FontWeight.w900),
+                  _value(description, size: 14.sp, weight: FontWeight.w700),
                   SizedBox(height: 6.w),
                   _label(_formatDate(lineDate)),
                 ],
@@ -617,7 +798,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
             _value(
               _formatAmount(amount),
               size: 14.sp,
-              weight: FontWeight.w900,
+              weight: FontWeight.w700,
               color: const Color(0xFF15A98A),
             ),
           ],
@@ -695,12 +876,6 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       _formData['section'],
     ]);
 
-    final comment = _pick([
-      _formData['comment'],
-      _formData['note'],
-      _formData['description'],
-    ]);
-
     final employeeImage = _pickImage([
       _formData['emp_image_url'],
       _formData['image_emp'],
@@ -735,6 +910,21 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     final lines = _formData['lines'] as List? ?? [];
     final linePages = _chunkLines(lines, 6);
     final hasAttachments = _attachmentIds.isNotEmpty;
+    final apiComment = _normalizeApiComment(_pick([
+      _formData['api_comment'],
+      _formData['comment'],
+      _formData['comments'],
+      _formData['note'],
+      _formData['notes'],
+      _formData['remark'],
+      _formData['remarks'],
+      _formData['description'],
+      _formData['manager_comment'],
+      _formData['approver_comment'],
+      _formData['reviewer_comment'],
+      _formData['request_comment'],
+      _formData['employee_comment'],
+    ]));
     final requestDateLabel = _formatDate(date);
 
     final userId =
@@ -1114,7 +1304,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                         ),
                                         const Spacer(),
                                         Text(
-                                          '${comment.characters.length}/50',
+                                          '${apiComment.characters.length}/50',
                                           style: GoogleFonts.poppins(
                                             fontSize: 11.sp,
                                             fontWeight: FontWeight.w500,
@@ -1139,7 +1329,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                             width: 1),
                                       ),
                                       child: Text(
-                                        comment,
+                                        apiComment,
                                         maxLines: null,
                                         overflow: TextOverflow.visible,
                                         style: GoogleFonts.poppins(
@@ -1221,6 +1411,8 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                               userIds: [userId],
                               variant: ApprovalActionButtonsVariant.pill,
                               showHrApproveConfirmation: true,
+                              useProvidedComment: true,
+                              commentProvider: () => apiComment,
                               pillWidth: pillWidth,
                               pillHeight: 36.w,
                               pillSpacing: 24.w,
@@ -1311,7 +1503,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
       textAlign: align,
       style: GoogleFonts.poppins(
         fontSize: size ?? 14.sp,
-        fontWeight: weight ?? FontWeight.w800,
+        fontWeight: weight ?? FontWeight.w700,
         color: color ?? const Color(0xFF0E0E0E),
         letterSpacing: 0.1,
       ),
@@ -1325,7 +1517,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
       text,
       style: GoogleFonts.poppins(
         fontSize: 11.sp,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
         color: const Color(0xFFB4B4B4),
       ),
     );
@@ -1353,7 +1545,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                       'PETTYCASH DETAILS',
                       style: GoogleFonts.poppins(
                         fontSize: 15.sp,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                         color: const Color(0xFF0E0E0E),
                         letterSpacing: 0.6,
                       ),
@@ -1405,7 +1597,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                                           children: [
                                             _value(description,
                                                 size: 14.sp,
-                                                weight: FontWeight.w900),
+                                                weight: FontWeight.w700),
                                             SizedBox(height: 6.w),
                                             _label(_formatDate(lineDate)),
                                           ],
@@ -1415,7 +1607,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                                       _value(
                                         _formatAmount(amount),
                                         size: 14.sp,
-                                        weight: FontWeight.w900,
+                                        weight: FontWeight.w700,
                                         color: const Color(0xFF15A98A),
                                       ),
                                     ],
@@ -1442,7 +1634,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       _value(projectName,
-                                          size: 14.sp, weight: FontWeight.w900),
+                                          size: 14.sp, weight: FontWeight.w700),
                                       SizedBox(height: 6.w),
                                       _label(_formatDate(date)),
                                     ],
@@ -1452,7 +1644,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                                 _value(
                                   _formatAmount(''),
                                   size: 14.sp,
-                                  weight: FontWeight.w900,
+                                  weight: FontWeight.w700,
                                   color: const Color(0xFF15A98A),
                                 ),
                               ],

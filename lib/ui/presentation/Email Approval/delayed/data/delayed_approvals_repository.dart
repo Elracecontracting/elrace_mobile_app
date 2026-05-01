@@ -117,11 +117,24 @@ class DelayedApprovalsRepository {
     final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
 
     try {
-      final request = http.Request('GET', url)
-        ..headers.addAll(_buildHeaders(token))
-        ..body = body;
+      http.Response response = await _sendRorRequest(
+        method: 'GET',
+        url: url,
+        token: token,
+        body: body,
+      );
 
-      final response = await http.Response.fromStream(await request.send());
+      if (response.statusCode == 405) {
+        if (kDebugMode) {
+          debugPrint('🟣 [DELAYED ROR] GET returned 405, retrying with POST');
+        }
+        response = await _sendRorRequest(
+          method: 'POST',
+          url: url,
+          token: token,
+          body: body,
+        );
+      }
 
       if (kDebugMode) {
         debugPrint(
@@ -139,18 +152,92 @@ class DelayedApprovalsRepository {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final parsed = DelayedRorResponse.fromJson(data);
+        final directRor = _extractDirectRorPercentage(data);
+        final effectiveRor = directRor ?? parsed.rorPercentage;
+        final normalized = DelayedRorResponse(
+          hrCount: parsed.hrCount,
+          rfqCount: parsed.rfqCount,
+          invoiceCount: parsed.invoiceCount,
+          pettyCashCount: parsed.pettyCashCount,
+          rorPercentage: effectiveRor,
+          hrRor: parsed.hrRor,
+          rfqRor: parsed.rfqRor,
+          invoiceRor: parsed.invoiceRor,
+          pettyCashRor: parsed.pettyCashRor,
+        );
         if (kDebugMode) {
           debugPrint(
-            '🟣 [DELAYED ROR] Parsed => hr=${parsed.hrCount}, rfq=${parsed.rfqCount}, pettyCash=${parsed.pettyCashCount}, invoice=${parsed.invoiceCount}, ror=${parsed.rorPercentage}%',
+            '🟣 [DELAYED ROR] Parsed => ror=${normalized.rorPercentage}% (direct=${directRor ?? 'n/a'})'
+            ' | hrRor=${normalized.hrRor}%, rfqRor=${normalized.rfqRor}%, invoiceRor=${normalized.invoiceRor}%, pettyCashRor=${normalized.pettyCashRor}%'
+            ' | hrCount=${normalized.hrCount}, rfqCount=${normalized.rfqCount}, invoiceCount=${normalized.invoiceCount}, pettyCashCount=${normalized.pettyCashCount}',
           );
         }
-        return parsed;
+        return normalized;
       } else {
         throw Exception('Failed to fetch delayed ROR: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error fetching delayed ROR: $e');
     }
+  }
+
+  Future<http.Response> _sendRorRequest({
+    required String method,
+    required Uri url,
+    required String token,
+    required String body,
+  }) async {
+    final request = http.Request(method, url)
+      ..headers.addAll(_buildHeaders(token))
+      ..body = body;
+
+    final response = await http.Response.fromStream(await request.send());
+
+    if (kDebugMode) {
+      debugPrint(
+          '🟣 [DELAYED ROR] method=$method status=${response.statusCode} bytes=${response.body.length}');
+    }
+
+    return response;
+  }
+
+  int? _extractDirectRorPercentage(dynamic decoded) {
+    if (decoded is! Map) return null;
+    final result = decoded['result'];
+    if (result is! Map) return null;
+    final data = result['data'];
+    if (data is! Map) return null;
+
+    final rorField = data['ror'] ??
+        data['ror_percentage'] ??
+        data['response_rate'] ??
+        data['percentage'];
+
+    if (rorField == null) return null;
+
+    // New shape: data.ror is a map {overall, hr, rfq, invoice, petty_cash}
+    if (rorField is Map) {
+      final overall = rorField['overall'];
+      return _decimalToPercent(overall);
+    }
+
+    return _decimalToPercent(rorField);
+  }
+
+  /// Converts a value to an integer percentage.
+  /// Treats values <= 1.5 as decimals (0.26 → 26), otherwise as already-percent.
+  int? _decimalToPercent(dynamic raw) {
+    if (raw == null) return null;
+    double? value;
+    if (raw is num) {
+      value = raw.toDouble();
+    } else if (raw is String) {
+      value = double.tryParse(raw.trim().replaceAll('%', ''));
+    }
+    if (value == null) return null;
+    // If value looks like a decimal ratio (e.g. 0.26), multiply by 100
+    if (value <= 1.5) value = value * 100;
+    return value.round().clamp(0, 9999);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -206,7 +293,7 @@ class DelayedApprovalsRepository {
   /// match backend variants without breaking existing behavior.
   Future<DelayedAllPageResult> fetchAllPage({
     required int page,
-    int pageSize = 20,
+    int pageSize = 10,
   }) async {
     final token = _requireToken();
     final url = Uri.parse('$_baseUrl/my_delayed_approvals/all').replace(

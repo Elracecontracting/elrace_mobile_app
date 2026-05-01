@@ -142,7 +142,6 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                             await provider.createReport(
                               title: reportNameController.text.trim(),
                               folderID: _folder!.id,
-                              reportType: selectedReportType,
                             );
                             await _loadReports();
                             if (mounted) {
@@ -2000,7 +1999,6 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                     await provider.createReport(
                                       title: widget.reportName,
                                       folderID: widget.folderId!,
-                                      reportType: widget.reportType,
                                     );
 
                                     // Upload photo items to server via API

@@ -897,27 +897,13 @@ class _AttendancePageState extends State<AttendancePage> {
                             ),
                           ),
                         ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${employee.totalPresentDays}/$monthDays',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: ratioColor,
-                              ),
-                            ),
-                            Text(
-                              '$absentDays absent',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF9AA0A6),
-                              ),
-                            ),
-                          ],
+                        Text(
+                          '${employee.totalPresentDays}/$monthDays',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: ratioColor,
+                          ),
                         ),
                         const SizedBox(width: 6),
                         Icon(

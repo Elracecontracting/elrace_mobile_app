@@ -193,12 +193,31 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
     };
 
     final url = Uri.parse('https://erp.elrace.com/api/get_rfq_details');
+    final commentParam = _pick([
+      _formData['comment'],
+      widget.initialData?['comment'],
+      _formData['note'],
+      widget.initialData?['note'],
+      _formData['description'],
+      widget.initialData?['description'],
+    ]);
     final body = jsonEncode({
       'jsonrpc': '2.0',
       'params': {
         'rfq_id': int.tryParse(widget.requestId),
+        'comment': commentParam,
       },
     });
+
+    // cURL debug
+    debugPrint('\n==== RFQ DETAILS REQUEST ====');
+    debugPrint('curl -X GET "$url" \\');
+    headers.forEach((k, v) {
+      final safe = k == 'Authorization' ? 'Bearer [TOKEN]' : v;
+      debugPrint('  -H "$k: $safe" \\');
+    });
+    debugPrint('  -d \'$body\'');
+    debugPrint('=========================\n');
 
     try {
       final request = http.Request('GET', url)
@@ -207,6 +226,16 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
+
+      // raw response logging
+      debugPrint('\n==== RFQ DETAILS RESPONSE (status: ${response.statusCode}) ====');
+      final raw = response.body;
+      const chunk = 800;
+      for (var i = 0; i < raw.length; i += chunk) {
+        debugPrint(raw.substring(i, i + chunk > raw.length ? raw.length : i + chunk));
+      }
+      debugPrint('=========================\n');
+
       final data = jsonDecode(response.body);
 
       if (data['result'] != null) {

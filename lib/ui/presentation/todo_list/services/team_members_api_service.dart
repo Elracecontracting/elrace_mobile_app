@@ -123,7 +123,7 @@ class TeamMembersApiService {
   TeamMembersApiService._();
 
   static const String _baseUrl = 'https://erp.elrace.com/api';
-  static const String _employeeListEndpoint = '/employee/listx';
+  static const String _employeeListEndpoint = '/employee/list';
 
   // Cache for team members
   List<TeamMember>? _cachedMembers;

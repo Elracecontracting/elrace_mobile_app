@@ -802,9 +802,14 @@ class PdfService {
               pw.Container(
                 height: rowHeight,
                 alignment: pw.Alignment.center,
-                child: (reportDetail.reportItems[i].type != "text")
-                    ? pw.Image(imageMap[reportDetail.reportItems[i].image]!)
-                    : pw.Text(""),
+                child: () {
+                  final img = imageMap[reportDetail.reportItems[i].image];
+                  if (reportDetail.reportItems[i].type != 'text' &&
+                      img != null) {
+                    return pw.Image(img);
+                  }
+                  return pw.Text('');
+                }(),
               ),
               pw.Container(
                 height: rowHeight,

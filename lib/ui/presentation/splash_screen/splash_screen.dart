@@ -14,7 +14,6 @@ import 'package:el_race/core/security/device_security_service.dart';
 import 'package:provider/provider.dart';
 import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provider.dart';
 import 'package:video_player/video_player.dart';
-import 'package:el_race/resources/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -268,7 +267,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryColor,
+      backgroundColor: Colors.white,
       body: _isVideoReady
           ? SizedBox.expand(
               child: FittedBox(
@@ -280,7 +279,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
             )
-          : const SizedBox.expand(), // Dark bg while video loads (< 100ms)
+          : const SizedBox.expand(),
     );
   }
 

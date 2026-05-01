@@ -15,7 +15,7 @@ class InvoiceMyActionsScreen extends StatefulWidget {
 
 class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen>
     with MyActionsPaginationMixin<InvoiceMyActionsScreen> {
-  final DateFormat _updatedDateFormat = DateFormat('MM/dd/yyyy');
+  final DateFormat _updatedDateFormat = DateFormat('dd/MM/yyyy');
 
   @override
   MyActionsType get actionsType => MyActionsType.invoice;

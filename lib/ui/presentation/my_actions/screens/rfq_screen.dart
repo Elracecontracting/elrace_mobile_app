@@ -16,7 +16,7 @@ class RfqScreen extends StatefulWidget {
 class _RfqScreenState extends State<RfqScreen>
     with MyActionsPaginationMixin<RfqScreen> {
   final DateFormat _sectionDateFormat = DateFormat('dd/MM/yyyy');
-  final DateFormat _updatedDateFormat = DateFormat('MM/dd/yyyy');
+  final DateFormat _updatedDateFormat = DateFormat('dd/MM/yyyy');
 
   @override
   MyActionsType get actionsType => MyActionsType.rfq;

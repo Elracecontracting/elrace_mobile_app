@@ -44,10 +44,10 @@ class _TimesheetScreenState extends State<TimesheetScreen>
   }
 
   String _formatDate(String? dateRaw) {
-    if (dateRaw == null || dateRaw.trim().isEmpty) return '-- -- ----';
+    if (dateRaw == null || dateRaw.trim().isEmpty) return '--/--/----';
     final parsed = DateTime.tryParse(dateRaw);
     if (parsed == null) return dateRaw;
-    return DateFormat('dd MMM yyyy').format(parsed);
+    return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
   @override

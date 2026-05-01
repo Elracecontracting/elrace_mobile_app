@@ -533,11 +533,17 @@ class DelayedDetailsResponse {
 
 /// ROR response from /api/my_delayed_approvals/ror
 class DelayedRorResponse {
-  final int hrCount;
-  final int rfqCount;
-  final int invoiceCount;
-  final int pettyCashCount;
+  final int? hrCount;
+  final int? rfqCount;
+  final int? invoiceCount;
+  final int? pettyCashCount;
   final int rorPercentage;
+
+  // Per-category ROR percentages (from new API shape)
+  final int? hrRor;
+  final int? rfqRor;
+  final int? invoiceRor;
+  final int? pettyCashRor;
 
   const DelayedRorResponse({
     required this.hrCount,
@@ -545,6 +551,10 @@ class DelayedRorResponse {
     required this.invoiceCount,
     required this.pettyCashCount,
     required this.rorPercentage,
+    this.hrRor,
+    this.rfqRor,
+    this.invoiceRor,
+    this.pettyCashRor,
   });
 
   factory DelayedRorResponse.fromJson(Map<String, dynamic> json) {
@@ -556,8 +566,10 @@ class DelayedRorResponse {
         : <String, dynamic>{};
 
     final rorNode = data['ror'];
-    final rorMap = rorNode is Map<String, dynamic>
-        ? rorNode
+    // New API shape: ror is a map {overall, hr, rfq, invoice, petty_cash}
+    final rorIsObject = rorNode is Map<String, dynamic>;
+    final rorMap = rorIsObject
+        ? rorNode as Map<String, dynamic>
         : (data['response_rate'] is Map<String, dynamic>
             ? data['response_rate'] as Map<String, dynamic>
             : <String, dynamic>{});
@@ -568,6 +580,23 @@ class DelayedRorResponse {
         : (data['counts'] is Map<String, dynamic>
             ? data['counts'] as Map<String, dynamic>
             : data);
+
+    final hasCounters = _hasAnyKey(countersMap, const [
+      'hr',
+      'human_resources',
+      'hr_count',
+      'rfq',
+      'rfqs',
+      'rfq_count',
+      'invoice',
+      'invoices',
+      'invoice_count',
+      'invoices_count',
+      'petty_cash',
+      'pettycash',
+      'petty_cash_count',
+      'pettycash_count',
+    ]);
 
     final hrCount = _readIntFromKeys(countersMap, [
       'hr',
@@ -592,16 +621,55 @@ class DelayedRorResponse {
       'pettycash_count',
     ]);
 
-    final rorPercentage = _readRorPercentage(rorMap, data);
+    final rorPercentage = rorIsObject
+        ? _decimalKeyToPercent(rorMap, 'overall')
+        : _readRorPercentage(rorMap, data);
+
+    // Per-category ROR from new API shape
+    final hrRor = rorIsObject ? _decimalKeyToPercent(rorMap, 'hr') : null;
+    final rfqRor = rorIsObject ? _decimalKeyToPercent(rorMap, 'rfq') : null;
+    final invoiceRor =
+        rorIsObject ? _decimalKeyToPercent(rorMap, 'invoice') : null;
+    final pettyCashRor =
+        rorIsObject ? _decimalKeyToPercent(rorMap, 'petty_cash') : null;
 
     return DelayedRorResponse(
-      hrCount: hrCount,
-      rfqCount: rfqCount,
-      invoiceCount: invoiceCount,
-      pettyCashCount: pettyCashCount,
-      rorPercentage: rorPercentage,
+      hrCount: hasCounters ? hrCount : null,
+      rfqCount: hasCounters ? rfqCount : null,
+      invoiceCount: hasCounters ? invoiceCount : null,
+      pettyCashCount: hasCounters ? pettyCashCount : null,
+      rorPercentage: rorPercentage ?? 0,
+      hrRor: hrRor,
+      rfqRor: rfqRor,
+      invoiceRor: invoiceRor,
+      pettyCashRor: pettyCashRor,
     );
   }
+}
+
+bool _hasAnyKey(Map<String, dynamic> source, List<String> keys) {
+  for (final key in keys) {
+    if (source.containsKey(key) && source[key] != null) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Reads a key from [map] and converts its decimal value to an integer
+/// percentage. Values <= 1.5 are treated as ratios (0.26 → 26).
+int? _decimalKeyToPercent(Map<String, dynamic> map, String key) {
+  final raw = map[key];
+  if (raw == null) return null;
+  double? value;
+  if (raw is num) {
+    value = raw.toDouble();
+  } else if (raw is String) {
+    value = double.tryParse(raw.trim().replaceAll('%', ''));
+  }
+  if (value == null) return null;
+  if (value <= 1.5) value = value * 100;
+  return value.round().clamp(0, 9999);
 }
 
 int _readRorPercentage(
@@ -618,6 +686,7 @@ int _readRorPercentage(
   if (fromPrimary != null) return fromPrimary;
 
   final fromFallback = _readPercentageFromKeys(fallback, const [
+    'ror',
     'ror_percentage',
     'response_rate_percentage',
     'response_rate',

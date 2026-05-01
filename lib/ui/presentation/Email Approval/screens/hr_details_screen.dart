@@ -1420,13 +1420,16 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
               border: Border.all(color: const Color(0xFFDADADA), width: 1),
             ),
             child: Text(
-              comment,
+              comment.trim().isEmpty ? 'No comment' : comment,
               maxLines: null,
               overflow: TextOverflow.visible,
               style: GoogleFonts.poppins(
                 fontSize: 12.sp,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF3B3B3B),
+                fontWeight: comment.trim().isEmpty ? FontWeight.w400 : FontWeight.w500,
+                color: comment.trim().isEmpty
+                    ? const Color(0xFFAAAAAA)
+                    : const Color(0xFF3B3B3B),
+                fontStyle: comment.trim().isEmpty ? FontStyle.italic : FontStyle.normal,
               ),
             ),
           ),

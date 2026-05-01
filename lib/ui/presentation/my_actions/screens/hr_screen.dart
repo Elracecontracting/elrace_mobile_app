@@ -47,7 +47,7 @@ class _HrScreenState extends State<HrScreen>
     if (dateRaw == null || dateRaw.trim().isEmpty) return '--/--/----';
     final parsed = DateTime.tryParse(dateRaw);
     if (parsed == null) return dateRaw;
-    return DateFormat('MM/dd/yyyy').format(parsed);
+    return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
   @override

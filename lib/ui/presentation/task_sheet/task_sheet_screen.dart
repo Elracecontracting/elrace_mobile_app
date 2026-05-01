@@ -4,6 +4,7 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/task_sheet/TaskDetailsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/add_task_sheet.dart';
+import 'package:el_race/ui/presentation/todo_list/services/team_members_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,6 +23,7 @@ class TaskSheetPage extends StatefulWidget {
 
 class _TaskSheetPageState extends State<TaskSheetPage> {
   List<dynamic> tasks = [];
+  List<String> _dropdownEmployees = [];
   bool isLoading = true;
   String? errorMessage;
   String? _selectedEmployee;
@@ -30,6 +32,24 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
   void initState() {
     super.initState();
     fetchTasks();
+    _fetchDropdownEmployees();
+  }
+
+  Future<void> _fetchDropdownEmployees() async {
+    try {
+      final members = await TeamMembersApiService.instance.getTeamMembers();
+      if (!mounted) return;
+      final names = members
+          .map((m) => m.name.replaceFirst(RegExp(r'^\d+\s+'), '').trim())
+          .where((n) => n.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+      debugPrint('👥 Dropdown employees from API (${names.length}): $names');
+      setState(() => _dropdownEmployees = names);
+    } catch (e) {
+      debugPrint('❌ Failed to load dropdown employees: $e');
+    }
   }
 
   Future<void> fetchTasks() async {
@@ -86,8 +106,17 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
       }
     });
 
+    debugPrint('\n📡 ===== EMPLOYEE DROPDOWN API =====');
+    debugPrint('URL: $url');
+    debugPrint('METHOD: POST');
+    debugPrint('HEADERS: {Content-Type: ${headers["Content-Type"]}, Authorization: Bearer ***}');
+    debugPrint('BODY: $body');
+
     try {
       final response = await http.post(url, headers: headers, body: body);
+      debugPrint('STATUS: ${response.statusCode}');
+      debugPrint('RESPONSE: ${response.body}');
+      debugPrint('===================================\n');
       final decoded = jsonDecode(response.body);
 
       if (response.statusCode == 200 && decoded["result"] != null) {
@@ -288,8 +317,9 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                     SizedBox(height: 12.h),
                     _EmployeeDropdown(
                       value: _selectedEmployee,
-                      tasks: tasks,
+                      employees: _dropdownEmployees,
                       onChanged: (value) {
+                        debugPrint('👤 Employee dropdown selected: $value');
                         setState(() {
                           _selectedEmployee = value;
                         });
@@ -368,31 +398,18 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
 
 class _EmployeeDropdown extends StatelessWidget {
   final String? value;
-  final List<dynamic> tasks;
+  final List<String> employees;
   final ValueChanged<String?> onChanged;
 
   const _EmployeeDropdown({
     required this.value,
-    required this.tasks,
+    required this.employees,
     required this.onChanged,
   });
 
-  List<String> _employeeOptions() {
-    final set = <String>{};
-    for (final t in tasks) {
-      if (t is! Map) continue;
-      final employeeName = (t['employee_name'] ?? '').toString().trim();
-      final name = (t['name'] ?? '').toString().trim();
-      final label = employeeName.isNotEmpty ? employeeName : name;
-      if (label.isNotEmpty) set.add(label);
-    }
-    final list = set.toList()..sort();
-    return list;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final options = _employeeOptions();
+    final options = employees;
     return Container(
       width: double.infinity,
       height: 40.h,
@@ -443,12 +460,13 @@ class _EmployeeDropdown extends StatelessWidget {
             ),
           ),
           buttonStyleData: ButtonStyleData(
-            height: 56.h,
+            height: 40.h,
             padding: EdgeInsets.zero,
             decoration: const BoxDecoration(color: Colors.transparent),
           ),
           dropdownStyleData: DropdownStyleData(
             elevation: 2,
+            offset: Offset(0, 4.h),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16.r),
