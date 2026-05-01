@@ -530,3 +530,121 @@ class DelayedDetailsResponse {
     return items;
   }
 }
+
+/// ROR response from /api/my_delayed_approvals/ror
+class DelayedRorResponse {
+  final int hrCount;
+  final int rfqCount;
+  final int invoiceCount;
+  final int pettyCashCount;
+  final int rorPercentage;
+
+  const DelayedRorResponse({
+    required this.hrCount,
+    required this.rfqCount,
+    required this.invoiceCount,
+    required this.pettyCashCount,
+    required this.rorPercentage,
+  });
+
+  factory DelayedRorResponse.fromJson(Map<String, dynamic> json) {
+    final result = json['result'] ?? {};
+    final data = result is Map<String, dynamic>
+        ? (result['data'] is Map<String, dynamic>
+            ? result['data'] as Map<String, dynamic>
+            : result)
+        : <String, dynamic>{};
+
+    final rorNode = data['ror'];
+    final rorMap = rorNode is Map<String, dynamic>
+        ? rorNode
+        : (data['response_rate'] is Map<String, dynamic>
+            ? data['response_rate'] as Map<String, dynamic>
+            : <String, dynamic>{});
+
+    final countersNode = data['counters'];
+    final countersMap = countersNode is Map<String, dynamic>
+        ? countersNode
+        : (data['counts'] is Map<String, dynamic>
+            ? data['counts'] as Map<String, dynamic>
+            : data);
+
+    final hrCount = _readIntFromKeys(countersMap, [
+      'hr',
+      'human_resources',
+      'hr_count',
+    ]);
+    final rfqCount = _readIntFromKeys(countersMap, [
+      'rfq',
+      'rfqs',
+      'rfq_count',
+    ]);
+    final invoiceCount = _readIntFromKeys(countersMap, [
+      'invoice',
+      'invoices',
+      'invoice_count',
+      'invoices_count',
+    ]);
+    final pettyCashCount = _readIntFromKeys(countersMap, [
+      'petty_cash',
+      'pettycash',
+      'petty_cash_count',
+      'pettycash_count',
+    ]);
+
+    final rorPercentage = _readRorPercentage(rorMap, data);
+
+    return DelayedRorResponse(
+      hrCount: hrCount,
+      rfqCount: rfqCount,
+      invoiceCount: invoiceCount,
+      pettyCashCount: pettyCashCount,
+      rorPercentage: rorPercentage,
+    );
+  }
+}
+
+int _readRorPercentage(
+  Map<String, dynamic> primary,
+  Map<String, dynamic> fallback,
+) {
+  final fromPrimary = _readPercentageFromKeys(primary, const [
+    'percentage',
+    'percent',
+    'value',
+    'ror',
+    'response_rate',
+  ]);
+  if (fromPrimary != null) return fromPrimary;
+
+  final fromFallback = _readPercentageFromKeys(fallback, const [
+    'ror_percentage',
+    'response_rate_percentage',
+    'response_rate',
+    'percentage',
+  ]);
+  if (fromFallback != null) return fromFallback;
+
+  return 0;
+}
+
+int? _readPercentageFromKeys(Map<String, dynamic> source, List<String> keys) {
+  for (final key in keys) {
+    final value = source[key];
+    final parsed = _parsePercent(value);
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
+int? _parsePercent(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value.clamp(0, 100);
+  if (value is num) return value.round().clamp(0, 100);
+  if (value is String) {
+    final normalized = value.trim().replaceAll('%', '');
+    final parsed = double.tryParse(normalized);
+    if (parsed != null) return parsed.round().clamp(0, 100);
+  }
+  return null;
+}

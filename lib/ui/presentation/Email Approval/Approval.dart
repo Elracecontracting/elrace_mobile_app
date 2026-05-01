@@ -6,6 +6,7 @@ import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/data/delayed_approvals_repository.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/delayed/models/delayed_approval_model.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/screens/delayed_requests_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/screens/hr_details_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/all_approvals_overview.dart';
@@ -71,6 +72,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   // Delayed requests count from API
   int delayedCount = 0;
   bool _delayedLoading = false;
+  DelayedRorResponse? _rorData;
   final DelayedApprovalsRepository _delayedRepo = DelayedApprovalsRepository();
   bool _isScrolled = false;
   final Map<String, bool> _categoryNotificationDots = {
@@ -89,6 +91,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     // Delayed count is also fired in background.
     _loadAllCategoriesInBackground();
     _fetchDelayedCount();
+    _fetchRorData();
     _loadCategoryNotificationDots();
   }
 
@@ -327,6 +330,18 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     }
   }
 
+  Future<void> _fetchRorData() async {
+    try {
+      final ror = await _delayedRepo.fetchRor();
+      if (!mounted) return;
+      setState(() {
+        _rorData = ror;
+      });
+    } catch (e) {
+      debugPrint('Failed to fetch delayed ROR: $e');
+    }
+  }
+
   bool _isNotificationUnread(Map<String, dynamic> notification) {
     final isReadValue = notification['isRead'] ?? notification['is_read'];
     if (isReadValue is bool) return !isReadValue;
@@ -470,6 +485,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     debugPrint('🔁 [ApprovalsScreen] Refresh requested after approve/reject');
     _loadAllCategoriesInBackground(force: true);
     _fetchDelayedCount();
+    _fetchRorData();
     _loadCategoryNotificationDots();
   }
 
@@ -667,6 +683,11 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         rfqCount: rfqItems.length,
         hrCount: hrItems.length,
         delayedCount: delayedCount,
+        rorInvoiceCount: _rorData?.invoiceCount,
+        rorPettyCashCount: _rorData?.pettyCashCount,
+        rorRfqCount: _rorData?.rfqCount,
+        rorHrCount: _rorData?.hrCount,
+        rorPercentage: _rorData?.rorPercentage,
         onHrTestCasesTap: kDebugMode ? _openHrRequestTestCases : null,
         onDelayedTap: () {
           Navigator.push(

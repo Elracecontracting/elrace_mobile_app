@@ -9,6 +9,11 @@ class AllApprovalsOverview extends StatelessWidget {
   final int rfqCount;
   final int hrCount;
   final int delayedCount;
+  final int? rorInvoiceCount;
+  final int? rorPettyCashCount;
+  final int? rorRfqCount;
+  final int? rorHrCount;
+  final int? rorPercentage;
   final VoidCallback? onDelayedTap;
   final VoidCallback? onHrTestCasesTap;
 
@@ -19,6 +24,11 @@ class AllApprovalsOverview extends StatelessWidget {
     required this.rfqCount,
     required this.hrCount,
     required this.delayedCount,
+    this.rorInvoiceCount,
+    this.rorPettyCashCount,
+    this.rorRfqCount,
+    this.rorHrCount,
+    this.rorPercentage,
     this.onDelayedTap,
     this.onHrTestCasesTap,
   });
@@ -50,10 +60,11 @@ class AllApprovalsOverview extends StatelessWidget {
             ),
             SizedBox(height: 20.h),
             _RorCard(
-              hrCount: hrCount,
-              rfqCount: rfqCount,
-              pettyCashCount: pettyCashCount,
-              invoiceCount: invoiceCount,
+              hrCount: rorHrCount ?? hrCount,
+              rfqCount: rorRfqCount ?? rfqCount,
+              pettyCashCount: rorPettyCashCount ?? pettyCashCount,
+              invoiceCount: rorInvoiceCount ?? invoiceCount,
+              rorPercentage: rorPercentage,
             ),
             SizedBox(height: 14.h),
             _DelayedRequestCard(value: delayedCount, onTap: onDelayedTap),
@@ -319,12 +330,14 @@ class _RorCard extends StatelessWidget {
   final int rfqCount;
   final int pettyCashCount;
   final int invoiceCount;
+  final int? rorPercentage;
 
   const _RorCard({
     required this.hrCount,
     required this.rfqCount,
     required this.pettyCashCount,
     required this.invoiceCount,
+    this.rorPercentage,
   });
 
   @override
@@ -332,7 +345,7 @@ class _RorCard extends StatelessWidget {
     final chartValues = <int>[hrCount, rfqCount, pettyCashCount, invoiceCount];
     final maxValue = chartValues.fold<int>(0, (m, v) => v > m ? v : m);
     final highlightedIndex = chartValues.indexOf(maxValue);
-    final ror = _calculateRorPercentage();
+    final ror = rorPercentage ?? _calculateRorPercentage();
 
     return Container(
       width: double.infinity,
@@ -365,7 +378,7 @@ class _RorCard extends StatelessWidget {
                 'ROR',
                 style: GoogleFonts.poppins(
                   fontSize: 20.sp,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   color: const Color(0xFF1A1A1A),
                   height: 1,
                 ),
@@ -444,7 +457,7 @@ class _RorCard extends StatelessWidget {
                       '+$ror%',
                       style: GoogleFonts.poppins(
                         fontSize: 42.sp / 2,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         color: const Color(0xFF111111),
                         height: 1,
                       ),
@@ -852,7 +865,7 @@ class _DelayedRequestCardState extends State<_DelayedRequestCard>
                             widget.value.toString(),
                             style: GoogleFonts.poppins(
                               fontSize: 30.sp,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: Colors.black,
                               height: 1.0,
                             ),

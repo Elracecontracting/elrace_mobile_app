@@ -107,6 +107,53 @@ class DelayedApprovalsRepository {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // 2.5 ROR  →  /api/my_delayed_approvals/ror
+  //    Returns response-rate values used in the approval overview ROR card.
+  // ─────────────────────────────────────────────────────────────
+  Future<DelayedRorResponse> fetchRor() async {
+    final token = _requireToken();
+    final url = Uri.parse('$_baseUrl/my_delayed_approvals/ror');
+
+    final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
+
+    try {
+      final request = http.Request('GET', url)
+        ..headers.addAll(_buildHeaders(token))
+        ..body = body;
+
+      final response = await http.Response.fromStream(await request.send());
+
+      if (kDebugMode) {
+        debugPrint(
+            'DELAYED ROR status=${response.statusCode} bytes=${response.body.length}');
+        debugPrint('🟣 [DELAYED ROR] Raw response start');
+        const chunkSize = 800;
+        final raw = response.body;
+        for (var i = 0; i < raw.length; i += chunkSize) {
+          final end = (i + chunkSize < raw.length) ? i + chunkSize : raw.length;
+          debugPrint(raw.substring(i, end));
+        }
+        debugPrint('🟣 [DELAYED ROR] Raw response end');
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final parsed = DelayedRorResponse.fromJson(data);
+        if (kDebugMode) {
+          debugPrint(
+            '🟣 [DELAYED ROR] Parsed => hr=${parsed.hrCount}, rfq=${parsed.rfqCount}, pettyCash=${parsed.pettyCashCount}, invoice=${parsed.invoiceCount}, ror=${parsed.rorPercentage}%',
+          );
+        }
+        return parsed;
+      } else {
+        throw Exception('Failed to fetch delayed ROR: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching delayed ROR: $e');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // 3. ALL  →  /api/my_delayed_approvals/all
   //    Supports pagination via limit/offset in params body.
   // ─────────────────────────────────────────────────────────────
