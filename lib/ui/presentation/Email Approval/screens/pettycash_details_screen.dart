@@ -206,6 +206,10 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     super.initState();
     if (widget.initialData != null) {
       _formData = Map<String, dynamic>.from(widget.initialData!);
+      final maybeAttachments = _formData['attachment_ids'];
+      if (maybeAttachments is List) {
+        _attachmentIds = maybeAttachments;
+      }
     }
     _fetchPettyCashDetails();
   }
@@ -270,20 +274,20 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
         print('[PETTYCASH] PARSED formData: $formData');
         print('[PETTYCASH] PARSED attachmentIds: $attachmentList');
         print('[PETTYCASH] COMMENT CANDIDATES: ${jsonEncode({
-          'api_comment': formData['api_comment'],
-          'comment': formData['comment'],
-          'comments': formData['comments'],
-          'note': formData['note'],
-          'notes': formData['notes'],
-          'remark': formData['remark'],
-          'remarks': formData['remarks'],
-          'description': formData['description'],
-          'manager_comment': formData['manager_comment'],
-          'approver_comment': formData['approver_comment'],
-          'reviewer_comment': formData['reviewer_comment'],
-          'request_comment': formData['request_comment'],
-          'employee_comment': formData['employee_comment'],
-        })}');
+              'api_comment': formData['api_comment'],
+              'comment': formData['comment'],
+              'comments': formData['comments'],
+              'note': formData['note'],
+              'notes': formData['notes'],
+              'remark': formData['remark'],
+              'remarks': formData['remarks'],
+              'description': formData['description'],
+              'manager_comment': formData['manager_comment'],
+              'approver_comment': formData['approver_comment'],
+              'reviewer_comment': formData['reviewer_comment'],
+              'request_comment': formData['request_comment'],
+              'employee_comment': formData['employee_comment'],
+            })}');
 
         setState(() {
           final merged = Map<String, dynamic>.from(_formData);
@@ -573,10 +577,12 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
 
-    debugPrint('══════ [PETTYCASH] get_attachment_details ($attachmentId) ══════');
+    debugPrint(
+        '══════ [PETTYCASH] get_attachment_details ($attachmentId) ══════');
     debugPrint('STATUS: ${response.statusCode}');
     debugPrint('BODY: ${response.body}');
-    debugPrint('═══════════════════════════════════════════════════════════════');
+    debugPrint(
+        '═══════════════════════════════════════════════════════════════');
 
     final decoded = jsonDecode(response.body) as Map;
     final result = decoded['result'] as Map?;
@@ -622,10 +628,10 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
           rawName.toLowerCase() == 'attachment_id' ||
           rawName.toLowerCase() == 'false' ||
           rawName.toLowerCase() == 'null';
-        final fallbackName = hintName.isNotEmpty
+      final fallbackName = hintName.isNotEmpty
           ? hintName
           : _safe(_formData['name'], fallback: 'Petty Cash Attachment');
-        final fileName = looksLikeKey ? fallbackName : rawName;
+      final fileName = looksLikeKey ? fallbackName : rawName;
 
       if (publicUrl.isEmpty) {
         throw Exception('Attachment URL is empty');
@@ -743,12 +749,12 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     );
   }
 
-  Widget _label(String text, {TextAlign? align}) {
+  Widget _label(String text, {TextAlign? align, double? size}) {
     return Text(
       text,
       textAlign: align,
       style: GoogleFonts.poppins(
-        fontSize: 11.sp,
+        fontSize: size ?? 11.sp,
         fontWeight: FontWeight.w700,
         color: const Color(0xFFB4B4B4),
         letterSpacing: 0.2,
@@ -788,16 +794,16 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _value(description, size: 14.sp, weight: FontWeight.w700),
+                  _value(description, size: 11.sp, weight: FontWeight.w700),
                   SizedBox(height: 6.w),
-                  _label(_formatDate(lineDate)),
+                  _label(_formatDate(lineDate), size: 8.sp),
                 ],
               ),
             ),
             SizedBox(width: 12.w),
             _value(
               _formatAmount(amount),
-              size: 14.sp,
+              size: 11.sp,
               weight: FontWeight.w700,
               color: const Color(0xFF15A98A),
             ),
@@ -909,6 +915,17 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
 
     final lines = _formData['lines'] as List? ?? [];
     final linePages = _chunkLines(lines, 6);
+    final safePageIndex = linePages.isEmpty
+        ? 0
+        : _currentLinesPage.clamp(0, linePages.length - 1) as int;
+    final currentPageLineCount =
+        linePages.isEmpty ? 1 : linePages[safePageIndex].length;
+    final dividerCount =
+        currentPageLineCount > 0 ? currentPageLineCount - 1 : 0;
+    final lineSliderHeight = linePages.isNotEmpty
+        ? (24.w + (currentPageLineCount * 38.w) + (dividerCount * 19.w))
+            .clamp(84.w, 460.w)
+        : 84.w;
     final hasAttachments = _attachmentIds.isNotEmpty;
     final apiComment = _normalizeApiComment(_pick([
       _formData['api_comment'],
@@ -1185,7 +1202,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                               ),
                               SizedBox(height: 12.w),
                               SizedBox(
-                                height: 330.w,
+                                height: lineSliderHeight,
                                 child: linePages.isNotEmpty
                                     ? PageView.builder(
                                         controller: _linesPageController,
@@ -1200,39 +1217,44 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                           final pageLines =
                                               linePages[pageIndex];
                                           return _card(
-                                            child: ListView.builder(
-                                              padding: EdgeInsets.zero,
-                                              physics:
-                                                  const BouncingScrollPhysics(),
-                                              itemCount: pageLines.length,
-                                              itemBuilder: (context, i) {
-                                                final lineMap =
-                                                    pageLines[i] as Map? ?? {};
-                                                final description = _pick([
-                                                  lineMap['description'],
-                                                  lineMap['name'],
-                                                  projectName,
-                                                ], fallback: 'Project name');
-                                                final lineDate = _pick([
-                                                  lineMap['date'],
-                                                  lineMap['line_date'],
-                                                  date,
-                                                ]);
-                                                final amount = _pick([
-                                                  lineMap['amount'],
-                                                  lineMap['price'],
-                                                  lineMap['subtotal'],
-                                                  pettycashLimit,
-                                                ]);
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                for (int i = 0;
+                                                    i < pageLines.length;
+                                                    i++)
+                                                  () {
+                                                    final lineMap =
+                                                        pageLines[i] as Map? ??
+                                                            {};
+                                                    final description = _pick([
+                                                      lineMap['description'],
+                                                      lineMap['name'],
+                                                      projectName,
+                                                    ],
+                                                        fallback:
+                                                            'Project name');
+                                                    final lineDate = _pick([
+                                                      lineMap['date'],
+                                                      lineMap['line_date'],
+                                                      date,
+                                                    ]);
+                                                    final amount = _pick([
+                                                      lineMap['amount'],
+                                                      lineMap['price'],
+                                                      lineMap['subtotal'],
+                                                      pettycashLimit,
+                                                    ]);
 
-                                                return _lineItemTile(
-                                                  description: description,
-                                                  lineDate: lineDate,
-                                                  amount: amount,
-                                                  showDivider:
-                                                      i < pageLines.length - 1,
-                                                );
-                                              },
+                                                    return _lineItemTile(
+                                                      description: description,
+                                                      lineDate: lineDate,
+                                                      amount: amount,
+                                                      showDivider: i <
+                                                          pageLines.length - 1,
+                                                    );
+                                                  }(),
+                                              ],
                                             ),
                                           );
                                         },

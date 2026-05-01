@@ -1553,7 +1553,6 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         _pdfs[idx] = ReportPdfModel(
           fileId: current.fileId,
           id: current.id,
-          reportId: current.reportId,
           fileName: '$newName.pdf',
           createdAt: current.createdAt,
           reportLink: current.reportLink,

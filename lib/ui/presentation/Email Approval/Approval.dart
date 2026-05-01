@@ -168,7 +168,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       final text = value.toString().trim();
       if (text.isEmpty) continue;
       final normalized = text.toLowerCase();
-      if (normalized == 'null' || normalized == 'false' || normalized == 'true') {
+      if (normalized == 'null' ||
+          normalized == 'false' ||
+          normalized == 'true') {
         continue;
       }
       return text;
@@ -181,32 +183,29 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     List<dynamic> rawItems, {
     required String categoryLabel,
   }) {
-    return rawItems
-        .whereType<Map>()
-        .map((raw) {
-          final map = Map<String, dynamic>.from(raw);
-          final typeValue = map['type']?.toString().trim();
-          map['category'] = categoryLabel;
-          map['type'] = (typeValue != null && typeValue.isNotEmpty)
-              ? typeValue
-              : categoryLabel;
+    return rawItems.whereType<Map>().map((raw) {
+      final map = Map<String, dynamic>.from(raw);
+      final typeValue = map['type']?.toString().trim();
+      map['category'] = categoryLabel;
+      map['type'] = (typeValue != null && typeValue.isNotEmpty)
+          ? typeValue
+          : categoryLabel;
 
-          final existingComment = map['comment'];
-          final hasMeaningfulComment = existingComment != null &&
-              existingComment != false &&
-              existingComment != true &&
-              existingComment.toString().trim().isNotEmpty &&
-              existingComment.toString().toLowerCase() != 'null' &&
-              existingComment.toString().toLowerCase() != 'false' &&
-              existingComment.toString().toLowerCase() != 'true';
+      final existingComment = map['comment'];
+      final hasMeaningfulComment = existingComment != null &&
+          existingComment != false &&
+          existingComment != true &&
+          existingComment.toString().trim().isNotEmpty &&
+          existingComment.toString().toLowerCase() != 'null' &&
+          existingComment.toString().toLowerCase() != 'false' &&
+          existingComment.toString().toLowerCase() != 'true';
 
-          if (!hasMeaningfulComment) {
-            map['comment'] = _pickCommentValue(map);
-          }
+      if (!hasMeaningfulComment) {
+        map['comment'] = _pickCommentValue(map);
+      }
 
-          return map;
-        })
-        .toList(growable: false);
+      return map;
+    }).toList(growable: false);
   }
 
   Future<List<dynamic>> _fetchCategoryData(String groupType) async {
@@ -247,7 +246,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     debugPrint('[$groupType] status=${response.statusCode}');
 
-    if (groupType == 'petty_cash' || groupType == 'rfq' || groupType == 'invoice') {
+    if (groupType == 'petty_cash' ||
+        groupType == 'rfq' ||
+        groupType == 'invoice') {
       debugPrint('🧾 [MyApproval][$groupType] Raw response start');
       const chunkSize = 800;
       final raw = response.body;
@@ -404,8 +405,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   Future<void> _fetchRorData() async {
     try {
       final ror = await _delayedRepo.fetchRor();
-      final hasBreakdownCounts =
-          (ror.hrCount ?? 0) > 0 ||
+      final hasBreakdownCounts = (ror.hrCount ?? 0) > 0 ||
           (ror.rfqCount ?? 0) > 0 ||
           (ror.pettyCashCount ?? 0) > 0 ||
           (ror.invoiceCount ?? 0) > 0;
@@ -418,7 +418,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       });
     } catch (e) {
       debugPrint('Failed to fetch delayed ROR: $e');
-      debugPrint('🟡 [ROR SOURCE] Fallback => local tab counts + local formula');
+      debugPrint(
+          '🟡 [ROR SOURCE] Fallback => local tab counts + local formula');
     }
   }
 

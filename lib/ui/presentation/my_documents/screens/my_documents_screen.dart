@@ -1047,7 +1047,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     VoidCallback? onTap,
   }) {
     return Material(
-      color: selected ? const Color(0xFFEFF7FF) : Colors.transparent,
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Padding(
