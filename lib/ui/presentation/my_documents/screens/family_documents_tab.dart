@@ -1,9 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
+import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 /// Family Documents Tab
@@ -45,6 +50,44 @@ class FamilyDocumentsTab extends StatefulWidget {
   State<FamilyDocumentsTab> createState() => _FamilyDocumentsTabState();
 }
 
+class _InlineCaseOption {
+  const _InlineCaseOption({
+    required this.key,
+    required this.label,
+    required this.docs,
+  });
+
+  final String key;
+  final String label;
+  final List<_InlineDocRequirement> docs;
+}
+
+class _InlineDocRequirement {
+  const _InlineDocRequirement({
+    required this.field,
+    required this.label,
+    required this.type,
+  });
+
+  final String field;
+  final String label;
+  final String type;
+}
+
+class _InlineNationalityOption {
+  const _InlineNationalityOption({required this.id, required this.name});
+
+  final int id;
+  final String name;
+}
+
+class _InlinePickedFile {
+  const _InlinePickedFile({required this.path, required this.filename});
+
+  final String path;
+  final String filename;
+}
+
 class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   // Currently selected folder (null = show folders list)
   String? _selectedFolder;
@@ -54,6 +97,30 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
       PageController(viewportFraction: 0.82);
   final PageController _statsPageController =
       PageController(viewportFraction: 0.355);
+
+  // Inline add-request form state (same screen, no separate route)
+  bool _showInlineRequestForm = false;
+  bool _inlineInitLoading = false;
+  bool _inlineSubmitting = false;
+  String? _inlineInitError;
+
+  String? _inlineRelationship;
+  String? _inlineCaseKey;
+  int? _inlineNationalityId;
+  DateTime? _inlineDob;
+  String? _expandedDocField;
+
+  final TextEditingController _inlineNameController = TextEditingController();
+  final TextEditingController _inlineDobController = TextEditingController();
+
+  final Map<String, _InlinePickedFile> _inlinePickedFiles =
+      <String, _InlinePickedFile>{};
+  final Map<String, DateTime> _inlineDocExpiryDates = <String, DateTime>{};
+  List<_InlineCaseOption> _inlineCaseOptions = const <_InlineCaseOption>[];
+  List<_InlineNationalityOption> _inlineNationalities =
+      const <_InlineNationalityOption>[];
+  List<_InlineDocRequirement> _inlineRequiredDocs =
+      const <_InlineDocRequirement>[];
 
   List<Map<String, dynamic>> _liveFamilyDocuments() {
     final docs = widget.documents;
@@ -131,6 +198,416 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
         .toList(growable: false);
   }
 
+  String _normalizeToken(dynamic value) {
+    return (value ?? '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  Map<String, dynamic>? _extractResultMap(dynamic decoded) {
+    if (decoded is! Map) return null;
+
+    if (decoded['result'] is Map) {
+      return Map<String, dynamic>.from(decoded['result'] as Map);
+    }
+
+    if (decoded['status'] != null || decoded['data'] != null) {
+      return Map<String, dynamic>.from(decoded);
+    }
+
+    return null;
+  }
+
+  String _backendFamilyMemberValue(String? relationship) {
+    final normalized = (relationship ?? '').trim().toLowerCase();
+    if (normalized == 'spouse') return 'spouse';
+    if (normalized == 'child') return 'child';
+    return '';
+  }
+
+  Future<void> _pickDate({
+    required ValueChanged<DateTime> onPicked,
+    DateTime? initialDate,
+    DateTime? firstDate,
+    DateTime? lastDate,
+  }) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate ?? now,
+      firstDate: firstDate ?? now.subtract(const Duration(days: 365 * 80)),
+      lastDate: lastDate ?? DateTime(now.year + 50),
+    );
+    if (picked != null) {
+      onPicked(picked);
+    }
+  }
+
+  Future<void> _openInlineRequestForm() async {
+    setState(() {
+      _showInlineRequestForm = true;
+      _inlineRelationship = 'spouse';
+      _inlineCaseKey = null;
+      _inlineNationalityId = null;
+      _inlineDob = null;
+      _expandedDocField = null;
+      _inlineInitError = null;
+      _inlineCaseOptions = const <_InlineCaseOption>[];
+      _inlineNationalities = const <_InlineNationalityOption>[];
+      _inlineRequiredDocs = const <_InlineDocRequirement>[];
+      _inlinePickedFiles.clear();
+      _inlineDocExpiryDates.clear();
+      _inlineNameController.clear();
+      _inlineDobController.clear();
+    });
+
+    await _loadInlineInit('spouse');
+  }
+
+  void _closeInlineRequestForm() {
+    setState(() {
+      _showInlineRequestForm = false;
+      _expandedDocField = null;
+    });
+  }
+
+  Future<void> _onInlineRelationshipChanged(String? value) async {
+    if (value == null || value == _inlineRelationship) return;
+
+    setState(() {
+      _inlineRelationship = value;
+      _inlineCaseKey = null;
+      _inlineNationalityId = null;
+      _expandedDocField = null;
+      _inlineInitError = null;
+      _inlineCaseOptions = const <_InlineCaseOption>[];
+      _inlineNationalities = const <_InlineNationalityOption>[];
+      _inlineRequiredDocs = const <_InlineDocRequirement>[];
+      _inlinePickedFiles.clear();
+      _inlineDocExpiryDates.clear();
+    });
+
+    await _loadInlineInit(value);
+  }
+
+  Future<void> _loadInlineInit(String relationship) async {
+    if (_inlineInitLoading) return;
+    final familyMember = _backendFamilyMemberValue(relationship);
+    if (familyMember.isEmpty) return;
+
+    setState(() {
+      _inlineInitLoading = true;
+      _inlineInitError = null;
+    });
+
+    try {
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      if (token.isEmpty) {
+        setState(() {
+          _inlineInitError = 'Session expired. Please login again.';
+        });
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('https://erp.elrace.com/api/family_insurance/init'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'jsonrpc': '2.0',
+          'params': {
+            'family_member': familyMember,
+          },
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        setState(() {
+          _inlineInitError = 'Failed to load request setup.';
+        });
+        return;
+      }
+
+      final decoded = jsonDecode(response.body);
+      final result = _extractResultMap(decoded);
+      if (result == null) {
+        setState(() {
+          _inlineInitError = 'Invalid setup response.';
+        });
+        return;
+      }
+
+      final statusToken = _normalizeToken(result['status']);
+      if (!(statusToken == 'success' ||
+          statusToken == 'ok' ||
+          statusToken == 'true')) {
+        setState(() {
+          _inlineInitError =
+              (result['message'] ?? 'Failed to load request setup.').toString();
+        });
+        return;
+      }
+
+      final data = (result['data'] is Map)
+          ? Map<String, dynamic>.from(result['data'] as Map)
+          : <String, dynamic>{};
+
+      final casesRaw = (data['medical_request_cases'] is List)
+          ? (data['medical_request_cases'] as List)
+          : const [];
+      final nationalitiesRaw = (data['nationalities'] is List)
+          ? (data['nationalities'] as List)
+          : const [];
+
+      final parsedCases = <_InlineCaseOption>[];
+      for (final item in casesRaw) {
+        if (item is! Map) continue;
+        final map = Map<String, dynamic>.from(item);
+        final caseKey = (map['case_key'] ?? '').toString().trim();
+        final caseLabel = (map['case_label'] ?? caseKey).toString().trim();
+        if (caseKey.isEmpty) continue;
+
+        final docs = <_InlineDocRequirement>[];
+        final docsRaw = (map['required_documents'] is List)
+            ? (map['required_documents'] as List)
+            : const [];
+        for (final doc in docsRaw) {
+          if (doc is! Map) continue;
+          final d = Map<String, dynamic>.from(doc);
+          final field = (d['field'] ?? '').toString().trim();
+          if (field.isEmpty) continue;
+          docs.add(
+            _InlineDocRequirement(
+              field: field,
+              label: (d['label'] ?? field).toString().trim(),
+              type: (d['type'] ?? '').toString().trim(),
+            ),
+          );
+        }
+
+        parsedCases.add(
+          _InlineCaseOption(key: caseKey, label: caseLabel, docs: docs),
+        );
+      }
+
+      final parsedNationalities = <_InlineNationalityOption>[];
+      for (final item in nationalitiesRaw) {
+        if (item is! Map) continue;
+        final map = Map<String, dynamic>.from(item);
+        final id = int.tryParse((map['id'] ?? '').toString());
+        final name = (map['name'] ?? '').toString().trim();
+        if (id == null || name.isEmpty) continue;
+        parsedNationalities.add(_InlineNationalityOption(id: id, name: name));
+      }
+
+      setState(() {
+        _inlineCaseOptions = parsedCases;
+        _inlineNationalities = parsedNationalities;
+        _inlineCaseKey = parsedCases.isNotEmpty ? parsedCases.first.key : null;
+        _inlineNationalityId = parsedNationalities.isNotEmpty
+            ? parsedNationalities.first.id
+            : null;
+      });
+
+      _syncInlineRequiredDocs();
+    } catch (_) {
+      setState(() {
+        _inlineInitError = 'Failed to load request setup.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _inlineInitLoading = false;
+        });
+      }
+    }
+  }
+
+  void _syncInlineRequiredDocs() {
+    final selected = _inlineCaseOptions.where((c) => c.key == _inlineCaseKey);
+    final docs = <_InlineDocRequirement>[];
+    if (selected.isNotEmpty) {
+      docs.addAll(selected.first.docs);
+    }
+
+    final relation = (_inlineRelationship ?? '').toLowerCase();
+    if (relation == 'spouse' &&
+        !docs.any((d) => d.field == 'marriage_certificate_file')) {
+      docs.add(
+        const _InlineDocRequirement(
+          field: 'marriage_certificate_file',
+          label: 'Marriage Certificate',
+          type: 'pdf',
+        ),
+      );
+    }
+    if (relation == 'child' &&
+        !docs.any((d) => d.field == 'birth_certificate_file')) {
+      docs.add(
+        const _InlineDocRequirement(
+          field: 'birth_certificate_file',
+          label: 'Birth Certificate(English Version)',
+          type: 'pdf',
+        ),
+      );
+    }
+
+    setState(() {
+      _inlineRequiredDocs = docs;
+      if (_expandedDocField != null &&
+          !docs.any((d) => d.field == _expandedDocField)) {
+        _expandedDocField = null;
+      }
+    });
+  }
+
+  Future<void> _pickInlineDocFile(String field,
+      {required bool imageOnly}) async {
+    final extensions = imageOnly
+        ? const ['jpg', 'jpeg', 'png']
+        : const ['pdf', 'jpg', 'jpeg', 'png'];
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: extensions,
+      withData: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    final picked = result.files.single;
+    if (picked.path == null) return;
+
+    setState(() {
+      _inlinePickedFiles[field] =
+          _InlinePickedFile(path: picked.path!, filename: picked.name);
+    });
+  }
+
+  bool _validateInlineBeforeSubmit() {
+    if ((_inlineRelationship ?? '').isEmpty) {
+      _showInlineSnack('Please select relationship.');
+      return false;
+    }
+    if ((_inlineCaseKey ?? '').isEmpty) {
+      _showInlineSnack('Please select document type to update.');
+      return false;
+    }
+    if (_inlineNameController.text.trim().isEmpty) {
+      _showInlineSnack('Please enter full name.');
+      return false;
+    }
+    if (_inlineDob == null) {
+      _showInlineSnack('Please select date of birth.');
+      return false;
+    }
+    if (_inlineNationalityId == null) {
+      _showInlineSnack('Please select nationality.');
+      return false;
+    }
+
+    for (final req in _inlineRequiredDocs) {
+      if (_inlinePickedFiles[req.field] == null) {
+        _showInlineSnack('Please attach ${req.label}.');
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  Future<void> _submitInlineRequest() async {
+    if (_inlineSubmitting) return;
+    if (!_validateInlineBeforeSubmit()) return;
+
+    setState(() {
+      _inlineSubmitting = true;
+    });
+
+    try {
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      if (token.isEmpty) {
+        _showInlineSnack('Session expired. Please login again.');
+        return;
+      }
+
+      final params = <String, dynamic>{
+        'family_member': _backendFamilyMemberValue(_inlineRelationship),
+        'medical_request_case': _inlineCaseKey,
+        'family_member_name': _inlineNameController.text.trim(),
+        'family_member_dob': DateFormat('yyyy-MM-dd').format(_inlineDob!),
+        'family_member_nationality_id': _inlineNationalityId,
+      };
+
+      for (final req in _inlineRequiredDocs) {
+        final picked = _inlinePickedFiles[req.field];
+        if (picked == null) continue;
+
+        final bytes = await File(picked.path).readAsBytes();
+        params[req.field] = base64Encode(bytes);
+        params[req.field.replaceFirst('_file', '_filename')] = picked.filename;
+
+        final expiry = _inlineDocExpiryDates[req.field];
+        if (expiry != null) {
+          params[req.field.replaceFirst('_file', '_expiry_date')] =
+              DateFormat('yyyy-MM-dd').format(expiry);
+        }
+      }
+
+      final response = await http.post(
+        Uri.parse('https://erp.elrace.com/api/family_insurance/submit'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'jsonrpc': '2.0',
+          'params': params,
+        }),
+      );
+
+      final decoded = jsonDecode(response.body);
+      final result = _extractResultMap(decoded);
+      final statusToken = _normalizeToken(result?['status']);
+      final isOk = response.statusCode == 200 &&
+          (statusToken == 'success' ||
+              statusToken == 'ok' ||
+              statusToken == 'true');
+
+      if (!isOk) {
+        final message = (result?['message'] ??
+                (decoded is Map ? decoded['message'] : null) ??
+                'Failed to submit request.')
+            .toString();
+        _showInlineSnack(message);
+        return;
+      }
+
+      _showInlineSnack('Request submitted successfully.');
+      _closeInlineRequestForm();
+      widget.onDocTypeSelected?.call('requested');
+    } catch (_) {
+      _showInlineSnack('Failed to submit request.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _inlineSubmitting = false;
+        });
+      }
+    }
+  }
+
+  void _showInlineSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   String _formatDate(dynamic raw) {
     if (raw == null || raw == false || raw.toString().trim().isEmpty) return '';
     try {
@@ -177,6 +654,8 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   void dispose() {
     _folderPageController.dispose();
     _statsPageController.dispose();
+    _inlineNameController.dispose();
+    _inlineDobController.dispose();
     super.dispose();
   }
 
@@ -217,6 +696,11 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
       onWillPop: () async {
         if (!widget.isActive) return true;
 
+        if (_showInlineRequestForm) {
+          _closeInlineRequestForm();
+          return false;
+        }
+
         // In filtered mode, back should clear filter first.
         if (widget.selectedDocType != null) {
           widget.onDocTypeSelected?.call(null);
@@ -233,6 +717,10 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
       },
       child: Builder(
         builder: (context) {
+          if (_showInlineRequestForm) {
+            return _buildInlineRequestForm();
+          }
+
           if (widget.isActive && widget.isLoading) {
             return const Center(
               child: CircularProgressIndicator(),
@@ -725,10 +1213,7 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   Widget _buildAddNewRequestCard() {
     return GestureDetector(
       onTap: () {
-        final callback = widget.onAddNewRequest ?? widget.onAddDocument;
-        if (callback != null) {
-          callback();
-        }
+        unawaited(_openInlineRequestForm());
       },
       child: Container(
         height: 64.h,
@@ -955,6 +1440,453 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                 child: _buildRequestedCard(doc),
               )),
       ],
+    );
+  }
+
+  String _docDisplayLabel(_InlineDocRequirement req) {
+    if (req.field == 'e_visa_file' &&
+        _inlineCaseKey == 'visit_to_resident_visa') {
+      return 'E-Visa with Changed Status';
+    }
+
+    const customLabels = <String, String>{
+      'emirates_id_file': 'Emirates ID',
+      'passport_copy_file': 'Passport Copy',
+      'marriage_certificate_file': 'Marriage Certificate',
+      'resident_cancellation_file': 'Previous Resident Cancellation',
+      'coc_file': 'COC',
+      'e_visa_file': 'E-Visa',
+      'changed_status_file': 'Changed Status',
+      'entry_stamp_file': 'Entry Stamp',
+      'birth_certificate_file': 'Birth Certificate(English Version)',
+      'visit_visa_file': 'Visit Visa',
+    };
+
+    final fromMap = customLabels[req.field];
+    if (fromMap != null) return fromMap;
+    if (req.label.trim().isNotEmpty) return req.label.trim();
+    return req.field.replaceAll('_', ' ').replaceAll(' file', '');
+  }
+
+  Widget _buildInlineRequestForm() {
+    final docsToShow = _inlineRequiredDocs
+        .where((d) => d.field != 'photo_file')
+        .toList(growable: false);
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 12.h),
+      children: [
+        Container(
+          color: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 12.h),
+          child: Column(
+            children: [
+              Center(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    GestureDetector(
+                      onTap: () =>
+                          _pickInlineDocFile('photo_file', imageOnly: true),
+                      child: Container(
+                        width: 105.w,
+                        height: 105.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFFE2E2E2),
+                          border: Border.all(
+                            color: const Color(0xFFC8C8C8),
+                            width: 1.2,
+                            style: BorderStyle.solid,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.add_a_photo_outlined,
+                          size: 28.sp,
+                          color: const Color(0xFF837D70),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 22.w,
+                        height: 22.w,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF6CC1B),
+                          shape: BoxShape.circle,
+                        ),
+                        child:
+                            Icon(Icons.edit, size: 11.sp, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 18.h),
+              Row(
+                children: [
+                  Icon(Icons.person_outline_rounded,
+                      size: 15.sp, color: const Color(0xFF6A6A6A)),
+                  SizedBox(width: 6.w),
+                  Text(
+                    'Basic Information',
+                    style: GoogleFonts.poppins(
+                      color: const Color(0xFF6A6A6A),
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              _inlineLabel('Full Name'),
+              _inlineTextField(
+                controller: _inlineNameController,
+                hint: 'Enter name',
+              ),
+              SizedBox(height: 10.h),
+              _inlineLabel('Relationship'),
+              _inlineDropdown<String>(
+                value: _inlineRelationship,
+                hint: 'Select',
+                items: const [
+                  DropdownMenuItem(value: 'child', child: Text('Child')),
+                  DropdownMenuItem(value: 'spouse', child: Text('Spouse')),
+                ],
+                onChanged: (v) => unawaited(_onInlineRelationshipChanged(v)),
+              ),
+              SizedBox(height: 10.h),
+              _inlineLabel('Nationality'),
+              _inlineDropdown<int>(
+                value: _inlineNationalityId,
+                hint: _inlineInitLoading ? 'Loading...' : 'e.g. Emirati',
+                items: _inlineNationalities
+                    .map(
+                      (n) => DropdownMenuItem<int>(
+                        value: n.id,
+                        child: Text(n.name),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: (v) => setState(() => _inlineNationalityId = v),
+              ),
+              SizedBox(height: 10.h),
+              _inlineLabel('Date of Birth'),
+              _inlineTextField(
+                controller: _inlineDobController,
+                hint: 'mm/dd/yyyy',
+                readOnly: true,
+                onTap: () async {
+                  await _pickDate(
+                    initialDate: _inlineDob,
+                    firstDate: DateTime(DateTime.now().year - 100),
+                    lastDate: DateTime.now(),
+                    onPicked: (d) {
+                      setState(() {
+                        _inlineDob = d;
+                        _inlineDobController.text =
+                            DateFormat('MM/dd/yyyy').format(d);
+                      });
+                    },
+                  );
+                },
+              ),
+              SizedBox(height: 10.h),
+              _inlineLabel('Document Type To Update'),
+              _inlineDropdown<String>(
+                value: _inlineCaseKey,
+                hint: _inlineInitLoading ? 'Loading...' : 'Select',
+                items: _inlineCaseOptions
+                    .map((c) => DropdownMenuItem<String>(
+                          value: c.key,
+                          child: Text(c.label),
+                        ))
+                    .toList(growable: false),
+                onChanged: (v) {
+                  setState(() {
+                    _inlineCaseKey = v;
+                  });
+                  _syncInlineRequiredDocs();
+                },
+              ),
+              if ((_inlineInitError ?? '').isNotEmpty) ...[
+                SizedBox(height: 8.h),
+                Text(
+                  _inlineInitError!,
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFFBA1719),
+                    fontSize: 11.sp,
+                  ),
+                ),
+              ],
+              SizedBox(height: 10.h),
+              ...docsToShow.map(
+                (req) => Padding(
+                  padding: EdgeInsets.only(bottom: 8.h),
+                  child: _buildInlineDocAccordionItem(req),
+                ),
+              ),
+              SizedBox(height: 6.h),
+              SizedBox(
+                width: double.infinity,
+                height: 46.h,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF6CC1B),
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                  onPressed: _inlineSubmitting ? null : _submitInlineRequest,
+                  child: _inlineSubmitting
+                      ? SizedBox(
+                          width: 20.w,
+                          height: 20.w,
+                          child:
+                              const CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.person_add_alt_1, size: 18.sp),
+                            SizedBox(width: 6.w),
+                            Text(
+                              'Add Family Member',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _inlineLabel(String text) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: 4.h, left: 3.w),
+        child: Text(
+          text,
+          style: GoogleFonts.poppins(
+            color: const Color(0xFF2B2B2B),
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _inlineTextField({
+    required TextEditingController controller,
+    required String hint,
+    bool readOnly = false,
+    VoidCallback? onTap,
+  }) {
+    return TextField(
+      controller: controller,
+      readOnly: readOnly,
+      onTap: onTap,
+      style:
+          GoogleFonts.poppins(fontSize: 12.sp, color: const Color(0xFF303030)),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.poppins(
+          fontSize: 11.sp,
+          color: const Color(0xFF9A9A9A),
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+        filled: true,
+        fillColor: const Color(0xFFD6D6D8),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _inlineDropdown<T>({
+    required T? value,
+    required String hint,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFD6D6D8),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          hint: Text(
+            hint,
+            style: GoogleFonts.poppins(
+              fontSize: 11.sp,
+              color: const Color(0xFF9A9A9A),
+            ),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          style: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: const Color(0xFF2F2F2F),
+          ),
+          items: items,
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInlineDocAccordionItem(_InlineDocRequirement req) {
+    final label = _docDisplayLabel(req);
+    final expanded = _expandedDocField == req.field;
+    final picked = _inlinePickedFiles[req.field];
+    final expiry = _inlineDocExpiryDates[req.field];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFD6D6D8),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(12.r),
+            onTap: () {
+              setState(() {
+                _expandedDocField = expanded ? null : req.field;
+              });
+            },
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF222222),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 18.w,
+                    height: 18.w,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: const Color(0xFF1E73FF), width: 1.4),
+                    ),
+                    child: picked == null
+                        ? const SizedBox.shrink()
+                        : Center(
+                            child: Container(
+                              width: 10.w,
+                              height: 10.w,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF1E73FF),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Icon(
+                    expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: const Color(0xFF6E7683),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (expanded)
+            Padding(
+              padding: EdgeInsets.fromLTRB(12.w, 0, 12.w, 12.h),
+              child: Column(
+                children: [
+                  _inlineLabel('Expiry Date'),
+                  _inlineTextField(
+                    controller: TextEditingController(
+                      text: expiry == null
+                          ? ''
+                          : DateFormat('MM/dd/yyyy').format(expiry),
+                    ),
+                    hint: 'mm/dd/yyyy',
+                    readOnly: true,
+                    onTap: () async {
+                      await _pickDate(
+                        initialDate: _inlineDocExpiryDates[req.field],
+                        onPicked: (d) {
+                          setState(() {
+                            _inlineDocExpiryDates[req.field] = d;
+                          });
+                        },
+                      );
+                    },
+                  ),
+                  SizedBox(height: 10.h),
+                  InkWell(
+                    onTap: () => _pickInlineDocFile(
+                      req.field,
+                      imageOnly: req.type.toLowerCase() == 'image',
+                    ),
+                    borderRadius: BorderRadius.circular(10.r),
+                    child: Container(
+                      width: 160.w,
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 10.w, vertical: 10.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD6D6D8),
+                        borderRadius: BorderRadius.circular(10.r),
+                        border: Border.all(
+                          color: const Color(0xFFE8DED7),
+                          style: BorderStyle.solid,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.cloud_upload_outlined,
+                              color: Color(0xFF6A6A6A)),
+                          SizedBox(height: 2.h),
+                          Text(
+                            picked == null ? 'Attach Files' : picked.filename,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.sp,
+                              color: const Color(0xFF383838),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 
