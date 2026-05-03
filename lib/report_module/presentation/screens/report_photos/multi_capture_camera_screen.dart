@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// A camera screen that lets the user take multiple photos in one session.
 /// Returns a list of [XFile] paths when the user taps "Done".
@@ -22,6 +23,7 @@ class _MultiCaptureCameraScreenState extends State<MultiCaptureCameraScreen>
   final List<String> _capturedPaths = [];
   bool _isInitialized = false;
   bool _isCapturing = false;
+  bool _permissionDenied = false;
   int _selectedCameraIndex = 0;
 
   @override
@@ -32,12 +34,23 @@ class _MultiCaptureCameraScreenState extends State<MultiCaptureCameraScreen>
   }
 
   Future<void> _initCamera() async {
-    _cameras = await availableCameras();
-    if (_cameras.isEmpty) {
-      if (mounted) Navigator.pop(context, <String>[]);
+    final permission = await Permission.camera.request();
+    if (!permission.isGranted && !permission.isLimited) {
+      if (mounted) setState(() => _permissionDenied = true);
       return;
     }
-    await _setupController(_cameras[_selectedCameraIndex]);
+
+    try {
+      _cameras = await availableCameras();
+      if (_cameras.isEmpty) {
+        if (mounted) setState(() => _permissionDenied = true);
+        return;
+      }
+      await _setupController(_cameras[_selectedCameraIndex]);
+    } catch (e) {
+      debugPrint('Camera list error: $e');
+      if (mounted) setState(() => _permissionDenied = true);
+    }
   }
 
   Future<void> _setupController(CameraDescription camera) async {
@@ -76,8 +89,11 @@ class _MultiCaptureCameraScreenState extends State<MultiCaptureCameraScreen>
   }
 
   Future<void> _capturePhoto() async {
-    if (_isCapturing || _controller == null || !_controller!.value.isInitialized)
+    if (_isCapturing ||
+        _controller == null ||
+        !_controller!.value.isInitialized) {
       return;
+    }
     setState(() => _isCapturing = true);
     try {
       final file = await _controller!.takePicture();
@@ -108,7 +124,35 @@ class _MultiCaptureCameraScreenState extends State<MultiCaptureCameraScreen>
         child: Stack(
           children: [
             // Camera preview
-            if (_isInitialized && _controller != null)
+            if (_permissionDenied)
+              Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.w),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.camera_alt_outlined,
+                          color: Colors.white, size: 56.sp),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Camera access is required to take photos.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+                      const ElevatedButton(
+                        onPressed: openAppSettings,
+                        child: Text('Open Settings'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_isInitialized && _controller != null)
               Positioned.fill(
                 child: CameraPreview(_controller!),
               )
@@ -197,7 +241,7 @@ class _MultiCaptureCameraScreenState extends State<MultiCaptureCameraScreen>
                         onTap: _switchCamera,
                         child: Container(
                           padding: EdgeInsets.all(12.r),
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.black45,
                             shape: BoxShape.circle,
                           ),
@@ -213,8 +257,7 @@ class _MultiCaptureCameraScreenState extends State<MultiCaptureCameraScreen>
                           height: 72.r,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border:
-                                Border.all(color: Colors.white, width: 4.r),
+                            border: Border.all(color: Colors.white, width: 4.r),
                           ),
                           child: Center(
                             child: AnimatedContainer(

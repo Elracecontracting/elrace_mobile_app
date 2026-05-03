@@ -47,7 +47,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>The camera is used to take profile pictures and for face recognition during attendance check-in.</string>
+	<string>The camera is used to scan QR codes, take profile and report photos, scan documents, and for face recognition during attendance check-in.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>The microphone is used for voice messages and audio recording in the chat feature.</string>
 	<key>NSFaceIDUsageDescription</key>

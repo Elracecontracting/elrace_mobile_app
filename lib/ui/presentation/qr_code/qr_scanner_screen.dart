@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:el_race/ui/presentation/qr_code/data/qr_login_service.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -14,7 +15,7 @@ class QrScannerScreen extends StatefulWidget {
 }
 
 class _QrScannerScreenState extends State<QrScannerScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final QrLoginService _qrLoginService = QrLoginService();
   final MobileScannerController cameraController = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
@@ -22,6 +23,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
   bool _isProcessing = false;
   bool _isTorchOn = false;
+  bool _isCheckingCameraPermission = true;
+  bool _hasCameraPermission = false;
+  bool _isCameraPermissionPermanentlyDenied = false;
 
   // ── Zoom ──────────────────────────────────────────────────────────
   double _currentZoom = 1.0;
@@ -42,6 +46,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkCameraPermission();
 
     _scanLineController = AnimationController(
       vsync: this,
@@ -61,11 +67,38 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scanLineController.dispose();
     _pulseController.dispose();
     _zoomLabelTimer?.cancel();
     cameraController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkCameraPermission(requestIfNeeded: false);
+    }
+  }
+
+  Future<void> _checkCameraPermission({bool requestIfNeeded = true}) async {
+    var status = await Permission.camera.status;
+    if (requestIfNeeded && status.isDenied) {
+      status = await Permission.camera.request();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isCheckingCameraPermission = false;
+      _hasCameraPermission = status.isGranted || status.isLimited;
+      _isCameraPermissionPermanentlyDenied =
+          status.isPermanentlyDenied || status.isRestricted;
+    });
+  }
+
+  Future<void> _openCameraSettings() async {
+    await openAppSettings();
   }
 
   // ── Zoom helpers ──────────────────────────────────────────────────
@@ -175,6 +208,21 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   Widget build(BuildContext context) {
     final frameSize = 260.w;
 
+    if (_isCheckingCameraPermission) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+    }
+
+    if (!_hasCameraPermission) {
+      return _CameraPermissionView(
+        permanentlyDenied: _isCameraPermissionPermanentlyDenied,
+        onRetry: _checkCameraPermission,
+        onOpenSettings: _openCameraSettings,
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: PreferredSize(
@@ -235,8 +283,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                         decoration: BoxDecoration(
                           color: Colors.black87,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color: Colors.redAccent, width: 1.5),
+                          border:
+                              Border.all(color: Colors.redAccent, width: 1.5),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -250,8 +298,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                                     fontWeight: FontWeight.w600)),
                             SizedBox(height: 4.h),
                             Text(error.errorCode.name,
-                                style: const TextStyle(
-                                    color: Colors.white54)),
+                                style: const TextStyle(color: Colors.white54)),
                           ],
                         ),
                       ),
@@ -270,10 +317,10 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                         height: frameSize,
                         child: Stack(
                           children: [
-                            _Corner(a: Alignment.topLeft),
-                            _Corner(a: Alignment.topRight),
-                            _Corner(a: Alignment.bottomLeft),
-                            _Corner(a: Alignment.bottomRight),
+                            const _Corner(a: Alignment.topLeft),
+                            const _Corner(a: Alignment.topRight),
+                            const _Corner(a: Alignment.bottomLeft),
+                            const _Corner(a: Alignment.bottomRight),
                             if (!_isProcessing)
                               AnimatedBuilder(
                                 animation: _scanLineAnim,
@@ -286,16 +333,18 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(colors: [
                                         Colors.transparent,
-                                        CustomColors.blue.withOpacity(0.8),
+                                        CustomColors.blue
+                                            .withValues(alpha: 0.8),
                                         Colors.white,
-                                        CustomColors.blue.withOpacity(0.8),
+                                        CustomColors.blue
+                                            .withValues(alpha: 0.8),
                                         Colors.transparent,
                                       ]),
                                       borderRadius: BorderRadius.circular(2),
                                       boxShadow: [
                                         BoxShadow(
                                           color: CustomColors.blue
-                                              .withOpacity(0.5),
+                                              .withValues(alpha: 0.5),
                                           blurRadius: 10,
                                           spreadRadius: 3,
                                         ),
@@ -347,10 +396,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                           padding: EdgeInsets.symmetric(
                               horizontal: 14.w, vertical: 5.h),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.65),
+                            color: Colors.black.withValues(alpha: 0.65),
                             borderRadius: BorderRadius.circular(20.r),
-                            border: Border.all(
-                                color: Colors.white24, width: 1),
+                            border: Border.all(color: Colors.white24, width: 1),
                           ),
                           child: Text(
                             '${_currentZoom.toStringAsFixed(1)}×',
@@ -374,7 +422,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               color: const Color(0xFF0E0E1A),
               border: Border(
                 top: BorderSide(
-                    color: CustomColors.blue.withOpacity(0.35), width: 1),
+                    color: CustomColors.blue.withValues(alpha: 0.35), width: 1),
               ),
             ),
             padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 20.h),
@@ -392,8 +440,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                 SizedBox(height: 4.h),
                 Text(
                   'Auto-detects when ready',
-                  style: TextStyle(
-                      color: Colors.white38, fontSize: 12.sp),
+                  style: TextStyle(color: Colors.white38, fontSize: 12.sp),
                 ),
                 SizedBox(height: 14.h),
 
@@ -401,8 +448,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                 Row(
                   children: [
                     Text('1×',
-                        style: TextStyle(
-                            color: Colors.white38, fontSize: 11.sp)),
+                        style:
+                            TextStyle(color: Colors.white38, fontSize: 11.sp)),
                     Expanded(
                       child: SliderTheme(
                         data: SliderThemeData(
@@ -410,7 +457,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                           activeTrackColor: CustomColors.blue,
                           inactiveTrackColor: Colors.white12,
                           overlayColor:
-                              CustomColors.blue.withOpacity(0.15),
+                              CustomColors.blue.withValues(alpha: 0.15),
                           thumbShape: const RoundSliderThumbShape(
                               enabledThumbRadius: 7),
                           trackHeight: 3,
@@ -424,8 +471,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                       ),
                     ),
                     Text('${_maxZoom.toInt()}×',
-                        style: TextStyle(
-                            color: Colors.white38, fontSize: 11.sp)),
+                        style:
+                            TextStyle(color: Colors.white38, fontSize: 11.sp)),
                   ],
                 ),
 
@@ -480,13 +527,12 @@ class _MaskPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.black.withOpacity(0.55);
+    final paint = Paint()..color = Colors.black.withValues(alpha: 0.55);
     final cx = size.width / 2;
     final cy = size.height / 2;
     final half = frameSize / 2;
 
-    final outer =
-        Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final outer = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
     final inner = Path()
       ..addRRect(RRect.fromRectAndRadius(
         Rect.fromLTRB(cx - half, cy - half, cx + half, cy + half),
@@ -564,8 +610,8 @@ class _ControlButton extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: active
-                  ? CustomColors.blue.withOpacity(0.2)
-                  : Colors.white.withOpacity(0.08),
+                  ? CustomColors.blue.withValues(alpha: 0.2)
+                  : Colors.white.withValues(alpha: 0.08),
               border: Border.all(
                 color: active ? CustomColors.blue : Colors.white24,
                 width: 1.5,
@@ -585,6 +631,54 @@ class _ControlButton extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CameraPermissionView extends StatelessWidget {
+  final bool permanentlyDenied;
+  final VoidCallback onRetry;
+  final VoidCallback onOpenSettings;
+
+  const _CameraPermissionView({
+    required this.permanentlyDenied,
+    required this.onRetry,
+    required this.onOpenSettings,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('Camera Permission'),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.camera_alt_outlined,
+                  color: Colors.white, size: 56),
+              const SizedBox(height: 16),
+              const Text(
+                'Camera access is required to scan QR codes.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: permanentlyDenied ? onOpenSettings : onRetry,
+                child:
+                    Text(permanentlyDenied ? 'Open Settings' : 'Allow Camera'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
