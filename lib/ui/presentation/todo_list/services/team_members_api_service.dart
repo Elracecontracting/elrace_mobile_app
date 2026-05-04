@@ -123,7 +123,8 @@ class TeamMembersApiService {
   TeamMembersApiService._();
 
   static const String _baseUrl = 'https://erp.elrace.com/api';
-  static const String _employeeListEndpoint = '/employee/list';
+  static const String _employeeListEndpoint = '/employee/listx';
+  static const String _employeeListLegacyEndpoint = '/employee/list';
 
   // Cache for team members
   List<TeamMember>? _cachedMembers;
@@ -153,37 +154,51 @@ class TeamMembersApiService {
     }
 
     try {
-      final url = Uri.parse('$_baseUrl$_employeeListEndpoint');
       final headers = _getHeaders();
 
       final body = jsonEncode({
         'jsonrpc': '2.0',
         'params': {},
       });
+      final requestAttempts = <Future<http.Response>>[
+        http.post(
+          Uri.parse('$_baseUrl$_employeeListEndpoint'),
+          headers: headers,
+          body: body,
+        ),
+        http.post(
+          Uri.parse('$_baseUrl$_employeeListLegacyEndpoint'),
+          headers: headers,
+          body: body,
+        ),
+      ];
 
-      final request = http.Request('GET', url)
-        ..headers.addAll(headers)
-        ..body = body;
+      http.Response? successfulResponse;
+      int? lastStatusCode;
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final employeesList =
-            data['result']?['employees'] as List<dynamic>? ?? [];
-
-        _cachedMembers = employeesList
-            .map((e) => TeamMember.fromJson(e as Map<String, dynamic>))
-            .toList();
-        _lastFetchTime = DateTime.now();
-
-        print(
-            '✅ TeamMembersApiService: Fetched ${_cachedMembers!.length} members');
-        return _cachedMembers!;
-      } else {
-        throw Exception('Failed to fetch members: ${response.statusCode}');
+      for (final attempt in requestAttempts) {
+        final response = await attempt;
+        lastStatusCode = response.statusCode;
+        if (response.statusCode == 200) {
+          successfulResponse = response;
+          break;
+        }
       }
+
+      if (successfulResponse == null) {
+        throw Exception('Failed to fetch members: ${lastStatusCode ?? 'unknown'}');
+      }
+
+      final data = jsonDecode(successfulResponse.body);
+      final employeesList = data['result']?['employees'] as List<dynamic>? ?? [];
+
+      _cachedMembers = employeesList
+          .map((e) => TeamMember.fromJson(e as Map<String, dynamic>))
+          .toList();
+      _lastFetchTime = DateTime.now();
+
+      print('✅ TeamMembersApiService: Fetched ${_cachedMembers!.length} members');
+      return _cachedMembers!;
     } catch (e) {
       print('❌ TeamMembersApiService: Error fetching members: $e');
       // Return cached data if available

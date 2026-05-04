@@ -29,6 +29,26 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     return DateTime(dubaiTime.year, dubaiTime.month, dubaiTime.day, 11, 59);
   }
 
+  Map<String, dynamic>? _getResult(dynamic data) {
+    if (data is Map && data['result'] is Map) {
+      return Map<String, dynamic>.from(data['result'] as Map);
+    }
+    return null;
+  }
+
+  String _getMessage(Map<String, dynamic>? result, String fallback) {
+    return result?['message']?.toString().trim().isNotEmpty == true
+        ? result!['message'].toString()
+        : fallback;
+  }
+
+  int _getCheckInRecordId(Map<String, dynamic> result) {
+    final value = result['check_in_record_id'];
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
   Future<void> checkInMethod(
       CheckInET event, Emitter<CheckInState> emit) async {
     try {
@@ -62,10 +82,12 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
 
       // Handle response and emit corresponding states
       if (response != null && response.data != null) {
-        final responseData = response.data['result'];
+        final responseData = _getResult(response.data);
         print('---- ${responseData.toString()}');
-        if (responseData['status'] == 'success') {
-          final checkInRecordId = responseData['check_in_record_id'];
+        if (responseData == null) {
+          emit(const CheckInErrorST('Invalid response from server.'));
+        } else if (responseData['status'] == 'success') {
+          final checkInRecordId = _getCheckInRecordId(responseData);
           await SharedPref()
               .setPreferenceInt('checkInRecordId', checkInRecordId);
 
@@ -92,19 +114,24 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
 
           // Log final SharedPref state
           print('🟢 --- SharedPref state after check-in ---');
-          print('🟢 isCheckedIn = ${SharedPref().getPreferenceBoolean('isCheckedIn')}');
-          print('🟢 checkInDisplayTime = ${SharedPref().getPreferenceString('checkInDisplayTime')}');
-          print('🟢 checkOutDisplayTime = ${SharedPref().getPreferenceString('checkOutDisplayTime')}');
+          print(
+              '🟢 isCheckedIn = ${SharedPref().getPreferenceBoolean('isCheckedIn')}');
+          print(
+              '🟢 checkInDisplayTime = ${SharedPref().getPreferenceString('checkInDisplayTime')}');
+          print(
+              '🟢 checkOutDisplayTime = ${SharedPref().getPreferenceString('checkOutDisplayTime')}');
           print('🟢 checkInTime (ms) = $checkInMs');
-          print('🟢 lastLocalCheckOutTime = ${SharedPref().getPreferenceInt('lastLocalCheckOutTime')}');
+          print(
+              '🟢 lastLocalCheckOutTime = ${SharedPref().getPreferenceInt('lastLocalCheckOutTime')}');
           print('🟢 ===== END CHECK-IN BLOC =====\n');
 
           // Guard local state from being overwritten by stale server sync
           AttendanceStatusSyncService.markLocalAction();
 
-          emit(CheckedInST(responseData['message'], checkInRecordId));
+          emit(CheckedInST(_getMessage(responseData, 'Check-in successful.'),
+              checkInRecordId));
         } else if (responseData['status'] == 'warning') {
-          final checkInRecordId = responseData['check_in_record_id'];
+          final checkInRecordId = _getCheckInRecordId(responseData);
           await SharedPref()
               .setPreferenceInt('checkInRecordId', checkInRecordId);
 
@@ -126,18 +153,23 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
 
           // Log final SharedPref state
           print('🟢 --- SharedPref state after check-in (warning) ---');
-          print('🟢 isCheckedIn = ${SharedPref().getPreferenceBoolean('isCheckedIn')}');
-          print('🟢 checkInDisplayTime = ${SharedPref().getPreferenceString('checkInDisplayTime')}');
-          print('🟢 checkOutDisplayTime = ${SharedPref().getPreferenceString('checkOutDisplayTime')}');
+          print(
+              '🟢 isCheckedIn = ${SharedPref().getPreferenceBoolean('isCheckedIn')}');
+          print(
+              '🟢 checkInDisplayTime = ${SharedPref().getPreferenceString('checkInDisplayTime')}');
+          print(
+              '🟢 checkOutDisplayTime = ${SharedPref().getPreferenceString('checkOutDisplayTime')}');
           print('🟢 checkInTime (ms) = $checkInMs2');
-          print('🟢 lastLocalCheckOutTime = ${SharedPref().getPreferenceInt('lastLocalCheckOutTime')}');
+          print(
+              '🟢 lastLocalCheckOutTime = ${SharedPref().getPreferenceInt('lastLocalCheckOutTime')}');
 
           // Guard local state from being overwritten by stale server sync
           AttendanceStatusSyncService.markLocalAction();
 
-          emit(CheckInWarningST(responseData['message'], checkInRecordId));
+          emit(CheckInWarningST(
+              _getMessage(responseData, 'Check-in warning.'), checkInRecordId));
         } else {
-          emit(CheckInErrorST(responseData['message'] ?? 'Check-in failed.'));
+          emit(CheckInErrorST(_getMessage(responseData, 'Check-in failed.')));
         }
       } else {
         emit(const CheckInErrorST('No response data from server.'));

@@ -6,6 +6,7 @@ import 'package:el_race/data/services/checkin_reminder_notification_service.dart
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/auth/uaepass_auth_cubit.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
+import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/ui/presentation/qr_code/qr_scanner_screen.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
@@ -16,7 +17,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 
 class AppSettingsWidget extends StatelessWidget {
-  static const bool _showLogoutButton = false;
+  static const bool _showLogoutButton = true;
 
   final GlobalKey<NavigatorState> navKey;
   final VoidCallback? onMuteControlTap;
@@ -591,6 +592,9 @@ class AppSettingsWidget extends StatelessWidget {
                         } catch (e) {
                           // print('⚠️ Failed to reset HomeBloc index on logout: $e');
                         }
+
+                        // Reset biometric session flag so next login prompts again
+                        HomeScreenPage.resetAuthSession();
 
                         // Always navigate to sign in, even if some cleanup failed
                         // print('🧭 Navigating to sign in...');

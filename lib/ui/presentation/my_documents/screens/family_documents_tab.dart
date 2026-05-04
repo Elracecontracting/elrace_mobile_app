@@ -28,6 +28,7 @@ class FamilyDocumentsTab extends StatefulWidget {
     this.isLoading = false,
     this.onDocTypeSelected,
     this.onOpenDocument,
+    this.onChangeDocument,
     this.onAddDocument,
     this.onAddNewRequest,
   });
@@ -43,6 +44,7 @@ class FamilyDocumentsTab extends StatefulWidget {
   final bool isLoading;
   final ValueChanged<String?>? onDocTypeSelected;
   final Future<void> Function(Map<String, dynamic> document)? onOpenDocument;
+  final Future<void> Function(Map<String, dynamic> document)? onChangeDocument;
   final VoidCallback? onAddDocument;
   final VoidCallback? onAddNewRequest;
 
@@ -975,50 +977,58 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                         ),
                         if (useRedBorder) ...[
                           SizedBox(height: 8.h),
-                          Container(
-                            constraints: BoxConstraints(minHeight: 24.h),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 10.w,
-                              vertical: 4.h,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Color(0xFF1B1F26),
-                                  Color(0xFF717171),
-                                ],
+                          GestureDetector(
+                            onTap: () {
+                              final callback = widget.onChangeDocument;
+                              if (callback != null) {
+                                unawaited(callback(doc));
+                              }
+                            },
+                            child: Container(
+                              constraints: BoxConstraints(minHeight: 24.h),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10.w,
+                                vertical: 4.h,
                               ),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  width: 12.w,
-                                  height: 12.w,
-                                  child: Image.asset(
-                                    'assets/newapp/newicon/change_document_icon.png',
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (_, __, ___) => Icon(
-                                      Icons.swap_horiz_rounded,
-                                      color: Colors.white,
-                                      size: 12.sp,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Color(0xFF1B1F26),
+                                    Color(0xFF717171),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 12.w,
+                                    height: 12.w,
+                                    child: Image.asset(
+                                      'assets/newapp/newicon/change_document_icon.png',
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_, __, ___) => Icon(
+                                        Icons.swap_horiz_rounded,
+                                        color: Colors.white,
+                                        size: 12.sp,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                SizedBox(width: 4.w),
-                                Text(
-                                  'Change',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 10.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                    height: 1,
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    'Change',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                      height: 1,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ],

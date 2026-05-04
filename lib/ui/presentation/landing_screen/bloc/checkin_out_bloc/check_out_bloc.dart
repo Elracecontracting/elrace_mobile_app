@@ -22,6 +22,19 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
     on<CheckOutET>(checkOutMethod);
   }
 
+  Map<String, dynamic>? _getResult(dynamic data) {
+    if (data is Map && data['result'] is Map) {
+      return Map<String, dynamic>.from(data['result'] as Map);
+    }
+    return null;
+  }
+
+  String _getMessage(Map<String, dynamic>? result, String fallback) {
+    return result?['message']?.toString().trim().isNotEmpty == true
+        ? result!['message'].toString()
+        : fallback;
+  }
+
   Future<void> checkOutMethod(
       CheckOutET event, Emitter<CheckOutState> emit) async {
     try {
@@ -37,8 +50,11 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
         try {
           final todayStatus = await AttendanceRepo().getTodayStatus();
           final serverRecordId = todayStatus['check_in_record_id'];
-          print('🔴 today_status returned check_in_record_id = $serverRecordId');
-          if (serverRecordId != null && serverRecordId is int && serverRecordId > 0) {
+          print(
+              '🔴 today_status returned check_in_record_id = $serverRecordId');
+          if (serverRecordId != null &&
+              serverRecordId is int &&
+              serverRecordId > 0) {
             recordId = serverRecordId;
             await SharedPref().setPreferenceInt('checkInRecordId', recordId);
             print('🔴 ✅ Recovered checkInRecordId = $recordId from server');
@@ -47,7 +63,8 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
             if (parsed != null && parsed > 0) {
               recordId = parsed;
               await SharedPref().setPreferenceInt('checkInRecordId', recordId);
-              print('🔴 ✅ Recovered checkInRecordId = $recordId from server (parsed string)');
+              print(
+                  '🔴 ✅ Recovered checkInRecordId = $recordId from server (parsed string)');
             }
           }
         } catch (e) {
@@ -56,7 +73,8 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
       }
 
       if (recordId == 0) {
-        print('🔴 ❌ checkInRecordId is still 0 after fallback! Checkout will likely fail.');
+        print(
+            '🔴 ❌ checkInRecordId is still 0 after fallback! Checkout will likely fail.');
       }
 
       // Emit loading state
@@ -74,8 +92,10 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
 
       // Handle response and emit corresponding states
       if (response != null && response.data != null) {
-        final responseData = response.data['result'];
-        if (responseData['status'] == 'success') {
+        final responseData = _getResult(response.data);
+        if (responseData == null) {
+          emit(const CheckOutErrorST('Invalid response from server.'));
+        } else if (responseData['status'] == 'success') {
           // Save check-out time in UAE timezone (GMT+4) for display
           final uaeTime = DateTime.now().toUtc().add(const Duration(hours: 4));
           final displayTime =
@@ -88,15 +108,18 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
 
           await SharedPref()
               .setPreferencesString('checkOutDisplayTime', displayTime);
-          
+
           // Mark as checked out in SharedPref so pull-to-refresh won't revert
           await SharedPref().setPreferencesBoolean('isCheckedIn', false);
           await SharedPref().setPreferenceInt('checkInRecordId', 0);
 
           // Log final SharedPref state after checkout
-          final savedCheckIn = SharedPref().getPreferenceString('checkInDisplayTime');
-          final savedCheckOut = SharedPref().getPreferenceString('checkOutDisplayTime');
-          final savedIsCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
+          final savedCheckIn =
+              SharedPref().getPreferenceString('checkInDisplayTime');
+          final savedCheckOut =
+              SharedPref().getPreferenceString('checkOutDisplayTime');
+          final savedIsCheckedIn =
+              SharedPref().getPreferenceBoolean('isCheckedIn');
           final savedCheckInTime = SharedPref().getPreferenceInt('checkInTime');
           print('🔴 --- SharedPref state after checkout ---');
           print('🔴 isCheckedIn = $savedIsCheckedIn');
@@ -109,7 +132,8 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
           AttendanceStatusSyncService.markLocalCheckOut();
 
           // Emit success state with the message
-          emit(CheckedOutST(responseData['message']));
+          emit(
+              CheckedOutST(_getMessage(responseData, 'Check-out successful.')));
         } else if (responseData['status'] == 'warning') {
           // Save check-out time even on warning
           final uaeTime = DateTime.now().toUtc().add(const Duration(hours: 4));
@@ -123,16 +147,20 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
 
           await SharedPref()
               .setPreferencesString('checkOutDisplayTime', displayTime);
-          
+
           // Mark as checked out in SharedPref so pull-to-refresh won't revert
           await SharedPref().setPreferencesBoolean('isCheckedIn', false);
           await SharedPref().setPreferenceInt('checkInRecordId', 0);
 
           // Log final SharedPref state
-          final savedCheckIn2 = SharedPref().getPreferenceString('checkInDisplayTime');
-          final savedCheckOut2 = SharedPref().getPreferenceString('checkOutDisplayTime');
-          final savedIsCheckedIn2 = SharedPref().getPreferenceBoolean('isCheckedIn');
-          final savedCheckInTime2 = SharedPref().getPreferenceInt('checkInTime');
+          final savedCheckIn2 =
+              SharedPref().getPreferenceString('checkInDisplayTime');
+          final savedCheckOut2 =
+              SharedPref().getPreferenceString('checkOutDisplayTime');
+          final savedIsCheckedIn2 =
+              SharedPref().getPreferenceBoolean('isCheckedIn');
+          final savedCheckInTime2 =
+              SharedPref().getPreferenceInt('checkInTime');
           print('🟡 --- SharedPref state after checkout (warning) ---');
           print('🟡 isCheckedIn = $savedIsCheckedIn2');
           print('🟡 checkInDisplayTime = $savedCheckIn2');
@@ -144,14 +172,15 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
           AttendanceStatusSyncService.markLocalCheckOut();
 
           // Emit warning state with the warning message
-          emit(CheckOutWarningST(responseData['message']));
+          emit(CheckOutWarningST(
+              _getMessage(responseData, 'Check-out warning.')));
         } else {
           // Emit error state with the error message
           print('\n🔴 ===== CHECK-OUT BLOC: FAILED =====');
           print('🔴 Error: ${responseData['message']}');
           print('🔴 Full response: $responseData');
           print('🔴 ===================================\n');
-          emit(CheckOutErrorST(responseData['message'] ?? 'Checkout failed.'));
+          emit(CheckOutErrorST(_getMessage(responseData, 'Checkout failed.')));
         }
       } else {
         print('\n🔴 ===== CHECK-OUT BLOC: NO RESPONSE =====');

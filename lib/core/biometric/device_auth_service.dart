@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:local_auth/error_codes.dart' as auth_error;
 
 /// Unified device authentication service.
 ///
@@ -60,12 +59,12 @@ class DeviceAuthService {
   ///
   /// * [reason] – localised string shown to the user.
   /// * [biometricOnly] – `true` → only biometrics; `false` → allow device
-  ///   passcode as an OS-level fallback if biometrics are unavailable.
+  ///   passcode as an OS-level fallback. Keep `true` for attendance security.
   ///
   /// Returns `true` on success.
   Future<bool> authenticate({
     required String reason,
-    bool biometricOnly = false,
+    bool biometricOnly = true,
   }) async {
     try {
       final result = await _auth.authenticate(

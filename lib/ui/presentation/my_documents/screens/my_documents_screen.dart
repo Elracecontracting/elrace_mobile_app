@@ -274,9 +274,6 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       if (publicUrl.isEmpty) {
         throw Exception('Attachment URL is empty');
       }
-      if (type.isNotEmpty && !type.contains('pdf')) {
-        throw Exception('Attachment is not a PDF ($type)');
-      }
 
       dismissLoader();
       if (!mounted) return;
@@ -286,6 +283,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           builder: (_) => AttachmentViewerScreen(
             publicUrl: publicUrl,
             title: name,
+            attachmentType: type,
           ),
         ),
       );
@@ -1289,45 +1287,51 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                       ),
                       if (isRedBorderCard) ...[
                         SizedBox(height: 8.h),
-                        Container(
-                          constraints: BoxConstraints(minHeight: 24.h),
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 10.w, vertical: 4.h),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [Color(0xFF1B1F26), Color(0xFF717171)],
+                        GestureDetector(
+                          onTap: () {
+                            unawaited(_showChangeDocumentDialog(
+                                item, DocumentDialogType.my));
+                          },
+                          child: Container(
+                            constraints: BoxConstraints(minHeight: 24.h),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Color(0xFF1B1F26), Color(0xFF717171)],
+                              ),
+                              borderRadius: BorderRadius.circular(12.r),
                             ),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 12.w,
-                                height: 12.w,
-                                child: Image.asset(
-                                  'assets/newapp/newicon/change_document_icon.png',
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => Icon(
-                                    Icons.swap_horiz_rounded,
-                                    color: Colors.white,
-                                    size: 12.sp,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 12.w,
+                                  height: 12.w,
+                                  child: Image.asset(
+                                    'assets/newapp/newicon/change_document_icon.png',
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => Icon(
+                                      Icons.swap_horiz_rounded,
+                                      color: Colors.white,
+                                      size: 12.sp,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              SizedBox(width: 4.w),
-                              Text(
-                                'Change',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                  height: 1,
+                                SizedBox(width: 4.w),
+                                Text(
+                                  'Change',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    height: 1,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -1349,6 +1353,29 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     final typeLabel = _toTitleCase(rawType.replaceAll('_', ' '));
     final nameLabel = _toTitleCase(rawName.replaceAll('_', ' '));
     return _isMeaningfulDocLabel(nameLabel) ? nameLabel : typeLabel;
+  }
+
+  String _documentNameForChange(Map<String, dynamic> item) {
+    final rawName = (item['name'] ?? '').toString().trim();
+    final rawType =
+        (item['title'] ?? item['document_type'] ?? item['type'] ?? '')
+            .toString()
+            .trim();
+    final typeLabel = _toTitleCase(rawType.replaceAll('_', ' '));
+    final nameLabel = _toTitleCase(rawName.replaceAll('_', ' '));
+    if (_isMeaningfulDocLabel(nameLabel)) return nameLabel;
+    if (_isMeaningfulDocLabel(typeLabel)) return typeLabel;
+    return 'Document';
+  }
+
+  Future<void> _showChangeDocumentDialog(
+    Map<String, dynamic> item,
+    DocumentDialogType type,
+  ) async {
+    await _showDocumentDialogByType(
+      type,
+      fixedDocumentType: _documentNameForChange(item),
+    );
   }
 
   String _requestedIdNumber(Map<String, dynamic> item) {
@@ -1952,6 +1979,9 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                             );
                           },
                           onOpenDocument: _openDocumentAttachment,
+                          onChangeDocument: (document) =>
+                              _showChangeDocumentDialog(
+                                  document, DocumentDialogType.family),
                           onAddDocument: () {
                             _showDocumentDialogByType(
                                 DocumentDialogType.family);
@@ -2194,56 +2224,69 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                                           ),
                                           if (isExpired) ...[
                                             SizedBox(height: 4.h),
-                                            Container(
-                                              constraints: BoxConstraints(
-                                                minHeight: 24.h,
-                                              ),
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 10.w,
-                                                vertical: 4.h,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                gradient: const LinearGradient(
-                                                  begin: Alignment.topCenter,
-                                                  end: Alignment.bottomCenter,
-                                                  colors: [
-                                                    Color(0xFF1B1F26),
-                                                    Color(0xFF717171),
-                                                  ],
+                                            GestureDetector(
+                                              onTap: () {
+                                                unawaited(
+                                                    _showChangeDocumentDialog(
+                                                        item,
+                                                        DocumentDialogType.my));
+                                              },
+                                              child: Container(
+                                                constraints: BoxConstraints(
+                                                  minHeight: 24.h,
                                                 ),
-                                                borderRadius:
-                                                    BorderRadius.circular(12.r),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  SizedBox(
-                                                    width: 12.w,
-                                                    height: 12.w,
-                                                    child: Image.asset(
-                                                      'assets/newapp/newicon/change_document_icon.png',
-                                                      fit: BoxFit.contain,
-                                                      errorBuilder:
-                                                          (_, __, ___) => Icon(
-                                                        Icons
-                                                            .swap_horiz_rounded,
-                                                        color: Colors.white,
-                                                        size: 12.sp,
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 10.w,
+                                                  vertical: 4.h,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  gradient:
+                                                      const LinearGradient(
+                                                    begin: Alignment.topCenter,
+                                                    end: Alignment.bottomCenter,
+                                                    colors: [
+                                                      Color(0xFF1B1F26),
+                                                      Color(0xFF717171),
+                                                    ],
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12.r),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    SizedBox(
+                                                      width: 12.w,
+                                                      height: 12.w,
+                                                      child: Image.asset(
+                                                        'assets/newapp/newicon/change_document_icon.png',
+                                                        fit: BoxFit.contain,
+                                                        errorBuilder:
+                                                            (_, __, ___) =>
+                                                                Icon(
+                                                          Icons
+                                                              .swap_horiz_rounded,
+                                                          color: Colors.white,
+                                                          size: 12.sp,
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                                  SizedBox(width: 4.w),
-                                                  Text(
-                                                    'Change',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 10.sp,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: Colors.white,
-                                                      height: 1,
+                                                    SizedBox(width: 4.w),
+                                                    Text(
+                                                      'Change',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 10.sp,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Colors.white,
+                                                        height: 1,
+                                                      ),
                                                     ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           ],
@@ -2284,7 +2327,10 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     _showDocumentDialogByType(type);
   }
 
-  Future<void> _showDocumentDialogByType(DocumentDialogType type) async {
+  Future<void> _showDocumentDialogByType(
+    DocumentDialogType type, {
+    String? fixedDocumentType,
+  }) async {
     final result = await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -2294,7 +2340,10 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           ),
           elevation: 0,
           backgroundColor: Colors.transparent,
-          child: DocumentDialog(type: type),
+          child: DocumentDialog(
+            type: type,
+            fixedDocumentType: fixedDocumentType,
+          ),
         );
       },
     );
@@ -2720,9 +2769,10 @@ enum DocumentDialogType {
 }
 
 class DocumentDialog extends StatefulWidget {
-  const DocumentDialog({super.key, required this.type});
+  const DocumentDialog({super.key, required this.type, this.fixedDocumentType});
 
   final DocumentDialogType type;
+  final String? fixedDocumentType;
 
   @override
   State<DocumentDialog> createState() => _DocumentDialogState();
@@ -2769,8 +2819,13 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
   bool get _showIdAndExpiry => widget.type != DocumentDialogType.company;
   bool get _familyOnly => widget.type == DocumentDialogType.family;
+  bool get _hasFixedDocumentType =>
+      (widget.fixedDocumentType ?? '').trim().isNotEmpty;
+  String get _fixedDocumentType => (widget.fixedDocumentType ?? '').trim();
 
   String get _dialogTitle {
+    if (_hasFixedDocumentType) return 'Change Documents';
+
     switch (widget.type) {
       case DocumentDialogType.family:
         return 'Family Documents';
@@ -2785,7 +2840,13 @@ class _DocumentDialogState extends State<DocumentDialog> {
   @override
   void initState() {
     super.initState();
+    if (_hasFixedDocumentType) {
+      _selectedType = _fixedDocumentType;
+      _types.add(_fixedDocumentType);
+    }
+
     if (widget.type == DocumentDialogType.company) {
+      if (_hasFixedDocumentType) return;
       _types.addAll(_fallbackTypes);
       _selectedType = _types.isNotEmpty ? _types.first : null;
     } else {
@@ -2912,14 +2973,18 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
       if (!mounted || names.isEmpty) return;
       setState(() {
-        _types
-          ..clear()
-          ..addAll(names);
+        if (!_hasFixedDocumentType) {
+          _types
+            ..clear()
+            ..addAll(names);
+        }
         _documentTypeIds
           ..clear()
           ..addAll(idsByName);
 
-        if (_selectedType == null || !_types.contains(_selectedType)) {
+        if (_hasFixedDocumentType) {
+          _selectedType = _fixedDocumentType;
+        } else if (_selectedType == null || !_types.contains(_selectedType)) {
           _selectedType = _types.first;
         }
       });
@@ -2929,6 +2994,13 @@ class _DocumentDialogState extends State<DocumentDialog> {
       if (mounted) {
         setState(() {
           _isLoadingTypes = false;
+          if (_hasFixedDocumentType) {
+            _selectedType = _fixedDocumentType;
+            if (_types.isEmpty) {
+              _types.add(_fixedDocumentType);
+            }
+            return;
+          }
           if (_types.isEmpty) {
             _types.addAll(_fallbackTypes);
           }
@@ -3766,90 +3838,123 @@ class _DocumentDialogState extends State<DocumentDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                _dialogTitle,
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16.sp,
-                  letterSpacing: 0.6,
-                ),
-              ),
-              SizedBox(height: _showIdAndExpiry ? 14.h : 28.h),
-
-              // Document type dropdown
-              _buildPillField(
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton2<String>(
-                    value: _selectedType,
-                    isExpanded: true,
-                    hint: Center(
+              SizedBox(
+                height: 30.h,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Center(
                       child: Text(
-                        _isLoadingTypes && _types.isEmpty
-                            ? 'Loading document types...'
-                            : 'document type',
+                        _dialogTitle,
                         style: GoogleFonts.poppins(
-                          color: Colors.grey,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 1.0,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16.sp,
+                          letterSpacing: 0.6,
                         ),
                       ),
                     ),
-                    items: _types
-                        .map(
-                          (t) => DropdownMenuItem<String>(
-                            value: t,
-                            child: Center(
-                              child: Text(
-                                t,
-                                overflow: TextOverflow.visible,
-                                style: GoogleFonts.poppins(
-                                  color: Colors.black87,
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.w400,
-                                ),
+                    Positioned(
+                      right: -6.w,
+                      top: -4.h,
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).pop(false),
+                        borderRadius: BorderRadius.circular(18.r),
+                        child: Container(
+                          width: 30.w,
+                          height: 30.w,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.close_rounded,
+                            color: const Color(0xFF1B1F26),
+                            size: 22.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: _hasFixedDocumentType ? 6.h : (_showIdAndExpiry ? 14.h : 28.h)),
+
+              // Document type dropdown (hidden when a fixed type is pre-selected).
+              if (!_hasFixedDocumentType)
+                _buildPillField(
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton2<String>(
+                          value: _selectedType,
+                          isExpanded: true,
+                          hint: Center(
+                            child: Text(
+                              _isLoadingTypes && _types.isEmpty
+                                  ? 'Loading document types...'
+                                  : 'document type',
+                              style: GoogleFonts.poppins(
+                                color: Colors.grey,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: 1.0,
                               ),
                             ),
                           ),
-                        )
-                        .toList(),
-                    onChanged: _isLoadingTypes && _types.isEmpty
-                        ? null
-                        : (v) => setState(() => _selectedType = v),
-                    // Keep the pill container as the button background.
-                    buttonStyleData: ButtonStyleData(
-                      height: 30.h,
-                      padding: EdgeInsets.symmetric(horizontal: 4.w),
-                      decoration:
-                          const BoxDecoration(color: Colors.transparent),
-                    ),
-                    iconStyleData: const IconStyleData(
-                      icon: Icon(Icons.keyboard_arrow_down_rounded),
-                      iconSize: 20,
-                      iconEnabledColor: Colors.grey,
-                    ),
-                    dropdownStyleData: DropdownStyleData(
-                      maxHeight: 260.h,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16.r),
-                        color: Colors.white,
+                          items: _types
+                              .map(
+                                (t) => DropdownMenuItem<String>(
+                                  value: t,
+                                  child: Center(
+                                    child: Text(
+                                      t,
+                                      overflow: TextOverflow.visible,
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.black87,
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: _isLoadingTypes && _types.isEmpty
+                              ? null
+                              : (v) => setState(() => _selectedType = v),
+                          // Keep the pill container as the button background.
+                          buttonStyleData: ButtonStyleData(
+                            height: 30.h,
+                            padding: EdgeInsets.symmetric(horizontal: 4.w),
+                            decoration:
+                                const BoxDecoration(color: Colors.transparent),
+                          ),
+                          iconStyleData: const IconStyleData(
+                            icon: Icon(Icons.keyboard_arrow_down_rounded),
+                            iconSize: 20,
+                            iconEnabledColor: Colors.grey,
+                          ),
+                          dropdownStyleData: DropdownStyleData(
+                            maxHeight: 260.h,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16.r),
+                              color: Colors.white,
+                            ),
+                            offset: const Offset(0, -4),
+                            scrollbarTheme: ScrollbarThemeData(
+                              radius: const Radius.circular(40),
+                              thickness: WidgetStateProperty.all(6),
+                              thumbVisibility: WidgetStateProperty.all(true),
+                            ),
+                          ),
+                          menuItemStyleData: MenuItemStyleData(
+                            height: 44.h,
+                            padding: EdgeInsets.symmetric(horizontal: 12.w),
+                          ),
+                        ),
                       ),
-                      offset: const Offset(0, -4),
-                      scrollbarTheme: ScrollbarThemeData(
-                        radius: const Radius.circular(40),
-                        thickness: WidgetStateProperty.all(6),
-                        thumbVisibility: WidgetStateProperty.all(true),
-                      ),
                     ),
-                    menuItemStyleData: MenuItemStyleData(
-                      height: 44.h,
-                      padding: EdgeInsets.symmetric(horizontal: 12.w),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: _showIdAndExpiry ? 14.h : 40.h),
+              SizedBox(height: _hasFixedDocumentType ? 0 : (_showIdAndExpiry ? 14.h : 40.h)),
 
               if (_showIdAndExpiry) ...[
                 SizedBox(height: 10.h),
