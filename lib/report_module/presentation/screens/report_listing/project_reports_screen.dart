@@ -134,32 +134,33 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                           }
 
                           try {
-                            final provider = Provider.of<ReportProvider>(
-                                outerContext,
-                                listen: false);
                             // Close dialog immediately
                             Navigator.pop(dialogContext);
-                            await provider.createReport(
-                              title: reportNameController.text.trim(),
-                              folderID: _folder!.id,
-                            );
-                            await _loadReports();
                             if (mounted) {
-                              if (provider.reports.isNotEmpty) {
-                                Navigator.push(
-                                  outerContext,
-                                  MaterialPageRoute(
-                                    builder: (context) => ReportPhotosScreen(
-                                      report: provider.reports.first,
-                                      folderName: _folder?.name ?? '',
-                                      folderId: _folder?.id ?? '',
-                                      onReportUpdated: () async {
-                                        await _loadReports();
-                                      },
+                              final now = DateTime.now();
+                              Navigator.push(
+                                outerContext,
+                                MaterialPageRoute(
+                                  builder: (context) => ReportPhotosScreen(
+                                    report: ReportModel(
+                                      id: 'draft-${now.millisecondsSinceEpoch}',
+                                      name: reportNameController.text.trim(),
+                                      companyId: '',
+                                      folderId: _folder!.id,
+                                      createdAt: now,
+                                      updatedAt: now,
+                                      reportType: selectedReportType,
                                     ),
+                                    folderName: _folder?.name ?? '',
+                                    folderId: _folder?.id ?? '',
+                                    createReportOnFirstImage: true,
+                                    draftReportType: selectedReportType,
+                                    onReportUpdated: () async {
+                                      await _loadReports();
+                                    },
                                   ),
-                                );
-                              }
+                                ),
+                              );
                             }
                           } catch (_) {
                             if (mounted) {
@@ -235,7 +236,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
       // If no folder was passed in, fetch the first available folder
       if (_folder == null) {
         await CompanyRepository().getCompany();
-        ReportProvider().init(base: "https://erp.elrace.com");
+        await provider.init(base: "https://erp.elrace.com");
         await provider.fetchAllFolders();
         if (!mounted) return;
         if (provider.folders.isEmpty) {

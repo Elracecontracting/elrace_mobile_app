@@ -40,12 +40,22 @@ class ReportModel extends HiveObject {
     return ReportModel(
       id: json['id'].toString(),
       name: (json['name'] ?? '').toString(),
-      folderId: json['folder_id'].toString(),
-      companyId: (json['company_id'] == false || json['company_id'] == null) ? '' : json['company_id'].toString(),
-      createdAt:
-          DateTime.parse((json['created_at'] ?? json['create_at']).toString()),
-      updatedAt: DateTime.parse(json['updated_at'].toString()),
-      reportType: (json['report_type'] != null && json['report_type'] != false) ? json['report_type'].toString() : null,
+      folderId: (json['folder_id'] ?? '').toString(),
+      companyId: (json['company_id'] == false || json['company_id'] == null)
+          ? ''
+          : json['company_id'].toString(),
+      createdAt: DateTime.tryParse(
+              (json['created_at'] ?? json['create_at'] ?? '').toString()) ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse((json['updated_at'] ??
+                  json['created_at'] ??
+                  json['create_at'] ??
+                  '')
+              .toString()) ??
+          DateTime.now(),
+      reportType: (json['report_type'] != null && json['report_type'] != false)
+          ? json['report_type'].toString()
+          : null,
     );
   }
 

@@ -1,26 +1,19 @@
 import 'dart:ui';
 
-import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/core/utils/flush_bar.dart';
 import 'package:el_race/report_module/data/models/folder_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:el_race/report_module/presentation/dialogs/add_report.dart';
-import 'package:el_race/report_module/presentation/screens/company/company_screen.dart';
-import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
-import 'package:el_race/report_module/presentation/widgets/square_button.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
-import 'package:el_race/utils/color_utils.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../widgets/folder_tile.dart';
-import 'project_reports_screen.dart';
+import '../report_photos/report_photos_screen.dart';
 
 class ReportAppHomeScreen extends StatefulWidget {
   const ReportAppHomeScreen({super.key});
@@ -45,14 +38,18 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
   }
 
   getData() async {
-    // Navigate immediately — ProjectReportsScreen loads its own data
     if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ProjectReportsScreen(),
-      ),
-    );
+    setState(() => isLoading = true);
+    try {
+      await CompanyRepository().getCompany();
+      final provider = Provider.of<ReportProvider>(context, listen: false);
+      await provider.init(base: "https://erp.elrace.com");
+      await provider.fetchAllFolders();
+    } catch (e) {
+      debugPrint('Error loading report folders: $e');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   Future<void> _onCreateReportTap() async {
@@ -79,6 +76,51 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
       setState(() {
         _isCreateButtonBusy = false;
       });
+    }
+  }
+
+  Future<void> _openFolderPhotos(FolderModel folder) async {
+    if (_isCreateButtonExpanded) {
+      setState(() => _isCreateButtonExpanded = false);
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final provider = Provider.of<ReportProvider>(context, listen: false);
+      final report = await provider.getOrCreateSingleReportForFolder(folder);
+
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (report == null) {
+        showFlushBar(context,
+            message: 'Failed to open report. Please try again');
+        return;
+      }
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ReportPhotosScreen(
+            report: report,
+            folderName: folder.name,
+            folderId: folder.id,
+            onReportUpdated: () async {
+              await getData();
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error opening folder report photos: $e');
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      showFlushBar(context, message: 'Failed to open report. Please try again');
     }
   }
 
@@ -232,6 +274,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                             final folder = filteredFolders[index];
                             return FolderTile(
                               folder: folder,
+                              onTap: () => _openFolderPhotos(folder),
                               onMenuSelected: (value) async {
                                 if (value == 'rename') {
                                   if (!context.mounted) return;

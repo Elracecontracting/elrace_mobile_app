@@ -33,6 +33,8 @@ class ReportPhotosScreen extends StatefulWidget {
   final String folderName;
   final String folderId;
   final VoidCallback? onReportUpdated;
+  final bool createReportOnFirstImage;
+  final String? draftReportType;
 
   const ReportPhotosScreen({
     super.key,
@@ -40,6 +42,8 @@ class ReportPhotosScreen extends StatefulWidget {
     required this.folderName,
     required this.folderId,
     this.onReportUpdated,
+    this.createReportOnFirstImage = false,
+    this.draftReportType,
   });
 
   @override
@@ -52,6 +56,9 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   bool _isDownloadingPhotos = false;
   final ImagePicker _picker = ImagePicker();
   List<_PhotoItem> _photoItems = [];
+  late ReportModel _report;
+  late bool _createReportOnFirstImage;
+  bool _isCreatingReport = false;
 
   int get _imagesCount => _photoItems
       .where(
@@ -61,14 +68,75 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPhotos();
+    _report = widget.report;
+    _createReportOnFirstImage = widget.createReportOnFirstImage;
+    if (_createReportOnFirstImage) {
+      _isLoading = false;
+    } else {
+      _loadPhotos();
+    }
+  }
+
+  Future<bool> _ensureReportCreated() async {
+    if (!_createReportOnFirstImage) return true;
+    if (_isCreatingReport) return false;
+
+    setState(() {
+      _isCreatingReport = true;
+      _isLoading = true;
+    });
+
+    try {
+      final provider = Provider.of<ReportProvider>(context, listen: false);
+      final created = await provider.createReport(
+        title: _report.name,
+        folderID: widget.folderId,
+        companyName: CompanyRepository.company?.companyName,
+        reportType: widget.draftReportType ?? _report.reportType,
+      );
+
+      if (created == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to create report. Please try again'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return false;
+      }
+
+      _report = created;
+      _createReportOnFirstImage = false;
+      widget.onReportUpdated?.call();
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error creating report before first image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to create report. Please try again'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCreatingReport = false;
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadPhotos() async {
     setState(() => _isLoading = true);
     try {
       final provider = Provider.of<ReportProvider>(context, listen: false);
-      final detail = await provider.fetchReportDetailFromApi(widget.report.id);
+      final detail = await provider.fetchReportDetailFromApi(_report.id);
       if (detail != null && detail.reportItems.isNotEmpty) {
         _photoItems = detail.reportItems.map((item) {
           final p = _PhotoItem();
@@ -101,7 +169,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
       if (item.itemId == null) continue;
       try {
         await provider.updateReportItem(
-          reportId: widget.report.id,
+          reportId: _report.id,
           itemId: item.itemId!,
           location: item.location ?? '',
           description: item.description,
@@ -147,7 +215,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
           }
 
           final result = await provider.updateReportItem(
-            reportId: widget.report.id,
+            reportId: _report.id,
             itemId: item.itemId!,
             location: item.location ?? '',
             description: item.description,
@@ -282,6 +350,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
         ),
       );
       if (paths == null || paths.isEmpty) return;
+      if (!await _ensureReportCreated()) return;
 
       setState(() => _isLoading = true);
       final provider = Provider.of<ReportProvider>(context, listen: false);
@@ -301,7 +370,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
             .where((e) => e.value.isNotEmpty)
             .map((e) => provider
                 .addReportItem(
-                  reportId: widget.report.id,
+                  reportId: _report.id,
                   imageFile: File(e.value),
                   location: '',
                   description: '',
@@ -312,29 +381,39 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
 
       if (mounted) await _loadPhotos();
     } else {
-      // Gallery: single pick
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
+      // Gallery: allow selecting multiple images at once.
+      final List<XFile> images = await _picker.pickMultiImage(
         imageQuality: 60,
       );
-      if (image == null) return;
-
-      final savedPath = await saveImageToAppStorage(
-        File(image.path),
-        widget.folderId + widget.folderId,
-      );
-      if (savedPath.isEmpty) return;
+      if (images.isEmpty) return;
+      if (!await _ensureReportCreated()) return;
 
       setState(() => _isLoading = true);
       try {
         final provider = Provider.of<ReportProvider>(context, listen: false);
-        await provider.addReportItem(
-          reportId: widget.report.id,
-          imageFile: File(savedPath),
-          location: '',
-          description: '',
-          index: _photoItems.length,
+        final savedPaths = await Future.wait(
+          images.map((image) => saveImageToAppStorage(
+                File(image.path),
+                widget.folderId + widget.folderId,
+              )),
         );
+
+        await Future.wait(
+          savedPaths
+              .asMap()
+              .entries
+              .where((e) => e.value.isNotEmpty)
+              .map((e) => provider
+                  .addReportItem(
+                    reportId: _report.id,
+                    imageFile: File(e.value),
+                    location: '',
+                    description: '',
+                    index: _photoItems.length + e.key,
+                  )
+                  .catchError((_) => null)),
+        );
+
         await _loadPhotos();
       } catch (_) {
         if (mounted) setState(() => _isLoading = false);
@@ -357,7 +436,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => PdfGenerationPage(
-          reportId: widget.report.id,
+          reportId: _report.id,
           folderId: widget.folderId,
           folderName: widget.folderName,
           reportItemsCount: _imagesCount,
@@ -454,7 +533,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
     }
 
     final dir = await getApplicationDocumentsDirectory();
-    final safeReportName = widget.report.name
+    final safeReportName = _report.name
         .trim()
         .replaceAll(RegExp(r'[^A-Za-z0-9_\- ]+'), '')
         .replaceAll(RegExp(r'\s+'), '_');
@@ -588,7 +667,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
       builder: (ctx) => _PhotoDetailDialog(
         photoItems: _photoItems,
         initialIndex: index,
-        reportId: widget.report.id,
+        reportId: _report.id,
         folderId: widget.folderId,
       ),
     ).then((_) {
@@ -760,7 +839,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                                               builder: (_) =>
                                                   _DownloadPhotosSelectionScreen(
                                                 photoItems: _photoItems,
-                                                reportId: widget.report.id,
+                                                reportId: _report.id,
                                                 folderId: widget.folderId,
                                                 onDownloadSelected: (selected) {
                                                   return _downloadPhotosToGallery(
@@ -1575,49 +1654,49 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         child: Column(
           children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(
-                    Icons.image_outlined,
-                    color: const Color(0xFFAEAEAE),
-                    size: 22.w,
-                  ),
-                  SizedBox(width: 4.w),
-                  Text(
-                    widget.reportItemsCount.toString(),
-                    style: GoogleFonts.poppins(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFFAEAEAE),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Type of Report',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF6A6D78),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Type of Reprot',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF6A6D78),
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.image_outlined,
+                        color: const Color(0xFFAEAEAE),
+                        size: 16.w,
+                      ),
+                      SizedBox(width: 3.w),
+                      Text(
+                        widget.reportItemsCount.toString(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFAEAEAE),
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 10.h),
+                  SizedBox(height: 8.h),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: _reportTemplates.map((template) {
                         final id = template['id']!;
                         final asset = template['asset']!;
                         final selected = _selectedTemplateType == id;
+                        final isTall =
+                            id == 'template1' || id == 'template3';
 
                         return GestureDetector(
                           onTap: () {
@@ -1625,32 +1704,39 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
-                            margin: EdgeInsets.only(right: 8.w),
-                            width: 84.w,
-                            height: 68.h,
-                            padding: EdgeInsets.all(3.w),
+                            margin: EdgeInsets.only(right: 6.w),
+                            width: isTall ? 70.w : 95.w,
+                            height: isTall ? 85.h : 62.h,
+                            padding: EdgeInsets.all(2.w),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(6.r),
+                              color: const Color(0xFFE6E6E6),
+                              borderRadius: BorderRadius.circular(2.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                               border: Border.all(
                                 color: selected
                                     ? const Color(0xFF27304E)
-                                    : const Color(0xFFD2D2D2),
-                                width: selected ? 1.8 : 1,
+                                    : const Color(0xFFD0D0D0),
+                                width: selected ? 1.4 : 0.7,
                               ),
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4.r),
+                              borderRadius: BorderRadius.circular(2.r),
                               child: Image.asset(
                                 asset,
-                                fit: BoxFit.cover,
+                                fit: BoxFit.fill,
                                 errorBuilder: (_, __, ___) => Container(
                                   color: const Color(0xFFEAEAEA),
                                   alignment: Alignment.center,
                                   child: Icon(
                                     Icons.image_outlined,
                                     color: const Color(0xFF9A9A9A),
-                                    size: 18.w,
+                                    size: 12.w,
                                   ),
                                 ),
                               ),
@@ -1660,7 +1746,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                       }).toList(),
                     ),
                   ),
-                  SizedBox(height: 16.h),
+                  SizedBox(height: 14.h),
                   Text(
                     'Company Name',
                     style: GoogleFonts.poppins(
@@ -1835,7 +1921,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                       child: Text(
                         'Recent Files',
                         style: GoogleFonts.poppins(
-                          fontSize: 32.sp,
+                          fontSize: 20.sp,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),

@@ -5,7 +5,6 @@ import 'package:el_race/report_module/data/models/report_pdf_model.dart';
 import 'package:el_race/report_module/data/services/report_hive_service.dart';
 import 'package:el_race/ui/presentation/call_screen/data/repository.dart';
 import 'package:flutter/foundation.dart';
-import 'package:el_race/main.dart';
 import 'package:el_race/report_module/core/utils/flush_bar.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
 import 'package:dio/dio.dart' as dio;
@@ -175,14 +174,31 @@ class ReportProvider extends ChangeNotifier {
     // print(jsonData);
     _setLoading(false);
 
-    final createdReport = FolderModel.fromJson(jsonData['data']);
-    _folders.insert(0, createdReport);
+    if (jsonData['data'] == null) return;
+    var createdFolder = FolderModel.fromJson(jsonData['data']);
+    _folders.insert(0, createdFolder);
     notifyListeners();
+
+    final createdReport = await createReport(
+      title: createdFolder.name,
+      folderID: createdFolder.id,
+      companyName: description,
+    );
+    if (createdReport != null) {
+      createdFolder = createdFolder.copyWith(reportCount: 1);
+      final index = _folders.indexWhere((f) => f.id == createdFolder.id);
+      if (index != -1) {
+        _folders[index] = createdFolder;
+        notifyListeners();
+      }
+    }
   }
 
-  Future<void> createReport({
+  Future<ReportModel?> createReport({
     required String title,
     required String folderID,
+    String? companyName,
+    String? reportType,
   }) async {
     _setLoading(true);
     var request =
@@ -192,12 +208,29 @@ class ReportProvider extends ChangeNotifier {
             'name': title,
             'company_id': companyId,
             'folder_id': folderID,
-            'company': "test", //todo remove
+            'company': (companyName?.trim().isNotEmpty ?? false)
+                ? companyName!.trim()
+                : "test",
+            if (reportType?.trim().isNotEmpty ?? false)
+              'report_type': reportType!.trim(),
           });
     final jsonData = await _handleResponse(await request.send());
     print(jsonData);
     _setLoading(false);
-    final createdReport = ReportModel.fromJson(jsonData['data']);
+    if (jsonData['data'] == null) return null;
+    var createdReport = ReportModel.fromJson(jsonData['data']);
+    if (createdReport.reportType == null &&
+        (reportType?.trim().isNotEmpty ?? false)) {
+      createdReport = ReportModel(
+        id: createdReport.id,
+        name: createdReport.name,
+        companyId: createdReport.companyId,
+        folderId: createdReport.folderId,
+        createdAt: createdReport.createdAt,
+        updatedAt: createdReport.updatedAt,
+        reportType: reportType!.trim(),
+      );
+    }
     // Persist report type locally so it survives app restart
     if (createdReport.reportType != null) {
       _saveReportType(createdReport.id, createdReport.reportType!);
@@ -205,6 +238,7 @@ class ReportProvider extends ChangeNotifier {
     _reports.insert(0, createdReport);
     _sortReportsNewestFirst();
     notifyListeners();
+    return createdReport;
   }
 
   Future<void> updateReport(
@@ -271,8 +305,10 @@ class ReportProvider extends ChangeNotifier {
 
       final jsonData = await _handleResponse(await request.send());
 
-      _folders = (jsonData['data'] as List)
+        _folders = (jsonData['data'] as List)
           .map((e) => FolderModel.fromJson(e))
+          .toList()
+          .reversed
           .toList();
     } catch (e) {
       debugPrint('Error in fetchAllFolders: $e');
@@ -364,6 +400,30 @@ class ReportProvider extends ChangeNotifier {
     debugPrint(
         '🔍 Loaded ${_reports.length} reports. Types: ${_reports.map((r) => '${r.name}:${r.reportType}').join(', ')}');
     notifyListeners();
+  }
+
+  Future<ReportModel?> getOrCreateSingleReportForFolder(
+      FolderModel folder) async {
+    await fetchAllReports(folderID: folder.id);
+
+    if (_reports.isNotEmpty) {
+      final normalizedFolderName = folder.name.trim().toLowerCase();
+      final sameNameIndex = _reports.indexWhere(
+        (report) => report.name.trim().toLowerCase() == normalizedFolderName,
+      );
+      if (sameNameIndex != -1) return _reports[sameNameIndex];
+
+      // Existing folders may already have old reports with custom names.
+      // Keep the user's data and open the newest report instead of creating
+      // duplicates; all newly created folders get a same-name report below.
+      return _reports.first;
+    }
+
+    return createReport(
+      title: folder.name,
+      folderID: folder.id,
+      companyName: folder.description,
+    );
   }
 
   Future<ReportDetailModel?> getReportDetail(ReportModel report) async {
@@ -465,13 +525,12 @@ class ReportProvider extends ChangeNotifier {
         final map = Map<String, dynamic>.from(item as Map);
         final pdfReportId = _extractPdfReportId(map);
         return ReportPdfModel(
-            fileId: (map['s3_key'] ?? map['file_id'] ?? '').toString(),
-            id: (map['id'] ?? '').toString(),
-            reportId: pdfReportId.isNotEmpty ? pdfReportId : reportId,
-            fileName: (map['name'] ?? map['file_name'] ?? '').toString(),
-            createdAt:
-                (map['create_at'] ?? map['created_at'] ?? '').toString(),
-            reportLink: (map['report_link'] ?? '').toString(),
+          fileId: (map['s3_key'] ?? map['file_id'] ?? '').toString(),
+          id: (map['id'] ?? '').toString(),
+          reportId: pdfReportId.isNotEmpty ? pdfReportId : reportId,
+          fileName: (map['name'] ?? map['file_name'] ?? '').toString(),
+          createdAt: (map['create_at'] ?? map['created_at'] ?? '').toString(),
+          reportLink: (map['report_link'] ?? '').toString(),
         );
       }).toList();
     } catch (e) {

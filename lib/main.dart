@@ -49,6 +49,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:app_links/app_links.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:screen_protector/screen_protector.dart';
 import 'package:el_race/core/app_globals.dart';
 import 'core/services/app_config_service.dart';
 import 'core/services/attendance_status_sync_service.dart';
@@ -95,6 +96,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // await _enableGlobalScreenProtection();
+
   // ── PHASE 1: Bare-minimum init (fast, needed before first frame) ──
   try {
     await Future.wait([
@@ -138,6 +141,18 @@ void main() async {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     _performHeavyInitialization();
   });
+}
+
+Future<void> _enableGlobalScreenProtection() async {
+  try {
+    await Future.wait<void>([
+      ScreenProtector.preventScreenshotOn(),
+      ScreenProtector.protectDataLeakageOn(),
+    ]);
+    debugPrint('✅ Screen protection enabled globally');
+  } catch (e) {
+    debugPrint('❌ Failed to enable screen protection: $e');
+  }
 }
 
 /// Runs all the heavy services in the background.

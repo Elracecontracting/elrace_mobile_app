@@ -16,6 +16,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 
 class AppSettingsWidget extends StatelessWidget {
+  static const bool _showLogoutButton = false;
+
   final GlobalKey<NavigatorState> navKey;
   final VoidCallback? onMuteControlTap;
   const AppSettingsWidget({
@@ -436,176 +438,182 @@ class AppSettingsWidget extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(height: 8.h),
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: 12.w,
-          ),
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha((0.15 * 255).toInt()),
-                offset: const Offset(0, 1.68),
-                //blurRadius: 4,
-              )
-            ],
-            borderRadius: const BorderRadius.only(
-              bottomRight: Radius.circular(20),
+        if (_showLogoutButton) ...[
+          SizedBox(height: 8.h),
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: 12.w,
             ),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF999999), Color(0xFFFFFFFF)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Image.asset('assets/png/log_out_icon.png'),
-              SizedBox(
-                width: 25.w,
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((0.15 * 255).toInt()),
+                  offset: const Offset(0, 1.68),
+                  //blurRadius: 4,
+                )
+              ],
+              borderRadius: const BorderRadius.only(
+                bottomRight: Radius.circular(20),
               ),
-              TextButton(
-                onPressed: () async {
-                  // print('🚪 Logout button pressed');
+              gradient: const LinearGradient(
+                colors: [Color(0xFF999999), Color(0xFFFFFFFF)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Image.asset('assets/png/log_out_icon.png'),
+                SizedBox(
+                  width: 25.w,
+                ),
+                TextButton(
+                  onPressed: () async {
+                    // print('🚪 Logout button pressed');
 
-                  // Hide profile box first (before showing dialog)
-                  final provider =
-                      Provider.of<ProfileBoxProvider>(context, listen: false);
-                  if (provider.isProfileVisible) {
-                    provider.hideProfileBox();
-                  }
+                    // Hide profile box first (before showing dialog)
+                    final provider =
+                        Provider.of<ProfileBoxProvider>(context, listen: false);
+                    if (provider.isProfileVisible) {
+                      provider.hideProfileBox();
+                    }
 
-                  // Wait a bit for the animation to complete
-                  await Future.delayed(const Duration(milliseconds: 300));
+                    // Wait a bit for the animation to complete
+                    await Future.delayed(const Duration(milliseconds: 300));
 
-                  // Use navKey.currentContext if available, otherwise fallback to context
-                  final dialogContext = navKey.currentContext ?? context;
+                    // Use navKey.currentContext if available, otherwise fallback to context
+                    final dialogContext = navKey.currentContext ?? context;
 
-                  // Show confirmation dialog
-                  final shouldLogout = await showDialog<bool>(
-                    context: dialogContext,
-                    barrierDismissible: false,
-                    builder: (ctx) => AlertDialog(
-                      title: Text(
-                        translate('profile.logout_confirmation_title'),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      content: Text(
-                          translate('profile.logout_confirmation_message')),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(false),
-                          child: Text(
-                            translate('common.cancel'),
-                            style: const TextStyle(color: Colors.grey),
-                          ),
+                    // Show confirmation dialog
+                    final shouldLogout = await showDialog<bool>(
+                      context: dialogContext,
+                      barrierDismissible: false,
+                      builder: (ctx) => AlertDialog(
+                        title: Text(
+                          translate('profile.logout_confirmation_title'),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        ElevatedButton(
-                          onPressed: () => Navigator.of(ctx).pop(true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xffBA1719),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                        content: Text(
+                            translate('profile.logout_confirmation_message')),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: Text(
+                              translate('common.cancel'),
+                              style: const TextStyle(color: Colors.grey),
                             ),
                           ),
-                          child: Text(
-                            translate('profile.logout'),
-                            style: const TextStyle(color: Colors.white),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xffBA1719),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              translate('profile.logout'),
+                              style: const TextStyle(color: Colors.white),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  // If user confirmed, proceed with logout
-                  if (shouldLogout == true) {
-                    // Show loading dialog
-                    final loadingContext = navKey.currentContext ?? context;
-                    showDialog(
-                      context: loadingContext,
-                      barrierDismissible: false,
-                      builder: (ctx) => const PopScope(
-                        canPop: false,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xffBA1719),
-                          ),
-                        ),
+                        ],
                       ),
                     );
 
-                    try {
-                      // Cleanup chat module (Firebase signout, FCM unsubscribe, etc.)
-                      // print('🧹 Cleaning up chat module...');
-                      try {
-                        await ChatModuleHelper.instance.cleanup().timeout(
-                              const Duration(seconds: 5),
-                            );
-                        // print('✅ Chat module cleaned up');
-                      } catch (e) {
-                        // print('⚠️ Chat cleanup failed (continuing): $e');
-                      }
-
-                      // Clear UAE PASS session
-                      try {
-                        await context.read<UaepassAuthCubit>().logout().timeout(
-                              const Duration(seconds: 5),
-                            );
-                      } catch (e) {
-                        // print('⚠️ UAE Pass logout failed (continuing): $e');
-                      }
-
-                      // إلغاء إشعارات التذكير بـ check in/out عند تسجيل الخروج
-                      try {
-                        await CheckInReminderNotificationService()
-                            .cancelAllReminders();
-                        // print('✅ Check-in/out reminders cancelled');
-                      } catch (e) {
-                        // print('⚠️ Failed to cancel reminders (continuing): $e');
-                      }
-
-                      // Clear user preferences
-                      // print('🧹 Clearing preferences...');
-                      await SharedPref().clearPreferences();
-                      // Update login state in Hive for background service
-                      await HiveService.setUserLoggedIn(false);
-                      // print('✅ Preferences cleared');
-                    } catch (e) {
-                      // print('❌ Logout error: $e');
-                    } finally {
-                      // Reset bottom navigation to Home for the next session.
-                      try {
-                        context
-                            .read<HomeBloc>()
-                            .add(const ChangeCurrentIndex(index: 1));
-                      } catch (e) {
-                        // print('⚠️ Failed to reset HomeBloc index on logout: $e');
-                      }
-
-                      // Always navigate to sign in, even if some cleanup failed
-                      // print('🧭 Navigating to sign in...');
-                      final navContext = navKey.currentContext ?? context;
-                      Navigator.pushAndRemoveUntil(
-                        navContext,
-                        MaterialPageRoute(
-                            builder: (context) => const SignInScreen()),
-                        (route) => false,
+                    // If user confirmed, proceed with logout
+                    if (shouldLogout == true) {
+                      // Show loading dialog
+                      final loadingContext = navKey.currentContext ?? context;
+                      showDialog(
+                        context: loadingContext,
+                        barrierDismissible: false,
+                        builder: (ctx) => const PopScope(
+                          canPop: false,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xffBA1719),
+                            ),
+                          ),
+                        ),
                       );
-                      // print('✅ Navigation completed');
+
+                      try {
+                        // Cleanup chat module (Firebase signout, FCM unsubscribe, etc.)
+                        // print('🧹 Cleaning up chat module...');
+                        try {
+                          await ChatModuleHelper.instance.cleanup().timeout(
+                                const Duration(seconds: 5),
+                              );
+                          // print('✅ Chat module cleaned up');
+                        } catch (e) {
+                          // print('⚠️ Chat cleanup failed (continuing): $e');
+                        }
+
+                        // Clear UAE PASS session
+                        try {
+                          await context
+                              .read<UaepassAuthCubit>()
+                              .logout()
+                              .timeout(
+                                const Duration(seconds: 5),
+                              );
+                        } catch (e) {
+                          // print('⚠️ UAE Pass logout failed (continuing): $e');
+                        }
+
+                        // إلغاء إشعارات التذكير بـ check in/out عند تسجيل الخروج
+                        try {
+                          await CheckInReminderNotificationService()
+                              .cancelAllReminders();
+                          // print('✅ Check-in/out reminders cancelled');
+                        } catch (e) {
+                          // print('⚠️ Failed to cancel reminders (continuing): $e');
+                        }
+
+                        // Clear user preferences
+                        // print('🧹 Clearing preferences...');
+                        await SharedPref().clearPreferences();
+                        // Update login state in Hive for background service
+                        await HiveService.setUserLoggedIn(false);
+                        // print('✅ Preferences cleared');
+                      } catch (e) {
+                        // print('❌ Logout error: $e');
+                      } finally {
+                        // Reset bottom navigation to Home for the next session.
+                        try {
+                          context
+                              .read<HomeBloc>()
+                              .add(const ChangeCurrentIndex(index: 1));
+                        } catch (e) {
+                          // print('⚠️ Failed to reset HomeBloc index on logout: $e');
+                        }
+
+                        // Always navigate to sign in, even if some cleanup failed
+                        // print('🧭 Navigating to sign in...');
+                        final navContext = navKey.currentContext ?? context;
+                        Navigator.pushAndRemoveUntil(
+                          navContext,
+                          MaterialPageRoute(
+                              builder: (context) => const SignInScreen()),
+                          (route) => false,
+                        );
+                        // print('✅ Navigation completed');
+                      }
                     }
-                  }
-                },
-                child: Text(translate('profile.logout'),
-                    style: const TextStyle(
-                        color: Color(0xffBA1719), fontWeight: FontWeight.bold)),
-              ),
-            ],
+                  },
+                  child: Text(translate('profile.logout'),
+                      style: const TextStyle(
+                          color: Color(0xffBA1719),
+                          fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

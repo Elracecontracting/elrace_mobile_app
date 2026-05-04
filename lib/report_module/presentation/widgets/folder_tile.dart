@@ -7,19 +7,26 @@ import 'package:google_fonts/google_fonts.dart';
 class FolderTile extends StatelessWidget {
   final FolderModel folder;
   final ValueChanged<String> onMenuSelected;
+  final VoidCallback? onTap;
 
-  const FolderTile(
-      {super.key, required this.folder, required this.onMenuSelected});
+  const FolderTile({
+    super.key,
+    required this.folder,
+    required this.onMenuSelected,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => ProjectReportsScreen(folder: folder)));
-      },
+      onTap: onTap ??
+          () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) =>
+                        ProjectReportsScreen(folder: folder)));
+          },
       child: Container(
         margin: EdgeInsets.fromLTRB(14.w, 0, 14.w, 12.h),
         clipBehavior: Clip.hardEdge,

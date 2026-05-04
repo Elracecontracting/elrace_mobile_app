@@ -36,8 +36,7 @@ class FolderModel {
       return hasS3Key || hasFileName;
     }
 
-    final dynamic reportsValue =
-        json['report_count'] ??
+    final dynamic reportsValue = json['report_count'] ??
         json['reports_count'] ??
         json['total_reports'] ??
         json['count'] ??
@@ -55,13 +54,20 @@ class FolderModel {
     }
 
     return FolderModel(
-      id: json['id'].toString(),
-      name: json['name'],
-      description: json['description'],
-      companyId: json['company_id'],
+      id: (json['id'] ?? json['folder_id']).toString(),
+      name: (json['name'] ?? json['folder_name'] ?? '').toString(),
+      description: (json['description'] ?? '').toString(),
+      companyId: _toInt(json['company_id']),
       reportCount: parsedReportCount,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: DateTime.tryParse(
+              (json['created_at'] ?? json['create_at'] ?? '').toString()) ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse((json['updated_at'] ??
+                  json['created_at'] ??
+                  json['create_at'] ??
+                  '')
+              .toString()) ??
+          DateTime.now(),
     );
   }
 
