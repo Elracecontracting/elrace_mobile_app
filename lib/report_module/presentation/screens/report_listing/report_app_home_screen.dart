@@ -296,7 +296,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                             BorderRadius.circular(16.r),
                                       ),
                                       title: Text(
-                                        'Delete Project Report',
+                                        'Delete Report',
                                         style: GoogleFonts.poppins(
                                           fontSize: 18.sp,
                                           fontWeight: FontWeight.w600,
@@ -304,7 +304,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                         ),
                                       ),
                                       content: Text(
-                                        'Are you sure you want to delete this project report?',
+                                        'Are you sure you want to delete this report?',
                                         style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           color: const Color(0xFF27304E),

@@ -38,6 +38,19 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
     if (mounted) setState(() => _companyLogo = company.logo);
   }
 
+  void _goBack() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    if (rootNavigator.canPop()) {
+      rootNavigator.pop();
+    }
+  }
+
   Future<void> _shareReport() async {
     final rawName = widget.fileName?.trim() ?? '';
     final name = rawName.isNotEmpty ? rawName : widget.link.split('/').last;
@@ -78,9 +91,7 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
             icon: Icons.keyboard_backspace,
             color: CustomColors.white,
             borderColor: CustomColors.black,
-            onPressed: () async {
-              Navigator.pop(context);
-            },
+            onPressed: _goBack,
           ),
         ),
         title: Image.asset(

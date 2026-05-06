@@ -496,6 +496,7 @@ class DefaultWidgets {
 
 class WidgetsData {
   final WidgetInfo? attendanceWidget;
+  final WidgetInfo? checkinWidget;
   final WidgetInfo? myRequestWidget;
   final WidgetInfo? myDocumentsWidget;
   final WidgetInfo? myProjectsWidget;
@@ -507,6 +508,7 @@ class WidgetsData {
 
   WidgetsData({
     this.attendanceWidget,
+    this.checkinWidget,
     this.myRequestWidget,
     this.myDocumentsWidget,
     this.myProjectsWidget,
@@ -522,6 +524,10 @@ class WidgetsData {
             ? null
             : WidgetInfo.fromJson(
                 json["attendance_widget"] as Map<String, dynamic>),
+      checkinWidget: json["checkin_widget"] == null
+        ? null
+        : WidgetInfo.fromJson(
+          json["checkin_widget"] as Map<String, dynamic>),
         myRequestWidget: json["my_request_widget"] == null
             ? null
             : WidgetInfo.fromJson(
@@ -556,6 +562,7 @@ class WidgetsData {
 
   Map<String, dynamic> toJson() => {
         "attendance_widget": attendanceWidget?.toJson(),
+      "checkin_widget": checkinWidget?.toJson(),
         "my_request_widget": myRequestWidget?.toJson(),
         "my_documents_widget": myDocumentsWidget?.toJson(),
         "my_projects_widget": myProjectsWidget?.toJson(),

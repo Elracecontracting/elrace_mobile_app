@@ -6,6 +6,7 @@ class FolderModel {
   final int reportCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final List<String> latestItemImages;
 
   FolderModel({
     required this.id,
@@ -15,6 +16,7 @@ class FolderModel {
     required this.reportCount,
     required this.createdAt,
     required this.updatedAt,
+    this.latestItemImages = const [],
   });
 
   factory FolderModel.fromJson(Map<String, dynamic> json) {
@@ -53,6 +55,18 @@ class FolderModel {
       parsedReportCount = _toInt(reportsValue);
     }
 
+    final parsedLatestItemImages = (json['latest_items'] is List)
+        ? (json['latest_items'] as List)
+            .whereType<Map>()
+            .map((item) {
+              final image = item['item_data'];
+              if (image == null || image == false) return '';
+              return image.toString().trim();
+            })
+            .where((image) => image.isNotEmpty)
+            .toList()
+        : <String>[];
+
     return FolderModel(
       id: (json['id'] ?? json['folder_id']).toString(),
       name: (json['name'] ?? json['folder_name'] ?? '').toString(),
@@ -68,6 +82,7 @@ class FolderModel {
                   '')
               .toString()) ??
           DateTime.now(),
+      latestItemImages: parsedLatestItemImages,
     );
   }
 
@@ -80,6 +95,7 @@ class FolderModel {
       'report_count': reportCount,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'latest_items': latestItemImages,
     };
   }
 
@@ -91,6 +107,7 @@ class FolderModel {
     int? reportCount,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<String>? latestItemImages,
   }) {
     return FolderModel(
       id: id ?? this.id,
@@ -100,6 +117,7 @@ class FolderModel {
       reportCount: reportCount ?? this.reportCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      latestItemImages: latestItemImages ?? this.latestItemImages,
     );
   }
 }

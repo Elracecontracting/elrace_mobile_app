@@ -27,6 +27,7 @@ class TasksDashboardScreen extends StatefulWidget {
 class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
   TaskFilter _selectedFilter = TaskFilter.all;
   Map<int, String> _memberPhotoById = {};
+  Map<int, TeamMember> _memberById = {};
   bool _isLoadingMemberPhotos = false;
   late Stream<DateTime> _timeStream;
 
@@ -49,16 +50,23 @@ class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
     setState(() => _isLoadingMemberPhotos = true);
 
     try {
-      final members = await TeamMembersApiService.instance.getTeamMembers();
+      final members = await TeamMembersApiService.instance.getTeamMembers(forceRefresh: true);
       final map = <int, String>{};
+      final memberMap = <int, TeamMember>{};
       for (final m in members) {
         final url = m.image?.trim();
         if (url != null && url.isNotEmpty) {
           map[m.id] = url;
+          if (m.employeeId != null) map[m.employeeId!] = url;
         }
+        memberMap[m.id] = m;
+        if (m.employeeId != null) memberMap[m.employeeId!] = m;
       }
       if (!mounted) return;
-      setState(() => _memberPhotoById = map);
+      setState(() {
+        _memberPhotoById = map;
+        _memberById = memberMap;
+      });
     } catch (_) {
       // ignore (fallback to initials)
     } finally {
@@ -78,9 +86,26 @@ class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
     return _memberPhotoById[id];
   }
 
+  TeamMember? _memberForDisplayName(String name) {
+    final id = _extractLeadingId(name);
+    if (id == null) return null;
+    return _memberById[id];
+  }
+
+  String _memberDisplayName(String rawName) {
+    final cleaned = rawName
+        .replaceFirst(RegExp(r'^\s*\d+\s*[-:|#]*\s*'), '')
+        .trim();
+    final parts = cleaned.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    if (parts.isEmpty) return rawName.trim();
+    if (parts.length == 1) return parts.first;
+    return '${parts[0]} ${parts[1]}';
+  }
+
   Widget _buildAvatarForName(String name, {double size = 42}) {
     final url = _photoUrlForDisplayName(name);
-    final initials = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    final displayName = _memberDisplayName(name);
+    final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
 
     if (url != null && url.isNotEmpty) {
       return Container(
@@ -286,6 +311,8 @@ class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
                           );
                         },
                         buildAvatar: _buildAvatarForName,
+                        memberDisplayName: _memberDisplayName,
+                        memberForDisplayName: _memberForDisplayName,
                       );
                     },
                     childCount: filteredTodos.length,
@@ -605,11 +632,15 @@ class _TaskCard extends StatefulWidget {
   final TodoModel todo;
   final VoidCallback onToggleComplete;
   final Widget Function(String name, {double size}) buildAvatar;
+  final String Function(String name) memberDisplayName;
+  final TeamMember? Function(String name) memberForDisplayName;
 
   const _TaskCard({
     required this.todo,
     required this.onToggleComplete,
     required this.buildAvatar,
+    required this.memberDisplayName,
+    required this.memberForDisplayName,
   });
 
   @override
@@ -731,8 +762,13 @@ class _TaskCardState extends State<_TaskCard> {
                           const SizedBox(height: 8),
                           Builder(
                             builder: (context) {
-                              final raw = widget.todo.assignedToName ?? '';
-                              final names = raw
+                              final names = (widget.todo.assignedMembers != null &&
+                                  widget.todo.assignedMembers!.isNotEmpty)
+                                ? widget.todo.assignedMembers!
+                                  .map((member) => member.name.trim())
+                                  .where((name) => name.isNotEmpty)
+                                  .toList()
+                                : (widget.todo.assignedToName ?? '')
                                   .split(',')
                                   .map((e) => e.trim())
                                   .where((e) => e.isNotEmpty)
@@ -760,27 +796,50 @@ class _TaskCardState extends State<_TaskCard> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: names
                                     .map(
-                                      (name) => Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 6),
-                                        child: Row(
-                                          children: [
-                                            widget.buildAvatar(name, size: 36),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                name,
-                                                maxLines: null,
-                                                overflow: TextOverflow.visible,
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w700,
+                                      (name) {
+                                        final displayName = widget.memberDisplayName(name);
+                                        final member = widget.memberForDisplayName(name);
+                                        final department = member?.department?.trim();
+
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 6),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            children: [
+                                              widget.buildAvatar(name, size: 36),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      displayName,
+                                                      maxLines: null,
+                                                      overflow: TextOverflow.visible,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                    if (department != null && department.isNotEmpty)
+                                                      Text(
+                                                        department,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                        style: const TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Color(0xFF9AA3AE),
+                                                        ),
+                                                      ),
+                                                  ],
                                                 ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                            ],
+                                          ),
+                                        );
+                                      },
                                     )
                                     .toList(),
                               );

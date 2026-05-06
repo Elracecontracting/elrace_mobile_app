@@ -34,6 +34,7 @@ class _NotificationTabConfig {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
+  static const int _notificationPageSize = 10;
   static const List<_NotificationTabConfig> _fixedNotificationTabs = [
     _NotificationTabConfig(
       category: 'circular',
@@ -49,10 +50,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   int currentIndex = 0;
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _contentScrollController = ScrollController();
   List<GlobalKey> _tabKeys = <GlobalKey>[];
   List<_NotificationTabConfig> _notificationTabs = const [];
   List<Map<String, dynamic>> notifications = [];
   bool _isLoading = true;
+  bool _isLoadingMoreNotifications = false;
+  bool _hasMoreNotifications = true;
+  int _notificationOffset = 0;
 
   // Circular/Announcement API data
   final CircularAnnouncementApiService _circularApiService =
@@ -66,10 +71,43 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
+    _contentScrollController.addListener(_handleContentScroll);
     _loadDynamicCategories();
     _loadMuteSettings();
     _loadNotifications();
     _loadCircularAnnouncements(); // Load from API
+  }
+
+  @override
+  void dispose() {
+    _contentScrollController.removeListener(_handleContentScroll);
+    _contentScrollController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  bool get _isLocalNotificationTab {
+    if (_notificationTabs.isEmpty || currentIndex >= _notificationTabs.length) {
+      return true;
+    }
+
+    final selectedCategory = _notificationTabs[currentIndex].category;
+    return selectedCategory != 'announcement' && selectedCategory != 'circular';
+  }
+
+  void _handleContentScroll() {
+    if (!_contentScrollController.hasClients ||
+        !_isLocalNotificationTab ||
+        _isLoading ||
+        _isLoadingMoreNotifications ||
+        !_hasMoreNotifications) {
+      return;
+    }
+
+    final position = _contentScrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 300) {
+      _loadMoreNotifications();
+    }
   }
 
   String _normalizeCategory(String value) {
@@ -293,14 +331,28 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _loadNotifications() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isLoadingMoreNotifications = false;
+      _hasMoreNotifications = true;
+      _notificationOffset = 0;
+    });
     try {
       final loadedNotifications =
-          await NotificationStorageService.getNotifications();
+          await NotificationStorageService.getNotifications(
+        limit: _notificationPageSize,
+        offset: 0,
+      );
 
       if (mounted) {
         setState(() {
-          notifications = loadedNotifications;
+          notifications = List<Map<String, dynamic>>.from(
+            loadedNotifications,
+            growable: true,
+          );
+          _notificationOffset = loadedNotifications.length;
+          _hasMoreNotifications =
+              loadedNotifications.length >= _notificationPageSize;
           _isLoading = false;
         });
       }
@@ -309,6 +361,61 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _loadMoreNotifications() async {
+    if (_isLoading || _isLoadingMoreNotifications || !_hasMoreNotifications) {
+      return;
+    }
+
+    final nextOffset = _notificationOffset;
+    setState(() {
+      _isLoadingMoreNotifications = true;
+    });
+    try {
+      debugPrint(
+        'Notification load more API: /notifications params={limit: $_notificationPageSize, offset: $nextOffset}',
+      );
+      final loadedNotifications =
+          await NotificationStorageService.getNotifications(
+        limit: _notificationPageSize,
+        offset: nextOffset,
+      );
+      debugPrint(
+        'Notification load more response: offset=$nextOffset, count=${loadedNotifications.length}',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        final mergedNotifications = List<Map<String, dynamic>>.from(
+          notifications,
+          growable: true,
+        );
+        final existingIds = mergedNotifications
+            .map((notification) => '${notification['id'] ?? ''}')
+            .where((id) => id.isNotEmpty)
+            .toSet();
+
+        for (final notification in loadedNotifications) {
+          final id = '${notification['id'] ?? ''}';
+          if (id.isNotEmpty && existingIds.contains(id)) continue;
+          mergedNotifications.add(Map<String, dynamic>.from(notification));
+          if (id.isNotEmpty) existingIds.add(id);
+        }
+
+        notifications = mergedNotifications;
+    _notificationOffset = nextOffset + loadedNotifications.length;
+        _hasMoreNotifications =
+            loadedNotifications.length >= _notificationPageSize;
+        _isLoadingMoreNotifications = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading more notifications at offset=$nextOffset: $e');
+      if (!mounted) return;
+      setState(() {
+        _isLoadingMoreNotifications = false;
+      });
     }
   }
 
@@ -478,6 +585,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     child: Builder(
                       builder: (context) {
                         return SingleChildScrollView(
+                          controller: _contentScrollController,
                           physics: const BouncingScrollPhysics(),
                           padding: EdgeInsets.only(
                             bottom: context.systemBottomInset + 16,
@@ -685,8 +793,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: filteredNotifications.length,
+      itemCount:
+          filteredNotifications.length + (_isLoadingMoreNotifications ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index >= filteredNotifications.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         final item = filteredNotifications[index];
         final currentNotificationIcon = _notificationTabs.isNotEmpty &&
                 currentIndex < _notificationTabs.length
@@ -915,7 +1031,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
         Padding(
           padding: const EdgeInsets.only(left: 6, bottom: 10),
           child: Text(
-            _formatTime(item['timestamp'] ?? ''),
+            (item['timeAgo'] ?? '').toString().trim().isNotEmpty
+                ? item['timeAgo'].toString()
+                : _formatTime(item['timestamp'] ?? ''),
             style: const TextStyle(
               fontSize: 9,
               color: Colors.black54,

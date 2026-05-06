@@ -21,6 +21,17 @@ class DelayedAllPageResult {
 class DelayedApprovalsRepository {
   static const String _baseUrl = 'https://erp.elrace.com/api';
 
+  void _debugPrintRawResponse(String label, String raw) {
+    if (!kDebugMode) return;
+    debugPrint('🟣 [$label] Raw response start');
+    const chunkSize = 800;
+    for (var i = 0; i < raw.length; i += chunkSize) {
+      final end = (i + chunkSize < raw.length) ? i + chunkSize : raw.length;
+      debugPrint(raw.substring(i, end));
+    }
+    debugPrint('🟣 [$label] Raw response end');
+  }
+
   Map<String, String> _buildHeaders(String token) => {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -54,6 +65,7 @@ class DelayedApprovalsRepository {
       if (kDebugMode) {
         debugPrint(
             'DELAYED COUNTERS status=${response.statusCode} bytes=${response.body.length}');
+        _debugPrintRawResponse('DELAYED COUNTERS', response.body);
       }
 
       if (response.statusCode == 200) {
@@ -273,6 +285,7 @@ class DelayedApprovalsRepository {
       if (kDebugMode) {
         debugPrint(
             'DELAYED ALL status=${response.statusCode} limit=$limit offset=$offset bytes=${response.body.length}');
+        _debugPrintRawResponse('DELAYED ALL', response.body);
       }
 
       if (response.statusCode == 200) {
@@ -324,6 +337,7 @@ class DelayedApprovalsRepository {
       if (kDebugMode) {
         debugPrint(
             'DELAYED ALL PAGED status=${response.statusCode} page=$page pageSize=$pageSize bytes=${response.body.length}');
+        _debugPrintRawResponse('DELAYED ALL PAGED', response.body);
       }
 
       if (response.statusCode != 200) {

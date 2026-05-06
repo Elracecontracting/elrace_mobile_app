@@ -431,29 +431,66 @@ class NotificationStorageService {
     }
   }
 
-  /// Get all notifications. API data is preferred, local cache is fallback.
-  static Future<List<Map<String, dynamic>>> getNotifications() async {
+  /// Get notifications. API data is preferred, local cache is fallback.
+  static Future<List<Map<String, dynamic>>> getNotifications({
+    int limit = 500,
+    int offset = 0,
+  }) async {
     try {
       final apiResult = await NotificationApiService.getNotifications(
-        limit: 500,
-        offset: 0,
+        limit: limit,
+        offset: offset,
       );
 
       final normalized = apiResult.notifications
           .map(_normalizeApiNotification)
-          .toList(growable: false);
+          .toList(growable: true);
 
       final prefs = await SharedPreferences.getInstance();
-      await _saveStoredNotifications(normalized, prefs);
+      if (offset <= 0) {
+        await _saveStoredNotifications(normalized, prefs);
+      } else {
+        final storedNotifications = await _getStoredNotifications();
+        final mergedNotifications = List<Map<String, dynamic>>.from(
+          storedNotifications,
+        );
+        final existingIds = mergedNotifications
+            .map((notification) => '${notification['id'] ?? ''}')
+            .where((id) => id.isNotEmpty)
+            .toSet();
 
-      // Badge count should reflect only unread items.
-      final unreadCount = normalized.where((n) => n['isRead'] != true).length;
-      await prefs.setInt(_unreadCountKey, unreadCount);
-      onCountChanged?.call();
+        for (final notification in normalized) {
+          final id = '${notification['id'] ?? ''}';
+          if (id.isNotEmpty && existingIds.contains(id)) continue;
+          mergedNotifications.add(notification);
+          if (id.isNotEmpty) existingIds.add(id);
+        }
+
+        await _saveStoredNotifications(mergedNotifications, prefs);
+      }
+
+      // Prefer API unread total. If unavailable, only compute from a full
+      // legacy fetch to avoid treating one paged chunk as the full list.
+      final unreadCount = apiResult.unreadCount ??
+          (offset <= 0 && limit >= 500
+              ? normalized.where((n) => n['isRead'] != true).length
+              : null);
+      if (unreadCount != null) {
+        await prefs.setInt(_unreadCountKey, unreadCount);
+        onCountChanged?.call();
+      }
 
       return normalized;
     } catch (_) {
-      return _getStoredNotifications();
+      final storedNotifications = await _getStoredNotifications();
+      if (limit <= 0) return storedNotifications;
+      if (offset >= storedNotifications.length) {
+        return const <Map<String, dynamic>>[];
+      }
+      final end = offset + limit;
+      final boundedEnd =
+          end > storedNotifications.length ? storedNotifications.length : end;
+      return storedNotifications.sublist(offset, boundedEnd);
     }
   }
 
@@ -480,7 +517,7 @@ class NotificationStorageService {
   ) {
     final normalized = Map<String, dynamic>.from(raw);
 
-    dynamic notificationData = raw['data'];
+    dynamic notificationData = raw['data'] ?? raw['payload'];
     if (notificationData is String && notificationData.trim().isNotEmpty) {
       try {
         notificationData = jsonDecode(notificationData);
@@ -501,12 +538,18 @@ class NotificationStorageService {
     normalized['body'] = (raw['body'] ?? raw['message'] ?? '').toString();
     normalized['imageUrl'] = raw['image_url'] ?? raw['imageUrl'];
     normalized['data'] = notificationData;
-    normalized['category'] =
-        _normalizeKey('${raw['category'] ?? raw['type'] ?? 'notification'}');
+    normalized['payload'] = notificationData;
+    normalized['category'] = _normalizeKey(
+      '${raw['category'] ?? raw['type'] ?? (notificationData is Map ? notificationData['model'] : null) ?? 'notification'}',
+    );
     normalized['timestamp'] = (raw['created_at'] ??
             raw['timestamp'] ??
-            DateTime.now().toIso8601String())
+            raw['date'] ??
+            raw['sent_at'] ??
+            '')
         .toString();
+    normalized['timeAgo'] =
+        (raw['time_ago'] ?? raw['timeAgo'] ?? '').toString();
     normalized['isRead'] = isRead;
     normalized['readAt'] = raw['read_at'] ?? raw['readAt'];
 

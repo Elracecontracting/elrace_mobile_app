@@ -186,6 +186,55 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     final provider = Provider.of<ReportProvider>(context, listen: false);
+
+    final itemsToDelete = _photoItems
+        .where((item) =>
+            item.itemId != null &&
+            (item.pendingDelete ||
+                item.imagePath == null ||
+                item.imagePath!.isEmpty))
+        .toList();
+
+    final deletedItems = <_PhotoItem>[];
+    var deleteFailed = false;
+
+    for (final item in itemsToDelete) {
+      try {
+        final deleted = await provider.deleteReportItem(
+          reportId: _report.id,
+          itemId: item.itemId!,
+        );
+        if (deleted) {
+          item.pendingDelete = false;
+          item.deletedImagePath = null;
+          item.deletedEditedBytes = null;
+          deletedItems.add(item);
+          debugPrint('🗑️ Deleted item from server: ${item.itemId}');
+        } else {
+          deleteFailed = true;
+          item.imagePath = item.deletedImagePath;
+          item.editedBytes = item.deletedEditedBytes;
+          item.pendingDelete = false;
+          item.deletedImagePath = null;
+          item.deletedEditedBytes = null;
+          debugPrint('🗑️ Delete item FAILED on server: ${item.itemId}');
+        }
+      } catch (e) {
+        deleteFailed = true;
+        item.imagePath = item.deletedImagePath;
+        item.editedBytes = item.deletedEditedBytes;
+        item.pendingDelete = false;
+        item.deletedImagePath = null;
+        item.deletedEditedBytes = null;
+        debugPrint('🗑️ Delete item ERROR (${item.itemId}): $e');
+      }
+    }
+
+    _photoItems.removeWhere(deletedItems.contains);
+    _photoItems.removeWhere((item) =>
+        item.itemId == null &&
+        (item.imagePath == null || item.imagePath!.isEmpty));
+
     for (int i = 0; i < _photoItems.length; i++) {
       final item = _photoItems[i];
       if (item.imagePath == null || item.imagePath!.isEmpty) continue;
@@ -238,7 +287,9 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
     if (mounted) setState(() => _isLoading = false);
     widget.onReportUpdated?.call();
     Fluttertoast.showToast(
-      msg: 'Report Updated',
+      msg: deleteFailed
+          ? 'Could not delete photo from server. Please try again'
+          : 'Report Updated',
       toastLength: Toast.LENGTH_SHORT,
       gravity: ToastGravity.BOTTOM,
     );
@@ -1695,8 +1746,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                         final id = template['id']!;
                         final asset = template['asset']!;
                         final selected = _selectedTemplateType == id;
-                        final isTall =
-                            id == 'template1' || id == 'template3';
+                        final isTall = id == 'template1' || id == 'template3';
 
                         return GestureDetector(
                           onTap: () {
@@ -1972,7 +2022,8 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PdfDisplayScreen(link: pdf.reportLink),
+            builder: (_) =>
+                PdfDisplayScreen(link: pdf.reportLink, fileName: pdf.fileName),
           ),
         );
       },
@@ -2276,12 +2327,24 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
       widget.folderId + widget.folderId,
     );
     if (savedPath.isNotEmpty && mounted) {
-      setState(() => _current.imagePath = savedPath);
+      setState(() {
+        _current.imagePath = savedPath;
+        _current.pendingDelete = false;
+        _current.deletedImagePath = null;
+        _current.deletedEditedBytes = null;
+      });
     }
   }
 
   void _deleteImage() {
-    setState(() => _current.imagePath = null);
+    setState(() {
+      _current.pendingDelete = _current.itemId != null;
+      _current.deletedImagePath = _current.imagePath;
+      _current.deletedEditedBytes = _current.editedBytes;
+      _current.imagePath = null;
+      _current.editedBytes = null;
+    });
+    _saveAndClose();
   }
 
   Future<void> _drawOnPhoto(_PhotoItem item) async {
@@ -2713,6 +2776,9 @@ class _PhotoItem {
   String? itemId;
   String? imagePath;
   Uint8List? editedBytes; // stored after drawing — bypasses file cache
+  bool pendingDelete = false;
+  String? deletedImagePath;
+  Uint8List? deletedEditedBytes;
   String? location;
   String description = '';
   final TextEditingController locationController = TextEditingController();

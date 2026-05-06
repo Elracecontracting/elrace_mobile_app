@@ -84,6 +84,8 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   Timer? _debounce;
   final bool _showSearch = false;
   String _query = '';
+  double? _edgeSwipeStartX;
+  bool _isHandlingEdgeSwipeBack = false;
 
   @override
   void initState() {
@@ -1789,6 +1791,29 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     }
   }
 
+  void _onEdgeSwipeStart(DragStartDetails details) {
+    if (!Platform.isIOS) return;
+    _edgeSwipeStartX = details.globalPosition.dx;
+    _isHandlingEdgeSwipeBack = false;
+  }
+
+  Future<void> _onEdgeSwipeUpdate(DragUpdateDetails details) async {
+    if (!Platform.isIOS || _isHandlingEdgeSwipeBack) return;
+    final startX = _edgeSwipeStartX;
+    if (startX == null) return;
+
+    final deltaX = details.globalPosition.dx - startX;
+    if (deltaX < 72) return;
+
+    _isHandlingEdgeSwipeBack = true;
+    await Navigator.of(context).maybePop();
+  }
+
+  void _onEdgeSwipeEnd(DragEndDetails details) {
+    _edgeSwipeStartX = null;
+    _isHandlingEdgeSwipeBack = false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -1832,10 +1857,12 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
         // For Company/Share tabs, allow normal pop to previous screen.
         return true;
       },
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: const HeaderWidget(),
-        body: Column(
+      child: Stack(
+        children: [
+          Scaffold(
+            backgroundColor: Colors.white,
+            appBar: const HeaderWidget(),
+            body: Column(
           children: [
             const SizedBox(height: 5),
             Center(
@@ -2021,7 +2048,26 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                     ),
             ),
           ],
-        ),
+            ),
+          ),
+          if (Platform.isIOS)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 28,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragStart: _onEdgeSwipeStart,
+                onHorizontalDragUpdate: _onEdgeSwipeUpdate,
+                onHorizontalDragEnd: _onEdgeSwipeEnd,
+                onHorizontalDragCancel: () {
+                  _edgeSwipeStartX = null;
+                  _isHandlingEdgeSwipeBack = false;
+                },
+              ),
+            ),
+        ],
       ),
     );
   }

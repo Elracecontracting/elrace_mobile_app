@@ -672,15 +672,23 @@ class PdfService {
         child: pw.Text('No image'),
       );
     }
+    final squareSide = height;
     return pw.Container(
       height: height,
       width: double.infinity,
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey300),
+        color: PdfColors.grey100,
       ),
-      child: pw.Image(
-        image,
-        fit: pw.BoxFit.cover,
+      child: pw.Center(
+        child: pw.SizedBox(
+          width: squareSide,
+          height: squareSide,
+          child: pw.Image(
+            image,
+            fit: pw.BoxFit.contain,
+          ),
+        ),
       ),
     );
   }

@@ -18,6 +18,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/image_editing_screen.dart';
 import 'package:el_race/report_module/data/services/pdf_service.dart';
@@ -46,8 +47,6 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
 
   Future<void> _showTakePicturesDialog() async {
     final TextEditingController reportNameController = TextEditingController();
-    const reportTypes = ['Incident report', 'Site report'];
-    String selectedReportType = reportTypes.first;
     final outerContext = context;
 
     await showDialog<void>(
@@ -91,19 +90,6 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                       title: 'Title',
                       controller: reportNameController,
                       hint: 'Enter report name',
-                    ),
-                    SizedBox(height: 12.h),
-                    _DialogDropdownCard(
-                      topLabel: 'Report',
-                      title: 'Type',
-                      value: selectedReportType,
-                      hint: 'Select report type',
-                      items: reportTypes,
-                      onChanged: (value) {
-                        if (value != null) {
-                          setDialogState(() => selectedReportType = value);
-                        }
-                      },
                     ),
                     SizedBox(height: 16.h),
                     SizedBox(
@@ -149,12 +135,10 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                       folderId: _folder!.id,
                                       createdAt: now,
                                       updatedAt: now,
-                                      reportType: selectedReportType,
                                     ),
                                     folderName: _folder?.name ?? '',
                                     folderId: _folder?.id ?? '',
                                     createReportOnFirstImage: true,
-                                    draftReportType: selectedReportType,
                                     onReportUpdated: () async {
                                       await _loadReports();
                                     },
@@ -910,7 +894,9 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                         ),
                         SizedBox(height: 4.h),
                         Text(
-                          widget.report.reportType ?? 'Report Type',
+                          widget.report.reportType ??
+                              DateFormat('dd MMM yyyy')
+                                  .format(widget.report.createdAt),
                           style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w500,

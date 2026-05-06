@@ -16,6 +16,70 @@ class FolderTile extends StatelessWidget {
     this.onTap,
   });
 
+  Widget _buildLatestImagesRow() {
+    if (folder.latestItemImages.isEmpty) {
+      return Text(
+        'No images',
+        style: GoogleFonts.poppins(
+          fontSize: 12.sp,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF9AA0A6),
+        ),
+      );
+    }
+
+    final displayCount =
+        folder.latestItemImages.length > 5 ? 5 : folder.latestItemImages.length;
+    final remaining = folder.reportCount > displayCount
+        ? folder.reportCount - displayCount
+        : 0;
+
+    return Row(
+      children: [
+        ...List.generate(displayCount, (index) {
+          return Align(
+            widthFactor: 0.6,
+            child: Container(
+              padding: EdgeInsets.only(bottom:1.6.w),
+              width: 30.w,
+              height: 30.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.6),
+              ),
+              child: ClipOval(
+                child: Image.network(
+                  folder.latestItemImages[index],
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFFE5E7EB),
+                    child: Icon(
+                      Icons.image,
+                      size: 14.w,
+                      color: const Color(0xFF9CA3AF),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+        if (remaining > 0)
+          Padding(
+            padding: EdgeInsets.only(left: 8.w),
+            child: Text(
+              '+$remaining',
+              style: GoogleFonts.poppins(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF27304E),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -42,14 +106,14 @@ class FolderTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Left side: Project Name + Company Name
+            // Left side: Report name + report status
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 10.h),
                   Text(
-                    folder.name.isEmpty ? 'Project Name' : folder.name,
+                    folder.name.isEmpty ? 'Report Name' : folder.name,
                     style: GoogleFonts.poppins(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w700,
@@ -58,11 +122,10 @@ class FolderTile extends StatelessWidget {
                     maxLines: null,
                     overflow: TextOverflow.visible,
                   ),
-                  SizedBox(height: 4.h),
                   Text(
-                    folder.description.isEmpty
-                        ? 'Company Name'
-                        : folder.description,
+                    folder.reportCount == 1
+                        ? '1 report item'
+                        : '${folder.reportCount} report items',
                     style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w400,
@@ -71,10 +134,12 @@ class FolderTile extends StatelessWidget {
                     maxLines: null,
                     overflow: TextOverflow.visible,
                   ),
+                  SizedBox(height: 5.h),
+                  _buildLatestImagesRow(),
                 ],
               ),
             ),
-            // Right side: three dots + chart + 100
+            // Right side: three dots + count chart
             SizedBox(
               width: 180.w,
               child: Column(

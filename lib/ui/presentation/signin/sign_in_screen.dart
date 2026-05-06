@@ -147,9 +147,9 @@ class _SignInScreenState extends State<SignInScreen> {
           print('SELECTED USER ID FOR FACE REGISTRATION: $userId');
           print('==================================================\n');
 
-          SharedPref().setPreferencesString(
+            await SharedPref().setPreferencesString(
               'loginResponse', jsonEncode(state.loginResponse.toJson()));
-          SharedPref().setPreferencesBoolean('isRegistered', true);
+            await SharedPref().setPreferencesBoolean('isRegistered', true);
 
           // Save credentials securely for silent re-login (chat token refresh)
           ChatCredentialStorage.instance.save(

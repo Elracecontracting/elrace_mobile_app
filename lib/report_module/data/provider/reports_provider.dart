@@ -305,7 +305,7 @@ class ReportProvider extends ChangeNotifier {
 
       final jsonData = await _handleResponse(await request.send());
 
-        _folders = (jsonData['data'] as List)
+      _folders = (jsonData['data'] as List)
           .map((e) => FolderModel.fromJson(e))
           .toList()
           .reversed
@@ -792,21 +792,55 @@ class ReportProvider extends ChangeNotifier {
     required String reportId,
     required String itemId,
   }) async {
-    try {
-      var request = http.MultipartRequest(
-          'POST', Uri.parse('$baseUrl/report-items/delete'))
-        ..fields.addAll({
-          'emp_id': empID,
-          'report_id': reportId,
-          'item_id': itemId,
-        });
+    final endpointCandidates = <String>[
+      '$baseUrl/api/delete_report_item',
+      '$baseUrl/report-items/delete',
+    ];
 
-      await _handleResponse(await request.send());
-      return true;
-    } catch (e) {
-      debugPrint('Error deleting report item: $e');
-      return false;
+    final fieldCandidates = <Map<String, String>>[
+      {
+        'emp_id': empID,
+        'report_id': reportId,
+        'item_id': itemId,
+      },
+      {
+        'emp_id': empID,
+        'report_id': reportId,
+        'id': itemId,
+      },
+    ];
+
+    for (final endpoint in endpointCandidates) {
+      for (final fields in fieldCandidates) {
+        try {
+          final request = http.MultipartRequest('POST', Uri.parse(endpoint))
+            ..fields.addAll(fields);
+          debugPrint('🗑️ deleteReportItem: url=$endpoint fields=$fields');
+
+          final response = await request.send();
+          final res = await response.stream.bytesToString();
+          debugPrint(
+              '🗑️ deleteReportItem response ${response.statusCode}: $res');
+
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            continue;
+          }
+
+          final jsonData = json.decode(res);
+          if (jsonData is Map<String, dynamic>) {
+            final status = jsonData['status']?.toString().toLowerCase();
+            final success = jsonData['success'];
+            if (status == 'success' || success == true) {
+              return true;
+            }
+          }
+        } catch (e) {
+          debugPrint('Error deleting report item via $endpoint: $e');
+        }
+      }
     }
+
+    return false;
   }
 
   /// Fetch full report detail (with items) from the server

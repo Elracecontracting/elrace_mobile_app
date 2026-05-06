@@ -1,9 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// A camera screen that lets the user take multiple photos in one session.
@@ -97,11 +100,43 @@ class _MultiCaptureCameraScreenState extends State<MultiCaptureCameraScreen>
     setState(() => _isCapturing = true);
     try {
       final file = await _controller!.takePicture();
-      setState(() => _capturedPaths.add(file.path));
+      final squarePath = await _cropCapturedPhotoToSquare(file.path);
+      setState(() => _capturedPaths.add(squarePath));
     } catch (e) {
       debugPrint('Capture error: $e');
     } finally {
       if (mounted) setState(() => _isCapturing = false);
+    }
+  }
+
+  Future<String> _cropCapturedPhotoToSquare(String originalPath) async {
+    try {
+      final originalBytes = await File(originalPath).readAsBytes();
+      final decoded = img.decodeImage(originalBytes);
+      if (decoded == null) return originalPath;
+
+      final cropSize =
+          decoded.width < decoded.height ? decoded.width : decoded.height;
+      final x = ((decoded.width - cropSize) / 2).round();
+      final y = ((decoded.height - cropSize) / 2).round();
+
+      final square = img.copyCrop(
+        decoded,
+        x: x,
+        y: y,
+        width: cropSize,
+        height: cropSize,
+      );
+
+      final encoded = Uint8List.fromList(img.encodeJpg(square, quality: 92));
+      final dir = await getTemporaryDirectory();
+      final path =
+          '${dir.path}/square_${DateTime.now().microsecondsSinceEpoch}.jpg';
+      await File(path).writeAsBytes(encoded, flush: true);
+      return path;
+    } catch (e) {
+      debugPrint('Square crop error: $e');
+      return originalPath;
     }
   }
 

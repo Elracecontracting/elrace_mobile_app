@@ -35,6 +35,19 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
     super.initState();
   }
 
+  void _goBack() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    if (rootNavigator.canPop()) {
+      rootNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,9 +64,7 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
             icon: Icons.keyboard_backspace,
             color: CustomColors.white,
             borderColor: CustomColors.black,
-            onPressed: () async {
-              Navigator.pop(context);
-            },
+            onPressed: _goBack,
           ),
         ),
         title: Image.asset(

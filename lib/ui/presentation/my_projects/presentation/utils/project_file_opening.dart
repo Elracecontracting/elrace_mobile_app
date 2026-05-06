@@ -1,4 +1,5 @@
 import 'package:el_race/ui/presentation/lpo/screens/lpo_pdf_viewer_screen.dart';
+import 'package:el_race/ui/presentation/my_documents/screens/attachment_viewer_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -67,6 +68,16 @@ Future<void> openProjectFileInApp(
   final fileNameLower = fileName.toLowerCase();
   final urlLower = normalizedUrl.toLowerCase();
   final isPdf = fileNameLower.endsWith('.pdf') || urlLower.contains('.pdf');
+  final isImage = fileNameLower.endsWith('.jpg') ||
+      fileNameLower.endsWith('.jpeg') ||
+      fileNameLower.endsWith('.png') ||
+      fileNameLower.endsWith('.webp') ||
+      fileNameLower.endsWith('.gif') ||
+      urlLower.contains('.jpg') ||
+      urlLower.contains('.jpeg') ||
+      urlLower.contains('.png') ||
+      urlLower.contains('.webp') ||
+      urlLower.contains('.gif');
 
   if (isPdf) {
     await Navigator.push(
@@ -81,14 +92,24 @@ Future<void> openProjectFileInApp(
     return;
   }
 
+  if (isImage) {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AttachmentViewerScreen(
+          publicUrl: normalizedUrl,
+          title: fileName.isNotEmpty ? fileName : 'Attachment',
+          attachmentType: 'image',
+        ),
+      ),
+    );
+    return;
+  }
+
   final uri = Uri.parse(normalizedUrl);
   final launched = await launchUrl(
     uri,
-    mode: LaunchMode.inAppWebView,
-    webViewConfiguration: const WebViewConfiguration(
-      enableJavaScript: true,
-      enableDomStorage: true,
-    ),
+    mode: LaunchMode.externalApplication,
   );
   if (!context.mounted) return;
   if (!launched) {
