@@ -123,6 +123,7 @@ dependencies:
   youtube_player_flutter: ^9.1.1
   timezone: ^0.10.1
   volume_controller: ^3.4.4
+  google_mlkit_face_detection: ^0.13.2
 
 dev_dependencies:
   flutter_launcher_icons: ^0.13.1

@@ -536,7 +536,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                 });
 
                 try {
-                  final result = await FilePicker.platform.pickFiles(
+                  final result = await FilePicker.pickFiles(
                     allowMultiple: true,
                     withData: true,
                   );

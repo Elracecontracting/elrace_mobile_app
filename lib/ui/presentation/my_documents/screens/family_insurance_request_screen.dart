@@ -321,7 +321,7 @@ class _FamilyInsuranceRequestScreenState
         ? const ['jpg', 'jpeg', 'png']
         : const ['pdf', 'jpg', 'jpeg', 'png'];
 
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: extensions,
       withData: false,
