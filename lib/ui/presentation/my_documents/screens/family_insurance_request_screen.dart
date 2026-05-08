@@ -10,6 +10,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
+import '../../../../utils/urll_utils.dart';
+
 class FamilyInsuranceRequestScreen extends StatefulWidget {
   const FamilyInsuranceRequestScreen({super.key});
 
@@ -44,6 +46,79 @@ class _FamilyInsuranceRequestScreenState
   List<_DocRequirement> _requiredDocs = const [];
   final Map<String, _PickedFile> _pickedFiles = <String, _PickedFile>{};
   final Map<String, DateTime> _docExpiryDates = <String, DateTime>{};
+  final Map<String, TextEditingController> _docExpiryControllers =
+      <String, TextEditingController>{};
+
+  static const String _initEndpoint = 'family_insurance/init';
+  static const String _submitEndpoint = 'family_insurance/submit';
+
+  static const Map<String, List<String>> _fallbackRequiredDocsByCase = {
+    'spouse|visa_changed_abu_dhabi': [
+      'passport_copy_file',
+      'emirates_id_file',
+      'resident_cancellation_file',
+      'coc_file',
+      'photo_file',
+      'e_visa_file',
+      'changed_status_file',
+      'marriage_certificate_file',
+    ],
+    'spouse|visa_changed_other_region': [
+      'passport_copy_file',
+      'emirates_id_file',
+      'resident_cancellation_file',
+      'photo_file',
+      'e_visa_file',
+      'changed_status_file',
+      'marriage_certificate_file',
+    ],
+    'spouse|resident_visa_outside_uae': [
+      'e_visa_file',
+      'entry_stamp_file',
+      'passport_copy_file',
+      'photo_file',
+      'marriage_certificate_file',
+    ],
+    'spouse|visit_to_resident_visa': [
+      'e_visa_file',
+      'passport_copy_file',
+      'photo_file',
+      'visit_visa_file',
+      'marriage_certificate_file',
+    ],
+    'child_1|newborn_inside_uae': [
+      'photo_file',
+      'birth_certificate_file',
+    ],
+    'child_2|resident_visa_outside_uae': [
+      'e_visa_file',
+      'entry_stamp_file',
+      'passport_copy_file',
+      'photo_file',
+      'birth_certificate_file',
+    ],
+    'child_3|visit_to_resident_visa': [
+      'e_visa_file',
+      'passport_copy_file',
+      'photo_file',
+      'visit_visa_file',
+      'birth_certificate_file',
+    ],
+  };
+
+  static const Map<String, String> _fallbackDocLabels = {
+    'passport_copy_file': 'Passport Copy',
+    'emirates_id_file': 'Emirates ID Front & Back',
+    'resident_cancellation_file': 'Resident Cancellation',
+    'coc_file': 'COC',
+    'photo_file': 'Personal Photo',
+    'e_visa_file': 'E Visa',
+    'changed_status_file': 'Changed Status',
+    'marriage_certificate_file': 'Marriage Certificate',
+    'entry_stamp_file': 'Entry Stamp',
+    'visit_visa_file': 'Visit Visa',
+    'birth_certificate_file': 'Birth Certificate',
+  };
 
   static const Color _bg = Color(0xFFF2F2F2);
   static const Color _card = Color(0xFFF8F8F8);
@@ -61,7 +136,33 @@ class _FamilyInsuranceRequestScreenState
     _eidExpiryController.dispose();
     _passportNumberController.dispose();
     _passportExpiryController.dispose();
+    for (final controller in _docExpiryControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  Uri _apiUri(String endpoint) {
+    final base = UrlUtil.baseUrl.replaceAll(RegExp(r'/+$'), '');
+    return Uri.parse('$base/$endpoint');
+  }
+
+  TextEditingController _expiryControllerFor(String field) {
+    final existing = _docExpiryControllers[field];
+    if (existing != null) {
+      final expiry = _docExpiryDates[field];
+      existing.text =
+          expiry == null ? '' : DateFormat('MM/dd/yyyy').format(expiry);
+      return existing;
+    }
+
+    final created = TextEditingController(
+      text: _docExpiryDates[field] == null
+          ? ''
+          : DateFormat('MM/dd/yyyy').format(_docExpiryDates[field]!),
+    );
+    _docExpiryControllers[field] = created;
+    return created;
   }
 
   String _normalizeToken(dynamic value) {
@@ -140,7 +241,7 @@ class _FamilyInsuranceRequestScreenState
       }
 
       final response = await http.post(
-        Uri.parse('https://erp.elrace.com/api/family_insurance/init'),
+        _apiUri(_initEndpoint),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -236,8 +337,14 @@ class _FamilyInsuranceRequestScreenState
         _nationalities = nationalities;
         _selectedCaseKey =
             caseOptions.isNotEmpty ? caseOptions.first.key : null;
-        _selectedNationalityId =
-            nationalities.isNotEmpty ? nationalities.first.id : null;
+        _selectedNationalityId = nationalities
+            .where((n) => n.id == 233)
+            .map((n) => n.id)
+            .cast<int?>()
+            .firstWhere(
+              (id) => id != null,
+              orElse: () => nationalities.isNotEmpty ? nationalities.first.id : null,
+            );
       });
 
       _syncRequiredDocs();
@@ -262,54 +369,23 @@ class _FamilyInsuranceRequestScreenState
     }
 
     final member = _selectedFamilyMember ?? '';
-    if (member == 'spouse' &&
-        !docs.any((d) => d.field == 'marriage_certificate_file')) {
+    final fallbackKey = '$member|${_selectedCaseKey ?? ''}';
+    final fallbackFields = _fallbackRequiredDocsByCase[fallbackKey] ?? const [];
+    for (final field in fallbackFields) {
+      if (docs.any((d) => d.field == field)) continue;
+      final label = _fallbackDocLabels[field] ?? field;
       docs.add(
-        const _DocRequirement(
-          field: 'marriage_certificate_file',
-          label: 'Marriage Certificate',
-          type: 'pdf',
-        ),
-      );
-    }
-    if (member.startsWith('child_') &&
-        !docs.any((d) => d.field == 'birth_certificate_file')) {
-      docs.add(
-        const _DocRequirement(
-          field: 'birth_certificate_file',
-          label: 'Birth Certificate',
-          type: 'pdf',
+        _DocRequirement(
+          field: field,
+          label: label,
+          type: field == 'photo_file' ? 'image' : 'pdf',
         ),
       );
     }
 
-    if (!docs.any((d) => d.field == 'emirates_id_file')) {
-      docs.add(
-        const _DocRequirement(
-          field: 'emirates_id_file',
-          label: 'Emirates ID Front & Back',
-          type: 'pdf',
-        ),
-      );
-    }
-    if (!docs.any((d) => d.field == 'passport_copy_file')) {
-      docs.add(
-        const _DocRequirement(
-          field: 'passport_copy_file',
-          label: 'Passport Copy',
-          type: 'pdf',
-        ),
-      );
-    }
-    if (!docs.any((d) => d.field == 'photo_file')) {
-      docs.add(
-        const _DocRequirement(
-          field: 'photo_file',
-          label: 'Personal Photo',
-          type: 'image',
-        ),
-      );
-    }
+    final activeFields = docs.map((d) => d.field).toSet();
+    _pickedFiles.removeWhere((key, _) => !activeFields.contains(key));
+    _docExpiryDates.removeWhere((key, _) => !activeFields.contains(key));
 
     setState(() {
       _requiredDocs = docs;
@@ -421,7 +497,7 @@ class _FamilyInsuranceRequestScreenState
       }
 
       final response = await http.post(
-        Uri.parse('https://erp.elrace.com/api/family_insurance/submit'),
+        _apiUri(_submitEndpoint),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -854,53 +930,53 @@ class _FamilyInsuranceRequestScreenState
               ),
             ],
             SizedBox(height: 16.h),
-            _docCard(
-              title: 'Emirates ID',
-              field: 'emirates_id_file',
-              imageOnly: false,
-              expiryController: _eidExpiryController,
-              expiryLabel: 'Expiry Date',
-              showNumberField: true,
-              numberController: _eidNumberController,
-              numberLabel: 'ID Number',
-              numberHint: '784-XXXX-XXXXXXX-X',
-            ),
-            SizedBox(height: 12.h),
-            _docCard(
-              title: 'Passport Details',
-              field: 'passport_copy_file',
-              imageOnly: false,
-              expiryController: _passportExpiryController,
-              expiryLabel: 'Expiry Date',
-              showNumberField: true,
-              numberController: _passportNumberController,
-              numberLabel: 'Passport Number',
-              numberHint: 'Enter number',
-            ),
+            if (_requiredDocs.any((d) => d.field == 'emirates_id_file')) ...[
+              _docCard(
+                title: 'Emirates ID',
+                field: 'emirates_id_file',
+                imageOnly: false,
+                expiryController: _eidExpiryController,
+                expiryLabel: 'Expiry Date',
+                showNumberField: true,
+                numberController: _eidNumberController,
+                numberLabel: 'ID Number',
+                numberHint: '784-XXXX-XXXXXXX-X',
+              ),
+              SizedBox(height: 12.h),
+            ],
+            if (_requiredDocs.any((d) => d.field == 'passport_copy_file')) ...[
+              _docCard(
+                title: 'Passport Details',
+                field: 'passport_copy_file',
+                imageOnly: false,
+                expiryController: _passportExpiryController,
+                expiryLabel: 'Expiry Date',
+                showNumberField: true,
+                numberController: _passportNumberController,
+                numberLabel: 'Passport Number',
+                numberHint: 'Enter number',
+              ),
+            ],
             if (_requiredDocs
                 .where((d) =>
                     d.field != 'emirates_id_file' &&
-                    d.field != 'passport_copy_file')
+                    d.field != 'passport_copy_file' &&
+                    d.field != 'photo_file')
                 .isNotEmpty) ...[
               SizedBox(height: 14.h),
               ..._requiredDocs
                   .where((d) =>
                       d.field != 'emirates_id_file' &&
-                      d.field != 'passport_copy_file')
+                      d.field != 'passport_copy_file' &&
+                      d.field != 'photo_file')
                   .map((d) {
-                final expiry = _docExpiryDates[d.field];
-                final controller = TextEditingController(
-                  text: expiry == null
-                      ? ''
-                      : DateFormat('MM/dd/yyyy').format(expiry),
-                );
                 return Padding(
                   padding: EdgeInsets.only(bottom: 10.h),
                   child: _docCard(
                     title: d.label,
                     field: d.field,
                     imageOnly: d.type.toLowerCase() == 'image',
-                    expiryController: controller,
+                    expiryController: _expiryControllerFor(d.field),
                     expiryLabel: 'Expiry Date',
                   ),
                 );

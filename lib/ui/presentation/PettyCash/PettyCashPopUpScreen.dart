@@ -291,45 +291,73 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     ),
                     itemCount: attachments.length,
                     itemBuilder: (context, index) {
+                      final file = attachments[index];
+                      final ext = file.path
+                          .split('.')
+                          .last
+                          .toLowerCase();
+                      final isPdf = ext == 'pdf';
                       return Stack(
                         children: [
                           GestureDetector(
                             onTap: () {
-                              // Open full screen image viewer
-                              Navigator.push(
-                                dialogContext,
-                                MaterialPageRoute(
-                                  builder: (_) => Scaffold(
-                                    backgroundColor: Colors.black,
-                                    appBar: AppBar(
+                              if (isPdf) {
+                                Navigator.push(
+                                  dialogContext,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        PdfDisplayScreen(path: file.path),
+                                  ),
+                                );
+                              } else {
+                                Navigator.push(
+                                  dialogContext,
+                                  MaterialPageRoute(
+                                    builder: (_) => Scaffold(
                                       backgroundColor: Colors.black,
-                                      iconTheme: const IconThemeData(color: Colors.white),
-                                    ),
-                                    body: Center(
-                                      child: InteractiveViewer(
-                                        child: Image.file(
-                                          attachments[index],
-                                          fit: BoxFit.contain,
+                                      appBar: AppBar(
+                                        backgroundColor: Colors.black,
+                                        iconTheme: const IconThemeData(
+                                            color: Colors.white),
+                                      ),
+                                      body: Center(
+                                        child: InteractiveViewer(
+                                          child: Image.file(
+                                            file,
+                                            fit: BoxFit.contain,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              );
+                                );
+                              }
                             },
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
+                                border:
+                                    Border.all(color: Colors.grey.shade300),
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  attachments[index],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                ),
+                                child: isPdf
+                                    ? Container(
+                                        color: const Color(0xFFF5F5F5),
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.picture_as_pdf,
+                                            color: Colors.red,
+                                            size: 40,
+                                          ),
+                                        ),
+                                      )
+                                    : Image.file(
+                                        file,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      ),
                               ),
                             ),
                           ),

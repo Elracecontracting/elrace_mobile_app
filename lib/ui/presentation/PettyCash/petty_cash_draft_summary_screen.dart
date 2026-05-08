@@ -3,6 +3,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cunning_document_scanner/cunning_document_scanner.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/My_task/screens/report_detail/camera_screen.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashAddExpense.dart';
@@ -178,6 +181,50 @@ class _PettyCashDraftSummaryScreenState
     return null;
   }
 
+  List<_OperatingUnitOption> _parseOperatingUnits(
+    Map<String, dynamic> data,
+    Map<String, dynamic> result,
+  ) {
+    final raw = data['operating_units'] ??
+        data['operating_unit_ids'] ??
+        data['operatingUnits'] ??
+        result['operating_units'] ??
+        result['operating_unit_ids'] ??
+        result['operatingUnits'];
+
+    if (raw is! List) return const <_OperatingUnitOption>[];
+
+    final options = <_OperatingUnitOption>[];
+    for (final item in raw) {
+      int? id;
+      String name = '';
+
+      if (item is Map) {
+        final map = Map<String, dynamic>.from(item);
+        id = _pickInt(map, ['id', 'operating_unit_id', 'unit_id', 'value']);
+        name = _pickString(
+          map,
+          ['name', 'display_name', 'operating_unit', 'label'],
+        );
+      } else if (item is List && item.isNotEmpty) {
+        final rawId = item.first;
+        id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+        if (item.length > 1) {
+          name = item[1]?.toString().trim() ?? '';
+        }
+      }
+
+      if (id != null && !options.any((option) => option.id == id)) {
+        options.add(_OperatingUnitOption(
+          id: id,
+          name: name.isEmpty ? 'Operating Unit $id' : name,
+        ));
+      }
+    }
+
+    return List.unmodifiable(options);
+  }
+
   Future<_SubmitPreviewData> _callSubmitPreview() async {
     final token = SharedPref.getLoginData().result?.token;
     if (token == null || token.isEmpty) {
@@ -238,6 +285,14 @@ class _PettyCashDraftSummaryScreenState
     final resolvedExpenseIds = data['expense_line_ids'] ?? expenseLineIds;
     final resolvedOperatingUnitId =
         _pickInt(data, ['operating_unit_id']) ?? _resolveOperatingUnitId();
+    final operatingUnits = _parseOperatingUnits(data, result);
+    final selectedOperatingUnitId = operatingUnits.any(
+      (unit) => unit.id == resolvedOperatingUnitId,
+    )
+        ? resolvedOperatingUnitId
+        : (operatingUnits.isNotEmpty
+            ? operatingUnits.first.id
+            : resolvedOperatingUnitId);
 
     final submitDate = _pickString(
       data,
@@ -279,19 +334,23 @@ class _PettyCashDraftSummaryScreenState
       pettyCashType: pettyType,
       expenseLineIds: resolvedExpenseIds,
       holderId: holderId,
-      operatingUnitId: resolvedOperatingUnitId,
+      operatingUnitId: selectedOperatingUnitId,
+      operatingUnits: operatingUnits,
       attachmentIds: resolvedAttachmentIds,
       hasAttachments: _draftAttachments.isNotEmpty,
     );
   }
 
-  Future<void> _submitExpense(_SubmitPreviewData preview) async {
+  Future<void> _submitExpense(
+    _SubmitPreviewData preview, {
+    required int? operatingUnitId,
+  }) async {
     final token = SharedPref.getLoginData().result?.token;
     if (token == null || token.isEmpty) {
       throw Exception('Authentication token is missing');
     }
 
-    if (preview.operatingUnitId == null) {
+    if (operatingUnitId == null) {
       throw Exception('operating_unit_id is missing');
     }
 
@@ -304,7 +363,7 @@ class _PettyCashDraftSummaryScreenState
       'params': {
         'expense_line_ids': preview.expenseLineIds,
         'holder_id': preview.holderId,
-        'operating_unit_id': preview.operatingUnitId,
+        'operating_unit_id': operatingUnitId,
         'attachment_ids': preview.attachmentIds,
       },
     };
@@ -337,6 +396,7 @@ class _PettyCashDraftSummaryScreenState
   Future<bool> _showSubmitConfirmationPopup(_SubmitPreviewData preview) async {
     double sliderValue = 0.5;
     bool submitting = false;
+    int? selectedOperatingUnitId = preview.operatingUnitId;
 
     final result = await showDialog<bool>(
       context: context,
@@ -346,16 +406,26 @@ class _PettyCashDraftSummaryScreenState
           builder: (ctx, setDialogState) {
             Future<void> confirmSubmit() async {
               if (submitting) return;
+              if (selectedOperatingUnitId == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please select operating unit')),
+                );
+                setDialogState(() => sliderValue = 0.5);
+                return;
+              }
               setDialogState(() => submitting = true);
               try {
-                await _submitExpense(preview);
-                if (mounted) Navigator.of(ctx).pop(true);
+                await _submitExpense(
+                  preview,
+                  operatingUnitId: selectedOperatingUnitId,
+                );
+                if (!ctx.mounted) return;
+                Navigator.of(ctx).pop(true);
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString())),
-                  );
-                }
+                if (!ctx.mounted) return;
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(content: Text(e.toString())),
+                );
                 setDialogState(() {
                   submitting = false;
                   sliderValue = 0.5;
@@ -368,193 +438,302 @@ class _PettyCashDraftSummaryScreenState
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Confirmation massage',
-                      style: GoogleFonts.poppins(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF111111),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ─── title (fixed, not scrolled) ───
+                      Text(
+                        'Confirmation massage',
+                        style: GoogleFonts.poppins(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF111111),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    _PreviewFieldCard(
-                        label: 'Submit Date',
-                        value: _formatDate(preview.submitDate)),
-                    const SizedBox(height: 10),
-                    _PreviewFieldCard(
-                        label: 'Petty cash holder',
-                        value: preview.pettyCashHolder),
-                    const SizedBox(height: 10),
-                    _PreviewFieldCard(
-                        label: 'Requested By', value: preview.requestedBy),
-                    const SizedBox(height: 10),
-                    _PreviewFieldCard(
-                      label: 'Company',
-                      valueWidget: Row(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Text('HCN',
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w700)),
-                                const SizedBox(width: 8),
-                                Icon(
-                                  preview.company.toUpperCase().contains('HCN')
-                                      ? Icons.check_box
-                                      : Icons.check_box_outline_blank,
-                                  color: const Color(0xFF6C4AB6),
-                                  size: 18,
+                      const SizedBox(height: 14),
+                      // ─── scrollable fields ───
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _PreviewFieldCard(
+                                  label: 'Submit Date',
+                                  value: _formatDate(preview.submitDate)),
+                              const SizedBox(height: 10),
+                              _PreviewFieldCard(
+                                  label: 'Petty cash holder',
+                                  value: preview.pettyCashHolder),
+                              const SizedBox(height: 10),
+                              _PreviewFieldCard(
+                                  label: 'Requested By',
+                                  value: preview.requestedBy),
+                              const SizedBox(height: 10),
+                              _PreviewFieldCard(
+                                label: 'Company',
+                                valueWidget: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Text('HCN',
+                                              style: GoogleFonts.poppins(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.w700)),
+                                          const SizedBox(width: 8),
+                                          Icon(
+                                            preview.company
+                                                    .toUpperCase()
+                                                    .contains('HCN')
+                                                ? Icons.check_box
+                                                : Icons.check_box_outline_blank,
+                                            color: const Color(0xFF6C4AB6),
+                                            size: 18,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Text('RCC',
+                                              style: GoogleFonts.poppins(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.w700)),
+                                          const SizedBox(width: 8),
+                                          Icon(
+                                            !preview.company
+                                                    .toUpperCase()
+                                                    .contains('HCN')
+                                                ? Icons.check_box
+                                                : Icons.check_box_outline_blank,
+                                            color: const Color(0xFF6C4AB6),
+                                            size: 18,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Text('RCC',
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w700)),
-                                const SizedBox(width: 8),
-                                Icon(
-                                  !preview.company.toUpperCase().contains('HCN')
-                                      ? Icons.check_box
-                                      : Icons.check_box_outline_blank,
-                                  color: const Color(0xFF6C4AB6),
-                                  size: 18,
+                              ),
+                              const SizedBox(height: 10),
+                              _PreviewFieldCard(
+                                  label: 'Petty Cash Batch',
+                                  value: preview.pettyCashBatch),
+                              const SizedBox(height: 10),
+                              _PreviewFieldCard(
+                                  label: 'Petty cash type',
+                                  value: preview.pettyCashType),
+                              const SizedBox(height: 10),
+                              _PreviewFieldCard(
+                                label: 'Operating Unit',
+                                valueWidget: preview.operatingUnits.isEmpty
+                                    ? Text(
+                                        selectedOperatingUnitId?.toString() ??
+                                            '-',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF111111),
+                                        ),
+                                      )
+                                    : Column(
+                                        children:
+                                            preview.operatingUnits.map((unit) {
+                                          final selected =
+                                              selectedOperatingUnitId == unit.id;
+                                          return InkWell(
+                                            onTap: submitting
+                                                ? null
+                                                : () => setDialogState(
+                                                      () =>
+                                                          selectedOperatingUnitId =
+                                                              unit.id,
+                                                    ),
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 6),
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    selected
+                                                        ? Icons
+                                                            .radio_button_checked
+                                                        : Icons
+                                                            .radio_button_unchecked,
+                                                    color: selected
+                                                        ? const Color(
+                                                            0xFF6C4AB6)
+                                                        : const Color(
+                                                            0xFF8A8A8A),
+                                                    size: 20,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          unit.name,
+                                                          style:
+                                                              GoogleFonts.poppins(
+                                                            fontSize: 15,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color: const Color(
+                                                                0xFF111111),
+                                                          ),
+                                                        ),
+                                                        Text(
+                                                          unit.id.toString(),
+                                                          style:
+                                                              GoogleFonts.poppins(
+                                                            fontSize: 11,
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                            color: const Color(
+                                                                0xFF8A8A8A),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(growable: false),
+                                      ),
+                              ),
+                              const SizedBox(height: 10),
+                              InkWell(
+                                onTap: preview.hasAttachments
+                                    ? () => _showSelectedAttachmentsPreview()
+                                    : null,
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 13),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF3F3F3),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                        color: const Color(0xFF9D9D9D)),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.attach_file_rounded,
+                                          color: Color(0xFF111111), size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'View Attachments',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF111111),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    _PreviewFieldCard(
-                        label: 'Petty Cash Batch',
-                        value: preview.pettyCashBatch),
-                    const SizedBox(height: 10),
-                    _PreviewFieldCard(
-                        label: 'Petty cash type', value: preview.pettyCashType),
-                    const SizedBox(height: 10),
-                    InkWell(
-                      onTap: preview.hasAttachments
-                          ? () => _showSelectedAttachmentsPreview()
-                          : null,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 13),
+                      // ─── confirm/cancel (fixed at bottom) ───
+                      Text(
+                        'Are you sure you want to Submit ?',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF111111),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        height: 42,
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3F3F3),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF9D9D9D)),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: const Color(0xFF8F8F8F)),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Stack(
+                          alignment: Alignment.center,
                           children: [
-                            const Icon(Icons.attach_file_rounded,
-                                color: Color(0xFF111111), size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'View Attachments',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF111111),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                Text('No',
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFFCC2424))),
+                                Text('Yes',
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF0E9F57))),
+                              ],
+                            ),
+                            SliderTheme(
+                              data: SliderTheme.of(ctx).copyWith(
+                                trackHeight: 36,
+                                activeTrackColor: Colors.transparent,
+                                inactiveTrackColor: Colors.transparent,
+                                thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: 22),
+                                overlayShape: SliderComponentShape.noOverlay,
+                                thumbColor: const Color(0xFFD1D1D1),
+                              ),
+                              child: Slider(
+                                min: 0,
+                                max: 1,
+                                value: sliderValue,
+                                onChanged: submitting
+                                    ? null
+                                    : (v) =>
+                                        setDialogState(() => sliderValue = v),
+                                onChangeEnd: submitting
+                                    ? null
+                                    : (v) {
+                                        if (v >= 0.9) {
+                                          confirmSubmit();
+                                        } else if (v <= 0.1) {
+                                          Navigator.of(ctx).pop(false);
+                                        } else {
+                                          setDialogState(
+                                              () => sliderValue = 0.5);
+                                        }
+                                      },
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Are you sure you want to Submit ?',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF111111),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F3F3),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: const Color(0xFF8F8F8F)),
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              Text('No',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFFCC2424))),
-                              Text('Yes',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF0E9F57))),
-                            ],
+                      if (submitting)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.2),
                           ),
-                          SliderTheme(
-                            data: SliderTheme.of(ctx).copyWith(
-                              trackHeight: 36,
-                              activeTrackColor: Colors.transparent,
-                              inactiveTrackColor: Colors.transparent,
-                              thumbShape: const RoundSliderThumbShape(
-                                  enabledThumbRadius: 22),
-                              overlayShape: SliderComponentShape.noOverlay,
-                              thumbColor: const Color(0xFFD1D1D1),
-                            ),
-                            child: Slider(
-                              min: 0,
-                              max: 1,
-                              value: sliderValue,
-                              onChanged: submitting
-                                  ? null
-                                  : (v) =>
-                                      setDialogState(() => sliderValue = v),
-                              onChangeEnd: submitting
-                                  ? null
-                                  : (v) {
-                                      if (v >= 0.9) {
-                                        confirmSubmit();
-                                      } else if (v <= 0.1) {
-                                        Navigator.of(ctx).pop(false);
-                                      } else {
-                                        setDialogState(() => sliderValue = 0.5);
-                                      }
-                                    },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (submitting)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.2),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -569,31 +748,79 @@ class _PettyCashDraftSummaryScreenState
   Future<void> _showSelectedAttachmentsPreview() async {
     if (_draftAttachments.isEmpty) return;
 
-    await showModalBottomSheet<void>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: ListView.separated(
-            shrinkWrap: true,
-            padding: const EdgeInsets.all(16),
-            itemCount: _draftAttachments.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) {
-              final file = _draftAttachments[i];
-              final name = file.path.split(Platform.pathSeparator).last;
-              return ListTile(
-                leading: const Icon(Icons.insert_drive_file_outlined),
-                title: Text(name),
-                subtitle: Text(file.path),
-              );
-            },
+    final single = _draftAttachments.length == 1 ? _draftAttachments.first : null;
+    final singleExt = single == null
+        ? ''
+        : single.path.split('.').last.toLowerCase();
+
+    if (single != null && singleExt == 'pdf') {
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => _LocalFileViewerScreen(
+            file: single,
+            title: single.path.split(Platform.pathSeparator).last,
+            isPdf: true,
+            isImage: false,
           ),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final pdfBytes = await _buildAttachmentsPdf();
+      if (!mounted) return;
+      if (pdfBytes == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No image attachments to preview as PDF')),
         );
-      },
-    );
+        return;
+      }
+
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => _GeneratedAttachmentsPdfViewer(pdfBytes: pdfBytes),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to prepare PDF preview')),
+      );
+    }
+  }
+
+  Future<Uint8List?> _buildAttachmentsPdf() async {
+    final doc = pw.Document();
+    var hasPages = false;
+
+    for (final file in _draftAttachments) {
+      if (!await file.exists()) continue;
+
+      final ext = file.path.split('.').last.toLowerCase();
+      final isImage = <String>{'jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'}
+          .contains(ext);
+      if (!isImage) continue;
+
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) continue;
+
+      final image = pw.MemoryImage(bytes);
+      doc.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(16),
+          build: (_) => pw.Center(
+            child: pw.Image(image, fit: pw.BoxFit.contain),
+          ),
+        ),
+      );
+      hasPages = true;
+    }
+
+    if (!hasPages) return null;
+    return doc.save();
   }
 
   Future<void> _onPrimaryActionTap() async {
@@ -1357,6 +1584,94 @@ class _PreviewFieldCard extends StatelessWidget {
   }
 }
 
+class _OperatingUnitOption {
+  final int id;
+  final String name;
+
+  const _OperatingUnitOption({
+    required this.id,
+    required this.name,
+  });
+}
+
+class _LocalFileViewerScreen extends StatelessWidget {
+  const _LocalFileViewerScreen({
+    required this.file,
+    required this.title,
+    required this.isPdf,
+    required this.isImage,
+  });
+
+  final File file;
+  final String title;
+  final bool isPdf;
+  final bool isImage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(title, overflow: TextOverflow.ellipsis),
+      ),
+      body: isPdf
+          ? SfPdfViewer.file(
+              file,
+              canShowPaginationDialog: true,
+              canShowScrollHead: true,
+              canShowScrollStatus: true,
+            )
+          : isImage
+              ? InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4.0,
+                  child: Center(
+                    child: Image.file(
+                      file,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Text('Failed to load image'),
+                      ),
+                    ),
+                  ),
+                )
+              : const Center(
+                  child: Text('Unsupported file type'),
+                ),
+    );
+  }
+}
+
+class _GeneratedAttachmentsPdfViewer extends StatelessWidget {
+  const _GeneratedAttachmentsPdfViewer({
+    required this.pdfBytes,
+  });
+
+  final Uint8List pdfBytes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text('Attachments'),
+      ),
+      body: SfPdfViewer.memory(
+        pdfBytes,
+        canShowPaginationDialog: true,
+        canShowScrollHead: true,
+        canShowScrollStatus: true,
+      ),
+    );
+  }
+}
+
 class _SubmitPreviewData {
   final String submitDate;
   final String pettyCashHolder;
@@ -1367,6 +1682,7 @@ class _SubmitPreviewData {
   final dynamic expenseLineIds;
   final int holderId;
   final int? operatingUnitId;
+  final List<_OperatingUnitOption> operatingUnits;
   final dynamic attachmentIds;
   final bool hasAttachments;
 
@@ -1380,6 +1696,7 @@ class _SubmitPreviewData {
     required this.expenseLineIds,
     required this.holderId,
     required this.operatingUnitId,
+    required this.operatingUnits,
     required this.attachmentIds,
     required this.hasAttachments,
   });

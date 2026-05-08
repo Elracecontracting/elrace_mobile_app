@@ -17,7 +17,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 
 class AppSettingsWidget extends StatelessWidget {
-  static const bool _showLogoutButton = false;
+  static const bool _showLogoutButton = true;
 
   final GlobalKey<NavigatorState> navKey;
   final VoidCallback? onMuteControlTap;
