@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/data/delayed_approvals_repository.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/delayed/models/delayed_approval_model.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/screens/delayed_requests_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/screens/hr_details_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/all_approvals_overview.dart';
@@ -15,10 +15,8 @@ import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
 import '../../widgets/header_widget.dart';
-import '../home_screen/screens/main_screens.dart';
 
 class ApprovalsScreen extends StatefulWidget {
   const ApprovalsScreen({
@@ -70,15 +68,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
   // Delayed requests count from API
   int delayedCount = 0;
-  bool _delayedLoading = false;
+  DelayedRorResponse? _rorData;
   final DelayedApprovalsRepository _delayedRepo = DelayedApprovalsRepository();
   bool _isScrolled = false;
-  final Map<String, bool> _categoryNotificationDots = {
-    _CategoryKeys.hr: false,
-    _CategoryKeys.rfq: false,
-    _CategoryKeys.invoice: false,
-    _CategoryKeys.pettyCash: false,
-  };
 
   @override
   void initState() {
@@ -89,7 +81,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     // Delayed count is also fired in background.
     _loadAllCategoriesInBackground();
     _fetchDelayedCount();
-    _loadCategoryNotificationDots();
+    _fetchRorData();
   }
 
   @override
@@ -148,6 +140,63 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     }).toList();
   }
 
+  String _pickCommentValue(Map<String, dynamic> item) {
+    final candidates = <dynamic>[
+      item['comment'],
+      item['comments'],
+      item['note'],
+      item['description'],
+      item['approval_comment'],
+      item['reject_reason'],
+      item['rejection_reason'],
+      item['manager_comment'],
+    ];
+
+    for (final value in candidates) {
+      if (value == null || value == false || value == true) continue;
+      final text = value.toString().trim();
+      if (text.isEmpty) continue;
+      final normalized = text.toLowerCase();
+      if (normalized == 'null' ||
+          normalized == 'false' ||
+          normalized == 'true') {
+        continue;
+      }
+      return text;
+    }
+
+    return '';
+  }
+
+  List<Map<String, dynamic>> _normalizeCategoryItems(
+    List<dynamic> rawItems, {
+    required String categoryLabel,
+  }) {
+    return rawItems.whereType<Map>().map((raw) {
+      final map = Map<String, dynamic>.from(raw);
+      final typeValue = map['type']?.toString().trim();
+      map['category'] = categoryLabel;
+      map['type'] = (typeValue != null && typeValue.isNotEmpty)
+          ? typeValue
+          : categoryLabel;
+
+      final existingComment = map['comment'];
+      final hasMeaningfulComment = existingComment != null &&
+          existingComment != false &&
+          existingComment != true &&
+          existingComment.toString().trim().isNotEmpty &&
+          existingComment.toString().toLowerCase() != 'null' &&
+          existingComment.toString().toLowerCase() != 'false' &&
+          existingComment.toString().toLowerCase() != 'true';
+
+      if (!hasMeaningfulComment) {
+        map['comment'] = _pickCommentValue(map);
+      }
+
+      return map;
+    }).toList(growable: false);
+  }
+
   Future<List<dynamic>> _fetchCategoryData(String groupType) async {
     final token = SharedPref.getLoginData().result?.token;
 
@@ -159,10 +208,23 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     final url = Uri.parse("https://erp.elrace.com/api/my_approvals_grouped");
 
+    final params = <String, dynamic>{"group_type": groupType};
+    if (groupType == 'rfq' || groupType == 'invoice') {
+      params['comment'] = '';
+    }
+
     final body = jsonEncode({
       "jsonrpc": "2.0",
-      "params": {"group_type": groupType},
+      "params": params,
     });
+
+    if (groupType == 'rfq' || groupType == 'invoice') {
+      final escapedBody = body.replaceAll("'", r"'\\''");
+      debugPrint('🧪 [MyApproval][$groupType] cURL:');
+      debugPrint(
+        "curl -X GET '$url' -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Authorization: Bearer $token' --data '$escapedBody'",
+      );
+    }
 
     final request = http.Request('GET', url)
       ..headers.addAll(headers)
@@ -173,15 +235,17 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     debugPrint('[$groupType] status=${response.statusCode}');
 
-    if (groupType == 'petty_cash') {
-      debugPrint('🧾 [MyApproval][petty_cash] Raw response start');
+    if (groupType == 'petty_cash' ||
+        groupType == 'rfq' ||
+        groupType == 'invoice') {
+      debugPrint('🧾 [MyApproval][$groupType] Raw response start');
       const chunkSize = 800;
       final raw = response.body;
       for (var i = 0; i < raw.length; i += chunkSize) {
         final end = (i + chunkSize < raw.length) ? i + chunkSize : raw.length;
         debugPrint(raw.substring(i, end));
       }
-      debugPrint('🧾 [MyApproval][petty_cash] Raw response end');
+      debugPrint('🧾 [MyApproval][$groupType] Raw response end');
     }
 
     if (response.statusCode == 200) {
@@ -236,15 +300,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       setState(() {
         switch (categoryKey) {
           case 'hr':
-            hrItems = items.map((i) => {...i, 'category': 'HR'}).toList();
+            hrItems = _normalizeCategoryItems(items, categoryLabel: 'HR');
           case 'rfq':
-            rfqItems = items.map((i) => {...i, 'category': 'RFQ'}).toList();
+            rfqItems = _normalizeCategoryItems(items, categoryLabel: 'RFQ');
           case 'invoice':
             invoiceItems =
-                items.map((i) => {...i, 'category': 'INVOICE'}).toList();
+                _normalizeCategoryItems(items, categoryLabel: 'INVOICE');
           case 'petty_cash':
             pettyCashItems =
-                items.map((i) => {...i, 'category': 'PETTY CASH'}).toList();
+                _normalizeCategoryItems(items, categoryLabel: 'PETTY CASH');
         }
         allItems = [
           ...hrItems,
@@ -312,157 +376,35 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   Future<void> _fetchDelayedCount() async {
-    setState(() => _delayedLoading = true);
     try {
       final counters = await _delayedRepo.fetchCounters();
       if (!mounted) return;
       setState(() {
         delayedCount = counters.totalCount;
-        _delayedLoading = false;
       });
     } catch (e) {
       debugPrint('Failed to fetch delayed count: $e');
-      if (!mounted) return;
-      setState(() => _delayedLoading = false);
     }
   }
 
-  bool _isNotificationUnread(Map<String, dynamic> notification) {
-    final isReadValue = notification['isRead'] ?? notification['is_read'];
-    if (isReadValue is bool) return !isReadValue;
-    if (isReadValue is num) return isReadValue == 0;
-    final str = (isReadValue ?? '').toString().trim().toLowerCase();
-    if (str.isEmpty) return true;
-    return !(str == 'true' || str == '1');
-  }
-
-  String _normalizeCategoryToken(String value) {
-    return value
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
-        .replaceAll(RegExp(r'_+'), '_')
-        .replaceAll(RegExp(r'^_|_$'), '');
-  }
-
-  Set<String> _categoryAliases(String categoryKey) {
-    switch (categoryKey) {
-      case _CategoryKeys.hr:
-        return {'hr', 'human_resources', 'human_resource'};
-      case _CategoryKeys.rfq:
-        return {'rfq', 'request_for_quotation'};
-      case _CategoryKeys.invoice:
-        return {'invoice', 'invoices'};
-      case _CategoryKeys.pettyCash:
-        return {'petty_cash', 'pettycash', 'ptsh'};
-      default:
-        return {categoryKey};
-    }
-  }
-
-  bool _notificationMatchesCategory(
-    Map<String, dynamic> notification,
-    String categoryKey,
-  ) {
-    final aliases = _categoryAliases(categoryKey);
-    final candidates = <String>{
-      '${notification['category'] ?? ''}',
-      '${notification['type'] ?? ''}',
-      '${notification['model'] ?? ''}',
-      '${notification['model_name'] ?? ''}',
-      '${notification['record_type'] ?? ''}',
-      '${notification['target_type'] ?? ''}',
-      '${notification['group_type'] ?? ''}',
-    };
-
-    final rawData = notification['data'];
-    if (rawData is Map<String, dynamic>) {
-      candidates.addAll([
-        '${rawData['category'] ?? ''}',
-        '${rawData['type'] ?? ''}',
-        '${rawData['model'] ?? ''}',
-        '${rawData['model_name'] ?? ''}',
-        '${rawData['record_type'] ?? ''}',
-        '${rawData['target_type'] ?? ''}',
-        '${rawData['group_type'] ?? ''}',
-      ]);
-    } else if (rawData is Map) {
-      final dataMap = Map<String, dynamic>.from(rawData);
-      candidates.addAll([
-        '${dataMap['category'] ?? ''}',
-        '${dataMap['type'] ?? ''}',
-        '${dataMap['model'] ?? ''}',
-        '${dataMap['model_name'] ?? ''}',
-        '${dataMap['record_type'] ?? ''}',
-        '${dataMap['target_type'] ?? ''}',
-        '${dataMap['group_type'] ?? ''}',
-      ]);
-    }
-
-    for (final candidate in candidates) {
-      final normalized = _normalizeCategoryToken(candidate);
-      if (normalized.isEmpty) continue;
-      if (aliases.contains(normalized)) return true;
-    }
-
-    final combinedText =
-        '${notification['title'] ?? ''} ${notification['body'] ?? ''}'
-            .toLowerCase();
-    if (categoryKey == _CategoryKeys.invoice &&
-        combinedText.contains('invoice')) {
-      return true;
-    }
-    if (categoryKey == _CategoryKeys.rfq && combinedText.contains('rfq')) {
-      return true;
-    }
-    if (categoryKey == _CategoryKeys.hr &&
-        (combinedText.contains('hr') ||
-            combinedText.contains('human resource') ||
-            combinedText.contains('leave'))) {
-      return true;
-    }
-    if (categoryKey == _CategoryKeys.pettyCash &&
-        (combinedText.contains('petty') || combinedText.contains('cash'))) {
-      return true;
-    }
-
-    return false;
-  }
-
-  Future<void> _loadCategoryNotificationDots() async {
+  Future<void> _fetchRorData() async {
     try {
-      final notifications = await NotificationStorageService.getNotifications();
-      final unread = notifications.where(_isNotificationUnread).toList();
-
-      final next = {
-        _CategoryKeys.hr: false,
-        _CategoryKeys.rfq: false,
-        _CategoryKeys.invoice: false,
-        _CategoryKeys.pettyCash: false,
-      };
-
-      for (final notification in unread) {
-        if (_notificationMatchesCategory(notification, _CategoryKeys.hr)) {
-          next[_CategoryKeys.hr] = true;
-        }
-        if (_notificationMatchesCategory(notification, _CategoryKeys.rfq)) {
-          next[_CategoryKeys.rfq] = true;
-        }
-        if (_notificationMatchesCategory(notification, _CategoryKeys.invoice)) {
-          next[_CategoryKeys.invoice] = true;
-        }
-        if (_notificationMatchesCategory(
-            notification, _CategoryKeys.pettyCash)) {
-          next[_CategoryKeys.pettyCash] = true;
-        }
-      }
-
+      final ror = await _delayedRepo.fetchRor();
+      final hasBreakdownCounts = (ror.hrCount ?? 0) > 0 ||
+          (ror.rfqCount ?? 0) > 0 ||
+          (ror.pettyCashCount ?? 0) > 0 ||
+          (ror.invoiceCount ?? 0) > 0;
+      debugPrint(
+        '🟣 [ROR SOURCE] API (${hasBreakdownCounts ? 'score+counts' : 'score-only'}) => ror=${ror.rorPercentage}%',
+      );
       if (!mounted) return;
       setState(() {
-        _categoryNotificationDots.addAll(next);
+        _rorData = ror;
       });
-    } catch (_) {
-      // Keep dots hidden if notifications cannot be read.
+    } catch (e) {
+      debugPrint('Failed to fetch delayed ROR: $e');
+      debugPrint(
+          '🟡 [ROR SOURCE] Fallback => local tab counts + local formula');
     }
   }
 
@@ -470,7 +412,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     debugPrint('🔁 [ApprovalsScreen] Refresh requested after approve/reject');
     _loadAllCategoriesInBackground(force: true);
     _fetchDelayedCount();
-    _loadCategoryNotificationDots();
+    _fetchRorData();
   }
 
   void _openHrRequestTestCases() {
@@ -609,6 +551,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                         int index = entry.key;
                         String categoryKey = entry.value;
                         bool isSelected = selectedCategoryKey == categoryKey;
+                        final categoryCount = _getCategoryCount(categoryKey);
                         return Container(
                           margin: const EdgeInsets.only(right: 8.0, left: 2.0),
                           child: GestureDetector(
@@ -637,11 +580,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                               title: _tabTitleFor(categoryKey),
                               isSelected: isSelected,
                               count: 0,
-                              showRedDot: categoryKey == _CategoryKeys.all
-                                  ? _categoryNotificationDots.values
-                                      .any((hasDot) => hasDot)
-                                  : (_categoryNotificationDots[categoryKey] ??
-                                      false),
+                              showRedDot: categoryCount > 0,
                             ),
                           ),
                         );
@@ -667,6 +606,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         rfqCount: rfqItems.length,
         hrCount: hrItems.length,
         delayedCount: delayedCount,
+        rorInvoiceCount: _rorData?.invoiceCount,
+        rorPettyCashCount: _rorData?.pettyCashCount,
+        rorRfqCount: _rorData?.rfqCount,
+        rorHrCount: _rorData?.hrCount,
+        rorPercentage: _rorData?.rorPercentage,
+        rorHrRor: _rorData?.hrRor,
+        rorRfqRor: _rorData?.rfqRor,
+        rorInvoiceRor: _rorData?.invoiceRor,
+        rorPettyCashRor: _rorData?.pettyCashRor,
         onHrTestCasesTap: kDebugMode ? _openHrRequestTestCases : null,
         onDelayedTap: () {
           Navigator.push(

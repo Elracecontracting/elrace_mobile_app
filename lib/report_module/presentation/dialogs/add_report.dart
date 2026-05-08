@@ -1,26 +1,16 @@
-import 'package:el_race/main.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
+import 'package:el_race/report_module/presentation/screens/report_photos/report_photos_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/app_globals.dart' show navKey;
+
 Future<bool> showAddNewReport(BuildContext context,
     {required int type, String? folderID}) async {
   TextEditingController nameController = TextEditingController();
-  TextEditingController descriptionController = TextEditingController();
-
-  // ── Available companies ──
-  final companies = <String>[
-    'RCC',
-    'El Race Cons. & Gen. Cont. Co. L.C.C',
-    'Al Hewar Contracting & Irrigation Est.',
-  ];
-  final currentCompany =
-      CompanyRepository.company?.companyName ?? companies.first;
-
-  String selectedCompany = companies.contains(currentCompany) ? currentCompany : companies.first;
 
   bool cancel = true;
 
@@ -28,110 +18,69 @@ Future<bool> showAddNewReport(BuildContext context,
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.5),
     builder: (ctx) {
-      return StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return Dialog(
-            insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            backgroundColor: Colors.white,
-            child: Padding(
-              padding:
-                  EdgeInsets.symmetric(vertical: 28.h, horizontal: 22.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _InputSection(
-                    label: 'Project',
-                    subLabel: 'Name',
-                    hint: 'Write here',
-                    controller: nameController,
+      return Dialog(
+        insetPadding: EdgeInsets.symmetric(horizontal: 10.w),
+        backgroundColor: Colors.transparent,
+        child: Container(
+          width: 1.sw,
+          padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 16.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F8F8),
+            borderRadius: BorderRadius.circular(22.r),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: Alignment.topRight,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(ctx),
+                  child: Container(
+                    width: 30.w,
+                    height: 30.w,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE81E25),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.close, color: Colors.white, size: 18.w),
                   ),
-
-                  SizedBox(height: 16.h),
-
-                  // ── Company Name dropdown ──
-                  _DropdownSection(
-                    label: 'Company',
-                    subLabel: 'Name',
-                    hint: 'Select company',
-                    value: selectedCompany,
-                    items: companies,
-                    onChanged: (v) {
-                      setDialogState(() => selectedCompany = v ?? companies.first);
-                      descriptionController.text = v ?? '';
-                    },
-                  ),
-
-                  SizedBox(height: 24.h),
-
-                  // ── Buttons ──
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 48.h,
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFC62828),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30.r),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              'CANCEL',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 14.w),
-                      Expanded(
-                        child: SizedBox(
-                          height: 48.h,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              if (nameController.text.trim().isNotEmpty) {
-                                descriptionController.text = selectedCompany;
-                                cancel = false;
-                                Navigator.pop(ctx);
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E7D32),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30.r),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              'SUBMIT',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          );
-        },
+              SizedBox(height: 8.h),
+              _ReportNameSection(
+                controller: nameController,
+              ),
+              SizedBox(height: 16.h),
+              SizedBox(
+                height: 47.h,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (nameController.text.trim().isNotEmpty) {
+                      cancel = false;
+                      Navigator.pop(ctx);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: const Color(0xFF27304E),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15.r),
+                    ),
+                  ),
+                  child: Text(
+                    'Start',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     },
   );
@@ -140,178 +89,106 @@ Future<bool> showAddNewReport(BuildContext context,
 
   ReportProvider provider =
       Provider.of<ReportProvider>(navKey.currentContext!, listen: false);
+  final reportName = nameController.text.trim();
   if (type == 2) {
+    final previousFolderIds = provider.folders.map((f) => f.id).toSet();
     await provider.createFolder(
-        title: nameController.text, description: descriptionController.text);
+      title: reportName,
+      description: CompanyRepository.company?.companyName ?? '',
+    );
+    final createdFolderIndex = provider.folders.indexWhere(
+      (folder) => !previousFolderIds.contains(folder.id),
+    );
+    if (createdFolderIndex == -1) return false;
+
+    if (context.mounted) {
+      final createdFolder = provider.folders[createdFolderIndex];
+      final createdReportIndex = provider.reports.indexWhere(
+        (report) => report.folderId == createdFolder.id,
+      );
+      final createdReport = createdReportIndex != -1
+          ? provider.reports[createdReportIndex]
+          : await provider.getOrCreateSingleReportForFolder(createdFolder);
+      if (createdReport != null && context.mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ReportPhotosScreen(
+              report: createdReport,
+              folderName: createdFolder.name,
+              folderId: createdFolder.id,
+            ),
+          ),
+        );
+      }
+    }
     return true;
   } else {
-    await provider.createReport(
-        title: nameController.text, folderID: folderID!);
+    await provider.createReport(title: reportName, folderID: folderID!);
     return true;
   }
 }
 
-class _InputSection extends StatelessWidget {
-  final String label;
-  final String subLabel;
-  final String hint;
+class _ReportNameSection extends StatelessWidget {
   final TextEditingController controller;
 
-  const _InputSection({
-    required this.label,
-    required this.subLabel,
-    required this.hint,
+  const _ReportNameSection({
     required this.controller,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 14.h),
+      padding: EdgeInsets.fromLTRB(14.w, 10.h, 14.w, 12.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF2F2F2),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: const Color(0xFFD1D3DA)),
+        border: Border.all(color: const Color(0xFFB9BBC3), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label,
+            'Report',
             style: GoogleFonts.poppins(
               fontSize: 11.sp,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF6B7280),
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF6A6D78),
             ),
           ),
           Text(
-            subLabel,
+            'Name',
             style: GoogleFonts.poppins(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1F2937),
+              color: const Color(0xFF151A36),
             ),
           ),
-          SizedBox(height: 10.h),
+          SizedBox(height: 8.h),
           Container(
-            height: 44.h,
+            height: 40.h,
             padding: EdgeInsets.symmetric(horizontal: 14.w),
             decoration: BoxDecoration(
-              color: const Color(0xFFF4F4F4),
-              borderRadius: BorderRadius.circular(22.r),
-              border: Border.all(color: const Color(0xFFD1D3DA)),
+              color: const Color(0xFFEFEFEF),
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(color: const Color(0xFFCFCFCF), width: 1),
             ),
-            alignment: Alignment.center,
             child: TextField(
               controller: controller,
               style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                color: const Color(0xFF374151),
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF272A36),
               ),
               decoration: InputDecoration(
-                hintText: hint,
                 border: InputBorder.none,
-                isCollapsed: true,
+                hintText: 'Enter report name',
                 hintStyle: GoogleFonts.poppins(
-                  fontSize: 12.sp,
-                  color: const Color(0xFFA3A6B1),
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFFA2A4AA),
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Reusable styled dropdown section matching the design mockup.
-class _DropdownSection extends StatelessWidget {
-  final String label;
-  final String subLabel;
-  final String hint;
-  final String? value;
-  final List<String> items;
-  final ValueChanged<String?> onChanged;
-
-  const _DropdownSection({
-    required this.label,
-    required this.subLabel,
-    required this.hint,
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 14.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: const Color(0xFFD1D3DA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF6B7280),
-            ),
-          ),
-          Text(
-            subLabel,
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1F2937),
-            ),
-          ),
-          SizedBox(height: 10.h),
-          Container(
-            height: 44.h,
-            padding: EdgeInsets.symmetric(horizontal: 14.w),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF4F4F4),
-              borderRadius: BorderRadius.circular(22.r),
-              border: Border.all(color: const Color(0xFFD1D3DA)),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: value,
-                hint: Text(
-                  hint,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12.sp,
-                    color: const Color(0xFFA3A6B1),
-                  ),
-                ),
-                isExpanded: true,
-                icon: Icon(
-                  Icons.arrow_drop_down,
-                  size: 22.w,
-                  color: const Color(0xFF374151),
-                ),
-                style: GoogleFonts.poppins(
-                  fontSize: 12.sp,
-                  color: const Color(0xFF374151),
-                ),
-                dropdownColor: Colors.white,
-                borderRadius: BorderRadius.circular(14.r),
-                items: items
-                    .map((item) => DropdownMenuItem<String>(
-                          value: item,
-                          child: Text(
-                            item,
-                            overflow: TextOverflow.visible,
-                          ),
-                        ))
-                    .toList(),
-                onChanged: onChanged,
+                contentPadding: EdgeInsets.symmetric(vertical: 10.h),
               ),
             ),
           ),

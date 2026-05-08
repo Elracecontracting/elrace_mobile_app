@@ -1,5 +1,5 @@
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
-import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
+import 'package:el_race/ui/presentation/my_actions/widgets/my_actions_pagination_mixin.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -13,14 +13,21 @@ class HrScreen extends StatefulWidget {
   State<HrScreen> createState() => _HrScreenState();
 }
 
-class _HrScreenState extends State<HrScreen> {
-  final MyActionsRepository _repo = MyActionsRepository();
-  late final Future<List<MyActionItem>> _future;
+class _HrScreenState extends State<HrScreen>
+    with MyActionsPaginationMixin<HrScreen> {
+  @override
+  MyActionsType get actionsType => MyActionsType.hr;
 
   @override
   void initState() {
     super.initState();
-    _future = _repo.fetchByType(MyActionsType.hr);
+    initActionsPagination();
+  }
+
+  @override
+  void dispose() {
+    disposeActionsPagination();
+    super.dispose();
   }
 
   String _statusBadgeAsset(String status) {
@@ -36,16 +43,11 @@ class _HrScreenState extends State<HrScreen> {
     }
   }
 
-  String _statusText(String status) {
-    final value = status.trim().toUpperCase();
-    return value.isEmpty ? 'UNKNOWN' : value;
-  }
-
   String _formatDate(String? dateRaw) {
     if (dateRaw == null || dateRaw.trim().isEmpty) return '--/--/----';
     final parsed = DateTime.tryParse(dateRaw);
     if (parsed == null) return dateRaw;
-    return DateFormat('MM/dd/yyyy').format(parsed);
+    return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
   @override
@@ -55,63 +57,73 @@ class _HrScreenState extends State<HrScreen> {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: FutureBuilder<List<MyActionItem>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+        child: Builder(
+          builder: (context) {
+            if (actionsInitialLoading) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
+            if (actionsError != null && actionItems.isEmpty) {
+              return Center(
+                child: TextButton(
+                  onPressed: retryInitialActionsLoad,
+                  child: const Text('Retry'),
+                ),
+              );
             }
 
-            final items = snapshot.data ?? const <MyActionItem>[];
+            final items = List<MyActionItem>.from(actionItems);
 
-            return ListView(
-              padding: EdgeInsets.only(top: 10.h, bottom: 80.h),
-              children: [
-                _ActionsHeader(
-                  iconAsset: 'assets/png/my-req-frame.png',
-                  title: 'HR',
-                ),
-                SizedBox(height: 12.h),
-                if (items.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 30.h),
-                      child: Text(
-                        'No actions available.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF5A5A5A),
+            return RefreshIndicator(
+              onRefresh: refreshActions,
+              child: ListView(
+                controller: actionsScrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(top: 10.h, bottom: 80.h),
+                children: [
+                  const _ActionsHeader(
+                    iconAsset: 'assets/png/my-req-frame.png',
+                    title: 'HR',
+                  ),
+                  SizedBox(height: 12.h),
+                  if (items.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 30.h),
+                        child: Text(
+                          'No actions available.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A5A5A),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ...items.map(
+                      (item) => Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 12.w, vertical: 7.h),
+                        child: _HrRequestCard(
+                          requestNo: item.reference?.trim().isNotEmpty == true
+                              ? item.reference!
+                              : item.name,
+                          title: item.requestType?.trim().isNotEmpty == true
+                              ? item.requestType!
+                              : 'REQUEST',
+                          employeeName: item.employeeName.trim().isEmpty
+                              ? '-'
+                              : item.employeeName,
+                          requestId: '${item.id}',
+                          updatedAt: _formatDate(item.date),
+                          statusBadgeAsset: _statusBadgeAsset(item.status),
                         ),
                       ),
                     ),
-                  )
-                else
-                  ...items.map(
-                    (item) => Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12.w, vertical: 7.h),
-                      child: _HrRequestCard(
-                        requestNo: item.reference?.trim().isNotEmpty == true
-                            ? item.reference!
-                            : item.name,
-                        title: item.requestType?.trim().isNotEmpty == true
-                            ? item.requestType!
-                            : 'REQUEST',
-                        employeeName: item.employeeName.trim().isEmpty
-                            ? '-'
-                            : item.employeeName,
-                        requestId: '${item.id}',
-                        updatedAt: _formatDate(item.date),
-                        statusBadgeAsset: _statusBadgeAsset(item.status),
-                      ),
-                    ),
-                  ),
-              ],
+                  buildActionsPaginationFooter(),
+                ],
+              ),
             );
           },
         ),
@@ -235,7 +247,7 @@ class _HrRequestCard extends StatelessWidget {
                             style: GoogleFonts.poppins(
                               fontSize: 11.sp,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF484848).withOpacity(0.72),
+                              color: const Color(0xB8484848),
                             ),
                           ),
                           SizedBox(height: 1.h),

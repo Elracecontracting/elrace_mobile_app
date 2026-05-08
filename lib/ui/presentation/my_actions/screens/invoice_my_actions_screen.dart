@@ -1,5 +1,5 @@
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
-import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
+import 'package:el_race/ui/presentation/my_actions/widgets/my_actions_pagination_mixin.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -13,15 +13,23 @@ class InvoiceMyActionsScreen extends StatefulWidget {
   State<InvoiceMyActionsScreen> createState() => _InvoiceMyActionsScreenState();
 }
 
-class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
-  final MyActionsRepository _repo = MyActionsRepository();
-  late final Future<List<MyActionItem>> _future;
-  final DateFormat _updatedDateFormat = DateFormat('MM/dd/yyyy');
+class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen>
+    with MyActionsPaginationMixin<InvoiceMyActionsScreen> {
+  final DateFormat _updatedDateFormat = DateFormat('dd/MM/yyyy');
+
+  @override
+  MyActionsType get actionsType => MyActionsType.invoice;
 
   @override
   void initState() {
     super.initState();
-    _future = _repo.fetchByType(MyActionsType.invoice);
+    initActionsPagination();
+  }
+
+  @override
+  void dispose() {
+    disposeActionsPagination();
+    super.dispose();
   }
 
   String _statusBadgeAsset(String status) {
@@ -62,14 +70,13 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: FutureBuilder<List<MyActionItem>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+        child: Builder(
+          builder: (context) {
+            if (actionsInitialLoading) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
+            if (actionsError != null && actionItems.isEmpty) {
               return Center(
                 child: Padding(
                   padding: EdgeInsets.all(20.w),
@@ -96,13 +103,18 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
                           color: const Color(0xFF9AA0A6),
                         ),
                       ),
+                      SizedBox(height: 14.h),
+                      TextButton(
+                        onPressed: retryInitialActionsLoad,
+                        child: const Text('Retry'),
+                      ),
                     ],
                   ),
                 ),
               );
             }
 
-            final items = snapshot.data ?? const <MyActionItem>[];
+            final items = List<MyActionItem>.from(actionItems);
             final cards = items.map((item) {
               final updatedDate = _parseDate(item.date);
               final title = (item.project?.trim().isNotEmpty == true)
@@ -122,64 +134,64 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
               );
             }).toList();
 
-            cards.sort((a, b) {
-              final aDate = a.updatedDate ?? DateTime(1970, 1, 1);
-              final bDate = b.updatedDate ?? DateTime(1970, 1, 1);
-              return bDate.compareTo(aDate);
-            });
-
-            return ListView(
-              padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10.h),
-                  child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          'assets/newapp/newicon/invoice_header.png',
-                          width: 26.w,
-                          height: 26.w,
-                          fit: BoxFit.contain,
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'INVOICE',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF101C36),
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (cards.isEmpty)
+            return RefreshIndicator(
+              onRefresh: refreshActions,
+              child: ListView(
+                controller: actionsScrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
+                children: [
                   Padding(
-                    padding: EdgeInsets.only(top: 24.h),
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
                     child: Center(
-                      child: Text(
-                        'No actions available.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF5A5A5A),
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            'assets/newapp/newicon/invoice_header.png',
+                            width: 26.w,
+                            height: 26.w,
+                            fit: BoxFit.contain,
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'INVOICE',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF101C36),
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  )
-                else
-                  ...cards.map(
-                    (item) => Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
-                      child: _InvoiceRequestCard(item: item),
-                    ),
                   ),
-              ],
+                  if (cards.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(top: 24.h),
+                      child: Center(
+                        child: Text(
+                          'No actions available.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A5A5A),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ...cards.map(
+                      (item) => Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 16.w, vertical: 7.h),
+                        child: _InvoiceRequestCard(item: item),
+                      ),
+                    ),
+                  buildActionsPaginationFooter(),
+                ],
+              ),
             );
           },
         ),

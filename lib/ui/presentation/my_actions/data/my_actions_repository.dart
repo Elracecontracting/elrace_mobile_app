@@ -8,6 +8,8 @@ import 'package:el_race/utils/urll_utils.dart';
 import 'package:http/http.dart' as http;
 
 class MyActionsRepository {
+  static const int defaultPerPage = 10;
+
   final ApiQuery _apiQuery;
 
   MyActionsRepository({ApiQuery? apiQuery})
@@ -16,7 +18,7 @@ class MyActionsRepository {
   Future<List<MyActionItem>> fetchByType(
     MyActionsType type, {
     int page = 1,
-    int perPage = 50,
+    int perPage = defaultPerPage,
     String keyword = '',
   }) async {
     final token = SharedPref.getLoginDataOrNull()?.result?.token;
@@ -85,46 +87,10 @@ class MyActionsRepository {
       } else {
         message = err['message']?.toString() ?? 'Odoo Server Error';
       }
-      print('[MyActions] Odoo error for type=${type.apiValue}: $message');
       throw Exception(message);
     }
 
     final result = json['result'];
-
-    // ── Debug: dump raw response structure for investigation ──
-    print('[MyActions][${type.apiValue}] result type: ${result.runtimeType}');
-    if (result is Map) {
-      print(
-          '[MyActions][${type.apiValue}] result keys: ${result.keys.toList()}');
-      final d = result['data'];
-      if (d is Map) {
-        print('[MyActions][${type.apiValue}] data keys: ${d.keys.toList()}');
-        d.forEach((k, v) {
-          if (v is List && v.isNotEmpty) {
-            print(
-                '[MyActions][${type.apiValue}] data["$k"] first item keys: ${(v.first as Map?)?.keys.toList()}');
-            print(
-                '[MyActions][${type.apiValue}] data["$k"] first item: ${v.first}');
-          }
-        });
-      } else if (d is List && d.isNotEmpty) {
-        print(
-            '[MyActions][${type.apiValue}] data is List, first item keys: ${(d.first as Map?)?.keys.toList()}');
-        print('[MyActions][${type.apiValue}] data first item: ${d.first}');
-      }
-      final directList = result[type.responseKey];
-      if (directList is List && directList.isNotEmpty) {
-        print(
-            '[MyActions][${type.apiValue}] result["${type.responseKey}"] first item keys: ${(directList.first as Map?)?.keys.toList()}');
-        print(
-            '[MyActions][${type.apiValue}] result["${type.responseKey}"] first item: ${directList.first}');
-      }
-    } else if (result is List && result.isNotEmpty) {
-      print(
-          '[MyActions][${type.apiValue}] result is List, first item keys: ${(result.first as Map?)?.keys.toList()}');
-      print('[MyActions][${type.apiValue}] result first item: ${result.first}');
-    }
-    // ── End debug ──
 
     // result might be the list/data directly (no wrapping map)
     if (result is List) {
@@ -135,9 +101,6 @@ class MyActionsRepository {
     }
 
     if (result is! Map) {
-      // Log for debugging, then return empty instead of crashing
-      print(
-          '[MyActions] Unexpected result type: ${result.runtimeType}, value: $result');
       return const <MyActionItem>[];
     }
 

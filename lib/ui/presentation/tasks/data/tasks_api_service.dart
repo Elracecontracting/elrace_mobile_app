@@ -73,6 +73,36 @@ class TasksApiService {
     }
   }
 
+  bool _isSuccessResult(dynamic result) {
+    if (result is! Map) return false;
+
+    final success = result['success'];
+    final status = result['status']?.toString().toLowerCase();
+
+    return success == true || status == 'success';
+  }
+
+  List<dynamic>? _extractTasksPayload(dynamic result) {
+    if (result is List) return result;
+    if (result is! Map) return null;
+
+    final data = result['data'];
+    if (data is List) return data;
+    if (data is Map) return _extractTasksPayload(data);
+
+    final tasks = result['tasks'];
+    if (tasks is List) return tasks;
+
+    return null;
+  }
+
+  List<TaskModel> _parseTaskList(List<dynamic> data) {
+    return data
+        .whereType<Map>()
+        .map((e) => TaskModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
   Future<List<TaskModel>> fetchTasks({required String token}) async {
     try {
       final uri = Uri.parse('$baseUrl/api/get_user_tasks');
@@ -121,17 +151,10 @@ class TasksApiService {
       // print('Result: $result');
       // print('=====================================');
 
-      if (result is Map && result['success'] == true) {
-        final data = result['data'];
-        // print('Tasks data: $data');
-        if (data is List) {
-          return data
-              .map((e) => e is Map<String, dynamic>
-                  ? TaskModel.fromJson(e)
-                  : TaskModel.fromJson(Map<String, dynamic>.from(e as Map)))
-              .toList();
-        }
-        return const [];
+      if (_isSuccessResult(result) || result is List) {
+        final data = _extractTasksPayload(result);
+        if (data == null) return const [];
+        return _parseTaskList(data);
       }
 
       final message =

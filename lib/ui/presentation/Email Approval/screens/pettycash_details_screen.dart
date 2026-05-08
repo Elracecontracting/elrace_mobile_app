@@ -1,9 +1,8 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_action_buttons.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/file_binary.dart';
+import 'package:el_race/ui/presentation/my_documents/screens/attachment_viewer_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -31,7 +30,8 @@ class PettyCashDetailsScreen extends StatefulWidget {
 class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
   bool _isLoading = true;
   String _error = '';
-  bool _showAllLines = false;
+  final PageController _linesPageController = PageController();
+  int _currentLinesPage = 0;
 
   Map<String, dynamic> _formData = const {};
   List<dynamic> _attachmentIds = const [];
@@ -59,6 +59,21 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     return normalized.isEmpty ? 'N/A' : normalized;
   }
 
+  String _normalizeApiComment(String value) {
+    final v = value.trim();
+    if (v.isEmpty) return '';
+    final lower = v.toLowerCase();
+    if (lower == 'no comments' ||
+        lower == 'no comment' ||
+        lower == 'n/a' ||
+        lower == 'na' ||
+        lower == '-' ||
+        lower == '--') {
+      return '';
+    }
+    return v;
+  }
+
   String _formatAmount(dynamic value) {
     final raw = _safe(value);
     if (raw.trim().isEmpty) return '0';
@@ -80,13 +95,129 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
+  bool _isInvalidImageValue(String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty || normalized == 'false' || normalized == 'null') {
+      return true;
+    }
+
+    if (normalized.endsWith('/false') ||
+        normalized.contains('/image/false') ||
+        normalized.contains('employee/image/false')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  String _pickImage(List<dynamic> values) {
+    for (final value in values) {
+      final candidate = _safe(value);
+      if (candidate.isEmpty) continue;
+      if (_isInvalidImageValue(candidate)) continue;
+      return candidate;
+    }
+    return '';
+  }
+
+  String _normalizeImageUrl(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || _isInvalidImageValue(trimmed)) return '';
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+
+    if (trimmed.startsWith('/')) {
+      return 'https://erp.elrace.com$trimmed';
+    }
+
+    if (RegExp(r'^\d+$').hasMatch(trimmed)) {
+      return 'https://erp.elrace.com/public/employee/image/$trimmed';
+    }
+
+    if (trimmed.startsWith('public/') || trimmed.startsWith('employee/')) {
+      return 'https://erp.elrace.com/$trimmed';
+    }
+
+    return trimmed;
+  }
+
+  Widget _buildAvatar(String imageData, {required double iconSize}) {
+    final trimmed = imageData.trim();
+    if (trimmed.isEmpty) {
+      return Icon(
+        Icons.person,
+        color: const Color(0xFF6B6B6B),
+        size: iconSize,
+      );
+    }
+
+    final normalizedUrl = _normalizeImageUrl(trimmed);
+    final isUrl = normalizedUrl.startsWith('http://') ||
+        normalizedUrl.startsWith('https://');
+    if (isUrl) {
+      final token = SharedPref.getLoginData().result?.token;
+      final headers = <String, String>{
+        'Accept': 'image/*,*/*;q=0.8',
+      };
+      if (_safe(token).isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      return Image.network(
+        normalizedUrl,
+        fit: BoxFit.cover,
+        headers: headers,
+        errorBuilder: (_, __, ___) => Icon(
+          Icons.person,
+          color: const Color(0xFF6B6B6B),
+          size: iconSize,
+        ),
+      );
+    }
+
+    try {
+      String base64String = trimmed;
+      if (trimmed.contains('base64,')) {
+        base64String = trimmed.split('base64,')[1];
+      }
+      final bytes = base64Decode(base64String);
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Icon(
+          Icons.person,
+          color: const Color(0xFF6B6B6B),
+          size: iconSize,
+        ),
+      );
+    } catch (_) {
+      return Icon(
+        Icons.person,
+        color: const Color(0xFF6B6B6B),
+        size: iconSize,
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     if (widget.initialData != null) {
       _formData = Map<String, dynamic>.from(widget.initialData!);
+      final maybeAttachments = _formData['attachment_ids'];
+      if (maybeAttachments is List) {
+        _attachmentIds = maybeAttachments;
+      }
     }
     _fetchPettyCashDetails();
+  }
+
+  @override
+  void dispose() {
+    _linesPageController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchPettyCashDetails() async {
@@ -142,6 +273,21 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
         print('[PETTYCASH] PARSED formData keys: ${formData.keys.toList()}');
         print('[PETTYCASH] PARSED formData: $formData');
         print('[PETTYCASH] PARSED attachmentIds: $attachmentList');
+        print('[PETTYCASH] COMMENT CANDIDATES: ${jsonEncode({
+              'api_comment': formData['api_comment'],
+              'comment': formData['comment'],
+              'comments': formData['comments'],
+              'note': formData['note'],
+              'notes': formData['notes'],
+              'remark': formData['remark'],
+              'remarks': formData['remarks'],
+              'description': formData['description'],
+              'manager_comment': formData['manager_comment'],
+              'approver_comment': formData['approver_comment'],
+              'reviewer_comment': formData['reviewer_comment'],
+              'request_comment': formData['request_comment'],
+              'employee_comment': formData['employee_comment'],
+            })}');
 
         setState(() {
           final merged = Map<String, dynamic>.from(_formData);
@@ -213,6 +359,35 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       normalized['holder'],
     ]);
 
+    final holderRaw =
+        raw['pettycash_holder'] ?? raw['holder'] ?? raw['holder_name'];
+    if (holderRaw is Map) {
+      final holderMap = Map<String, dynamic>.from(holderRaw);
+      normalized['holder_name'] = _pick([
+        holderMap['name'],
+        holderMap['holder_name'],
+        holderMap['employee_name'],
+        holderMap['emp_name'],
+        normalized['holder_name'],
+        normalized['pettycash_holder'],
+      ]);
+      normalized['holder_image'] = _pick([
+        holderMap['holder_image_url'],
+        holderMap['emp_image_url'],
+        holderMap['image_emp'],
+        holderMap['employee_image'],
+        holderMap['image'],
+        holderMap['avatar'],
+        holderMap['photo'],
+        holderMap['id'],
+        normalized['holder_image'],
+      ]);
+      normalized['pettycash_holder'] = _pick([
+        normalized['holder_name'],
+        normalized['pettycash_holder'],
+      ]);
+    }
+
     normalized['requester_name'] = _pick([
       normalized['requester_name'],
       normalized['requester'],
@@ -235,6 +410,23 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       normalized['amount_total'],
       normalized['amount'],
     ]);
+
+    // Keep a unified, API-driven comment field for UI + approve/reject payload.
+    normalized['api_comment'] = _normalizeApiComment(_pick([
+      normalized['api_comment'],
+      normalized['comment'],
+      normalized['comments'],
+      normalized['note'],
+      normalized['notes'],
+      normalized['remark'],
+      normalized['remarks'],
+      normalized['description'],
+      normalized['manager_comment'],
+      normalized['approver_comment'],
+      normalized['reviewer_comment'],
+      normalized['request_comment'],
+      normalized['employee_comment'],
+    ]));
 
     return normalized;
   }
@@ -323,26 +515,99 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     }
   }
 
-  Future<void> _viewAttachment() async {
-    if (_attachmentIds.isEmpty) return;
+  /// Extracts a plain integer attachment ID from whatever shape the item is.
+  int? _extractAttachmentId(dynamic item) {
+    if (item is int) return item;
+    if (item is Map) {
+      final raw = item['attachment_id'] ?? item['id'] ?? item['attachmentId'];
+      if (raw is int) return raw;
+      return int.tryParse(raw?.toString() ?? '');
+    }
+    return int.tryParse(item?.toString() ?? '');
+  }
 
-    final attachmentId = (_attachmentIds.first is Map)
-        ? (_attachmentIds.first['attachment_id'] ?? _attachmentIds.first)
-        : _attachmentIds.first;
+  /// Tries to extract a human-readable filename from an attachment item.
+  String _extractAttachmentHintName(dynamic item, {int fallbackIndex = 0}) {
+    if (item is Map) {
+      for (final key in ['name', 'attachment_name', 'filename', 'file_name']) {
+        final v = item[key]?.toString().trim() ?? '';
+        if (v.isNotEmpty &&
+            v.toLowerCase() != 'false' &&
+            v.toLowerCase() != 'null' &&
+            v.toLowerCase() != 'attachment_id') {
+          return v;
+        }
+      }
+    }
+    // Fall back to petty cash request name + index
+    final reqName = _safe(_formData['name']);
+    if (reqName.isNotEmpty) {
+      return '$reqName${fallbackIndex > 0 ? ' (${fallbackIndex + 1})' : ''}';
+    }
+    return 'Attachment${fallbackIndex > 0 ? ' ${fallbackIndex + 1}' : ''}';
+  }
 
-    final token = SharedPref.getLoginData().result?.token;
+  Future<Map<String, dynamic>> _fetchAttachmentDetails(int attachmentId) async {
+    final token = SharedPref.getLoginData().result?.token ?? '';
+    const endpoint = 'https://erp.elrace.com/api/get_attachment_details';
+    final url = Uri.parse(endpoint);
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'Authorization': 'Bearer $token',
     };
-
-    final data = {
+    final bodyMap = {
       'jsonrpc': '2.0',
-      'params': {
-        'attachment_id': attachmentId,
-      },
+      'params': {'attachment_id': attachmentId},
     };
+    final bodyJson = jsonEncode(bodyMap);
+
+    // ── curl log ──────────────────────────────────────────────────────
+    debugPrint(
+      "curl -X GET '$endpoint' "
+      "-H 'Content-Type: application/json' "
+      "-H 'Accept: application/json' "
+      "-H 'Authorization: Bearer $token' "
+      "--data '${bodyJson.replaceAll("'", "'\\''")}'",
+    );
+
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = bodyJson;
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+
+    debugPrint(
+        '══════ [PETTYCASH] get_attachment_details ($attachmentId) ══════');
+    debugPrint('STATUS: ${response.statusCode}');
+    debugPrint('BODY: ${response.body}');
+    debugPrint(
+        '═══════════════════════════════════════════════════════════════');
+
+    final decoded = jsonDecode(response.body) as Map;
+    final result = decoded['result'] as Map?;
+
+    if (result == null || result['status'] != 'success') {
+      throw Exception(
+        result?['message']?.toString() ??
+            decoded['error']?.toString() ??
+            'Failed to load attachment (HTTP ${response.statusCode})',
+      );
+    }
+
+    final data = result['data'];
+    if (data is! Map) throw Exception('Invalid attachment details response');
+    return Map<String, dynamic>.from(data);
+  }
+
+  Future<void> _openSingleAttachment(int attachmentId,
+      {String hintName = ''}) async {
+    bool loaderVisible = true;
+    void dismissLoader() {
+      if (!loaderVisible) return;
+      loaderVisible = false;
+      if (mounted && Navigator.canPop(context)) Navigator.of(context).pop();
+    }
 
     showDialog(
       context: context,
@@ -351,58 +616,122 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     );
 
     try {
-      final response = await Dio().fetch(
-        RequestOptions(
-          method: 'GET',
-          path: 'https://erp.elrace.com/api/get_attachment_details',
-          headers: headers,
-          data: data,
-          responseType: ResponseType.json,
-        ),
-      );
+      final details = await _fetchAttachmentDetails(attachmentId);
+      dismissLoader();
 
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.of(context).pop();
+      final publicUrl = (details['public_url'] ?? '').toString().trim();
+
+      // Prefer attachment_name from API, but fall back to petty cash request
+      // name if the API returns a raw field key like "attachment_id".
+      final rawName = (details['attachment_name'] ?? '').toString().trim();
+      final looksLikeKey = rawName.isEmpty ||
+          rawName.toLowerCase() == 'attachment_id' ||
+          rawName.toLowerCase() == 'false' ||
+          rawName.toLowerCase() == 'null';
+      final fallbackName = hintName.isNotEmpty
+          ? hintName
+          : _safe(_formData['name'], fallback: 'Petty Cash Attachment');
+      final fileName = looksLikeKey ? fallbackName : rawName;
+
+      if (publicUrl.isEmpty) {
+        throw Exception('Attachment URL is empty');
       }
 
-      final resData = response.data as Map;
-      final result = resData['result'] as Map?;
-      final dataMap = result?['data'] as Map?;
-      final binaryBase64 = dataMap?['attachment_binary_data']?.toString() ?? '';
-      final fileName = dataMap?['attachment_name']?.toString() ?? '';
-
-      if (binaryBase64.isEmpty) {
-        Fluttertoast.showToast(
-          msg: 'No binary data found.',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-        );
-        return;
-      }
-
-      final pdfBytes = base64Decode(binaryBase64);
       if (!mounted) return;
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => AttachmentPdfViewer(
-            pdfBytes: pdfBytes,
-            attchmentName: fileName,
+          builder: (_) => AttachmentViewerScreen(
+            publicUrl: publicUrl,
+            title: fileName,
           ),
         ),
       );
     } catch (e) {
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
+      dismissLoader();
+      if (!mounted) return;
       Fluttertoast.showToast(
-        msg: 'Error: $e',
+        msg: e.toString(),
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+      );
+    }
+  }
+
+  Future<void> _viewAttachment() async {
+    if (_attachmentIds.isEmpty) return;
+
+    // Collect valid integer IDs
+    // Build (id, hintName) pairs
+    final items = _attachmentIds
+        .asMap()
+        .entries
+        .map((e) {
+          final id = _extractAttachmentId(e.value);
+          if (id == null) return null;
+          final name =
+              _extractAttachmentHintName(e.value, fallbackIndex: e.key);
+          return (id: id, name: name);
+        })
+        .whereType<({int id, String name})>()
+        .toList();
+
+    if (items.isEmpty) {
+      Fluttertoast.showToast(
+        msg: 'No valid attachment IDs found.',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.CENTER,
         backgroundColor: Colors.black,
         textColor: Colors.white,
       );
+      return;
+    }
+
+    // If only one attachment, open directly
+    if (items.length == 1) {
+      await _openSingleAttachment(items.first.id, hintName: items.first.name);
+      return;
+    }
+
+    // Multiple attachments — let user pick
+    if (!mounted) return;
+    final picked = await showModalBottomSheet<({int id, String name})>(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 14.w, 16.w, 4.w),
+              child: Text(
+                'Select Attachment',
+                style: GoogleFonts.poppins(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Divider(),
+            ...items.map((item) => ListTile(
+                  leading: const Icon(Icons.picture_as_pdf_rounded),
+                  title: Text(
+                    item.name,
+                    style: GoogleFonts.poppins(fontSize: 13.sp),
+                  ),
+                  onTap: () => Navigator.of(ctx).pop(item),
+                )),
+            SizedBox(height: 8.w),
+          ],
+        ),
+      ),
+    );
+
+    if (picked != null) {
+      await _openSingleAttachment(picked.id, hintName: picked.name);
     }
   }
 
@@ -420,13 +749,13 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     );
   }
 
-  Widget _label(String text, {TextAlign? align}) {
+  Widget _label(String text, {TextAlign? align, double? size}) {
     return Text(
       text,
       textAlign: align,
       style: GoogleFonts.poppins(
-        fontSize: 11.sp,
-        fontWeight: FontWeight.w800,
+        fontSize: size ?? 11.sp,
+        fontWeight: FontWeight.w700,
         color: const Color(0xFFB4B4B4),
         letterSpacing: 0.2,
       ),
@@ -440,7 +769,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       textAlign: align,
       style: GoogleFonts.poppins(
         fontSize: size ?? 14.sp,
-        fontWeight: weight ?? FontWeight.w800,
+        fontWeight: weight ?? FontWeight.w700,
         color: color ?? const Color(0xFF0E0E0E),
         letterSpacing: 0.1,
       ),
@@ -465,17 +794,17 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _value(description, size: 14.sp, weight: FontWeight.w900),
+                  _value(description, size: 11.sp, weight: FontWeight.w700),
                   SizedBox(height: 6.w),
-                  _label(_formatDate(lineDate)),
+                  _label(_formatDate(lineDate), size: 8.sp),
                 ],
               ),
             ),
             SizedBox(width: 12.w),
             _value(
               _formatAmount(amount),
-              size: 14.sp,
-              weight: FontWeight.w900,
+              size: 11.sp,
+              weight: FontWeight.w700,
               color: const Color(0xFF15A98A),
             ),
           ],
@@ -490,6 +819,17 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
         ],
       ],
     );
+  }
+
+  List<List<dynamic>> _chunkLines(List<dynamic> source, int chunkSize) {
+    if (source.isEmpty) return const [];
+    final chunks = <List<dynamic>>[];
+    for (int i = 0; i < source.length; i += chunkSize) {
+      final end =
+          (i + chunkSize < source.length) ? i + chunkSize : source.length;
+      chunks.add(source.sublist(i, end));
+    }
+    return chunks;
   }
 
   @override
@@ -535,17 +875,74 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       _formData['req_date'],
     ]);
 
-    final total = _pick([
-      _formData['total'],
-      _formData['total_amount'],
-      _formData['amount_total'],
-      _formData['amount'],
+    final employeeTitle = _pick([
+      _formData['job_title'],
+      _formData['job_position'],
+      _formData['department'],
+      _formData['section'],
+    ]);
+
+    final employeeImage = _pickImage([
+      _formData['emp_image_url'],
+      _formData['image_emp'],
+      _formData['employee_image'],
+      _formData['emp_image'],
+      _formData['employee_img'],
+      _formData['image'],
+      _formData['avatar'],
+      _formData['photo'],
+      _formData['profile_image'],
+    ]);
+
+    final holderImage = _pickImage([
+      _formData['holder_image_url'],
+      _formData['pettycash_holder_image_url'],
+      _formData['pettycash_holder_image'],
+      _formData['holder_image'],
+      _formData['holder_img'],
+      _formData['pettycash_holder_avatar'],
+      (_formData['pettycash_holder'] is Map)
+          ? (_formData['pettycash_holder'] as Map)['image_emp']
+          : null,
+      (_formData['holder'] is Map)
+          ? (_formData['holder'] as Map)['image_emp']
+          : null,
+      (_formData['holder_name'] is Map)
+          ? (_formData['holder_name'] as Map)['image_emp']
+          : null,
+      _formData['image_emp'],
     ]);
 
     final lines = _formData['lines'] as List? ?? [];
-    final hasMoreLines = lines.length > 4;
-    final visibleLines =
-        (_showAllLines || !hasMoreLines) ? lines : lines.take(4).toList();
+    final linePages = _chunkLines(lines, 6);
+    final safePageIndex = linePages.isEmpty
+        ? 0
+        : _currentLinesPage.clamp(0, linePages.length - 1) as int;
+    final currentPageLineCount =
+        linePages.isEmpty ? 1 : linePages[safePageIndex].length;
+    final dividerCount =
+        currentPageLineCount > 0 ? currentPageLineCount - 1 : 0;
+    final lineSliderHeight = linePages.isNotEmpty
+        ? (24.w + (currentPageLineCount * 38.w) + (dividerCount * 19.w))
+            .clamp(84.w, 460.w)
+        : 84.w;
+    final hasAttachments = _attachmentIds.isNotEmpty;
+    final apiComment = _normalizeApiComment(_pick([
+      _formData['api_comment'],
+      _formData['comment'],
+      _formData['comments'],
+      _formData['note'],
+      _formData['notes'],
+      _formData['remark'],
+      _formData['remarks'],
+      _formData['description'],
+      _formData['manager_comment'],
+      _formData['approver_comment'],
+      _formData['reviewer_comment'],
+      _formData['request_comment'],
+      _formData['employee_comment'],
+    ]));
+    final requestDateLabel = _formatDate(date);
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
@@ -554,7 +951,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
         ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F2),
+      backgroundColor: Colors.white,
       appBar: HeaderWidget(),
       body: SafeArea(
         top: false,
@@ -586,240 +983,433 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                       Expanded(
                         child: SingleChildScrollView(
                           padding: EdgeInsets.symmetric(
-                              horizontal: 16.w, vertical: 12.w),
+                              horizontal: 18.w, vertical: 10.w),
                           child: Column(
                             children: [
-                              SizedBox(height: 4.w),
+                              SizedBox(height: 8.w),
                               Text(
-                                'PETTYCASH DETAILS',
+                                'Petty cash',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 15.sp,
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: 33.sp / 2,
+                                  fontWeight: FontWeight.w500,
                                   color: const Color(0xFF0E0E0E),
-                                  letterSpacing: 0.6,
                                 ),
                               ),
-                              SizedBox(height: 16.w),
-                              // Row 1: Req No | Pettycash Limit
+                              SizedBox(height: 14.w),
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Expanded(
-                                    child: _card(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 14.w, vertical: 12.w),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _label('Req No'),
-                                          SizedBox(height: 8.w),
-                                          _value(requestNo,
-                                              size: 11.5.sp,
-                                              weight: FontWeight.w900),
-                                        ],
+                                  Container(
+                                    width: 92.w,
+                                    height: 92.w,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
+                                      border: Border.all(
+                                        color: const Color(0xFFDADADA),
+                                        width: 1.2,
+                                      ),
+                                    ),
+                                    child: ClipOval(
+                                      child: _buildAvatar(
+                                        employeeImage,
+                                        iconSize: 42.w,
                                       ),
                                     ),
                                   ),
-                                  SizedBox(width: 8.w),
                                   Expanded(
-                                    child: _card(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 14.w, vertical: 12.w),
+                                    child: Padding(
+                                      padding: EdgeInsets.only(left: 12.w),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          _label('Pettycash Limit'),
+                                          Text(
+                                            _displayOrNA(requester),
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 18.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF181818),
+                                            ),
+                                          ),
+                                          if (employeeTitle.trim().isNotEmpty)
+                                            Padding(
+                                              padding:
+                                                  EdgeInsets.only(top: 2.w),
+                                              child: Text(
+                                                employeeTitle,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 15.sp,
+                                                  fontWeight: FontWeight.w500,
+                                                  color:
+                                                      const Color(0xFF888888),
+                                                ),
+                                              ),
+                                            ),
                                           SizedBox(height: 8.w),
-                                          _value(_formatAmount(pettycashLimit),
-                                              size: 11.5.sp,
-                                              weight: FontWeight.w900),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 6.w,
+                                                    vertical: 5.w,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        const Color(0xFFC9C9C9),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20.r),
+                                                  ),
+                                                  child: FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    child: Text(
+                                                      requestNo,
+                                                      maxLines: 1,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 13.sp,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: const Color(
+                                                            0xFF1E1E1E),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: 8.w),
+                                              Expanded(
+                                                child: Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 6.w,
+                                                    vertical: 5.w,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        const Color(0xFF2EA6DE),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20.r),
+                                                  ),
+                                                  child: FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    child: Text(
+                                                      requestDateLabel,
+                                                      maxLines: 1,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 13.sp,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: const Color(
+                                                            0xFF1E1E1E),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ],
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 10.w),
-                              // Row 2: Pettycash Holder (full width)
-                              _card(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 14.w, vertical: 12.w),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _label('Pettycash Holder'),
-                                    SizedBox(height: 8.w),
-                                    _value(pettycashHolder,
-                                        size: 11.5.sp, weight: FontWeight.w900),
+                              SizedBox(height: 14.w),
+                              Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                      color: const Color(0xFF9E9E9E), width: 1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
                                   ],
                                 ),
-                              ),
-                              SizedBox(height: 10.w),
-                              // Row 3: Requester (full width)
-                              _card(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 14.w, vertical: 12.w),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _label('Requester'),
-                                    SizedBox(height: 8.w),
-                                    _value(requester,
-                                        size: 11.5.sp, weight: FontWeight.w900),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 10.w),
-                              // Items card
-                              _card(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (visibleLines.isNotEmpty)
-                                      ...visibleLines
-                                          .asMap()
-                                          .entries
-                                          .map((entry) {
-                                        final i = entry.key;
-                                        final line = entry.value;
-                                        final lineMap = line as Map? ?? {};
-                                        final description = _pick([
-                                          lineMap['description'],
-                                          lineMap['name'],
-                                          projectName,
-                                        ], fallback: 'Item');
-                                        final lineDate = _pick([
-                                          lineMap['date'],
-                                          lineMap['line_date'],
-                                          date,
-                                        ]);
-                                        final amount = _pick([
-                                          lineMap['amount'],
-                                          lineMap['price'],
-                                          lineMap['subtotal'],
-                                        ]);
-
-                                        return _lineItemTile(
-                                          description: description,
-                                          lineDate: lineDate,
-                                          amount: amount,
-                                          showDivider:
-                                              i < visibleLines.length - 1,
-                                        );
-                                      })
-                                    else
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
+                                    Container(
+                                      width: double.infinity,
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 12.w, vertical: 8.w),
+                                      decoration: const BoxDecoration(
+                                        border: Border(
+                                          bottom: BorderSide(
+                                              color: Color(0xFFE2E2E2),
+                                              width: 1),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Petty cash holder',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 15.sp,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF5A5A5A),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 12.w, vertical: 10.w),
+                                      child: Row(
                                         children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                _value(projectName,
-                                                    size: 14.sp,
-                                                    weight: FontWeight.w900),
-                                                SizedBox(height: 6.w),
-                                                _label(_formatDate(date)),
-                                              ],
+                                          Container(
+                                            width: 34.w,
+                                            height: 34.w,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Colors.white,
+                                              border: Border.all(
+                                                color: const Color(0xFFDADADA),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: ClipOval(
+                                              child: _buildAvatar(
+                                                holderImage,
+                                                iconSize: 18.w,
+                                              ),
                                             ),
                                           ),
-                                          SizedBox(width: 12.w),
-                                          _value(_formatAmount(pettycashLimit),
-                                              size: 14.sp,
-                                              weight: FontWeight.w900,
-                                              color: const Color(0xFF15A98A)),
+                                          SizedBox(width: 8.w),
+                                          Expanded(
+                                            child: Text(
+                                              _displayOrNA(pettycashHolder),
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14.sp,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF111111),
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ),
+                                    ),
                                   ],
                                 ),
                               ),
-                              if (hasMoreLines && !_showAllLines) ...[
-                                SizedBox(height: 6.w),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              PettyCashSeeMoreScreen(
-                                            requestId: widget.requestId,
-                                            type: widget.type,
-                                            userId: userId,
-                                            lines: lines,
-                                            projectName: projectName,
-                                            date: date,
+                              SizedBox(height: 12.w),
+                              SizedBox(
+                                height: lineSliderHeight,
+                                child: linePages.isNotEmpty
+                                    ? PageView.builder(
+                                        controller: _linesPageController,
+                                        itemCount: linePages.length,
+                                        onPageChanged: (index) {
+                                          if (!mounted) return;
+                                          setState(() {
+                                            _currentLinesPage = index;
+                                          });
+                                        },
+                                        itemBuilder: (context, pageIndex) {
+                                          final pageLines =
+                                              linePages[pageIndex];
+                                          return _card(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                for (int i = 0;
+                                                    i < pageLines.length;
+                                                    i++)
+                                                  () {
+                                                    final lineMap =
+                                                        pageLines[i] as Map? ??
+                                                            {};
+                                                    final description = _pick([
+                                                      lineMap['description'],
+                                                      lineMap['name'],
+                                                      projectName,
+                                                    ],
+                                                        fallback:
+                                                            'Project name');
+                                                    final lineDate = _pick([
+                                                      lineMap['date'],
+                                                      lineMap['line_date'],
+                                                      date,
+                                                    ]);
+                                                    final amount = _pick([
+                                                      lineMap['amount'],
+                                                      lineMap['price'],
+                                                      lineMap['subtotal'],
+                                                      pettycashLimit,
+                                                    ]);
+
+                                                    return _lineItemTile(
+                                                      description: description,
+                                                      lineDate: lineDate,
+                                                      amount: amount,
+                                                      showDivider: i <
+                                                          pageLines.length - 1,
+                                                    );
+                                                  }(),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : _card(
+                                        child: _lineItemTile(
+                                          description:
+                                              _displayOrNA(projectName),
+                                          lineDate: date,
+                                          amount: pettycashLimit,
+                                          showDivider: false,
+                                        ),
+                                      ),
+                              ),
+                              SizedBox(height: 8.w),
+                              if (linePages.length > 1)
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    for (int i = 0; i < linePages.length; i++)
+                                      Container(
+                                        width: 8.w,
+                                        height: 8.w,
+                                        margin: EdgeInsets.symmetric(
+                                            horizontal: 5.w),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: i == _currentLinesPage
+                                              ? const Color(0xFF919191)
+                                              : Colors.transparent,
+                                          border: Border.all(
+                                            color: const Color(0xFF9D9D9D),
+                                            width: 1,
                                           ),
                                         ),
-                                      );
-                                    },
-                                    child: Text(
-                                      'SEE MORE',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.w900,
-                                        color: const Color(0xFFBBBBBB),
-                                        letterSpacing: 0.2,
+                                      ),
+                                  ],
+                                )
+                              else
+                                SizedBox(height: 8.w),
+                              SizedBox(height: 10.w),
+                              Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                      color: const Color(0xFF9E9E9E), width: 1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Comment',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF5A5A5A),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          '${apiComment.characters.length}/50',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 11.sp,
+                                            fontWeight: FontWeight.w500,
+                                            color: const Color(0xFFA8A8A8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 6.w),
+                                    Container(
+                                      width: double.infinity,
+                                      constraints:
+                                          BoxConstraints(minHeight: 38.w),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w, vertical: 8.w),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF4F4F4),
+                                        borderRadius:
+                                            BorderRadius.circular(10.r),
+                                        border: Border.all(
+                                            color: const Color(0xFFDADADA),
+                                            width: 1),
+                                      ),
+                                      child: Text(
+                                        apiComment,
+                                        maxLines: null,
+                                        overflow: TextOverflow.visible,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF3B3B3B),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (hasAttachments) ...[
+                                SizedBox(height: 16.w),
+                                SizedBox(
+                                  width: 0.88.sw,
+                                  child: InkWell(
+                                    onTap: _viewAttachment,
+                                    borderRadius: BorderRadius.circular(14.r),
+                                    child: Container(
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 13.w),
+                                      decoration: BoxDecoration(
+                                        borderRadius:
+                                            BorderRadius.circular(14.r),
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Color(0xFF777B84),
+                                            Color(0xFF63676F),
+                                          ],
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.attach_file_rounded,
+                                            color: Colors.white,
+                                            size: 20.sp,
+                                          ),
+                                          SizedBox(width: 6.w),
+                                          Text(
+                                            'View Attachments',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
                                 ),
                               ],
-                              SizedBox(height: 10.w),
-                              // Total card
-                              _card(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w, vertical: 12.w),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    _value('TOTAL',
-                                        size: 15.sp,
-                                        weight: FontWeight.w900,
-                                        color: const Color(0xFFD31721)),
-                                    _value(_formatAmount(total),
-                                        size: 18.sp,
-                                        weight: FontWeight.w900,
-                                        color: const Color(0xFFD31721)),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 10.w),
-                              // Attachments button
-                              SizedBox(
-                                width: double.infinity,
-                                height: 46.w,
-                                child: ElevatedButton.icon(
-                                  onPressed: _attachmentIds.isEmpty
-                                      ? null
-                                      : _viewAttachment,
-                                  icon: Icon(Icons.attach_file,
-                                      color: Colors.white, size: 18.w),
-                                  label: Text(
-                                    'View Attachments',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13.sp,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF64676B),
-                                    disabledBackgroundColor:
-                                        const Color(0xFF64676B)
-                                            .withValues(alpha: 0.4),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                  ),
-                                ),
-                              ),
                               SizedBox(height: 14.w),
                             ],
                           ),
@@ -836,18 +1426,21 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                           top: false,
                           child: Padding(
                             padding: EdgeInsets.symmetric(
-                                horizontal: 38.w, vertical: 10.w),
+                                horizontal: 38.w, vertical: 8.w),
                             child: ApprovalActionButtons(
                               requestId: widget.requestId,
                               type: widget.type,
                               userIds: [userId],
                               variant: ApprovalActionButtonsVariant.pill,
+                              showHrApproveConfirmation: true,
+                              useProvidedComment: true,
+                              commentProvider: () => apiComment,
                               pillWidth: pillWidth,
-                              pillHeight: 36.w,
-                              pillSpacing: 24.w,
+                              pillHeight: 33.w,
+                              pillSpacing: 20.w,
                               pillBorderRadius: BorderRadius.circular(20.r),
                               pillTextStyle: GoogleFonts.poppins(
-                                fontSize: 17.sp,
+                                fontSize: 15.sp,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.white,
                                 height: 1,
@@ -932,7 +1525,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
       textAlign: align,
       style: GoogleFonts.poppins(
         fontSize: size ?? 14.sp,
-        fontWeight: weight ?? FontWeight.w800,
+        fontWeight: weight ?? FontWeight.w700,
         color: color ?? const Color(0xFF0E0E0E),
         letterSpacing: 0.1,
       ),
@@ -946,7 +1539,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
       text,
       style: GoogleFonts.poppins(
         fontSize: 11.sp,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
         color: const Color(0xFFB4B4B4),
       ),
     );
@@ -974,7 +1567,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                       'PETTYCASH DETAILS',
                       style: GoogleFonts.poppins(
                         fontSize: 15.sp,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                         color: const Color(0xFF0E0E0E),
                         letterSpacing: 0.6,
                       ),
@@ -1026,7 +1619,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                                           children: [
                                             _value(description,
                                                 size: 14.sp,
-                                                weight: FontWeight.w900),
+                                                weight: FontWeight.w700),
                                             SizedBox(height: 6.w),
                                             _label(_formatDate(lineDate)),
                                           ],
@@ -1036,7 +1629,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                                       _value(
                                         _formatAmount(amount),
                                         size: 14.sp,
-                                        weight: FontWeight.w900,
+                                        weight: FontWeight.w700,
                                         color: const Color(0xFF15A98A),
                                       ),
                                     ],
@@ -1063,7 +1656,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       _value(projectName,
-                                          size: 14.sp, weight: FontWeight.w900),
+                                          size: 14.sp, weight: FontWeight.w700),
                                       SizedBox(height: 6.w),
                                       _label(_formatDate(date)),
                                     ],
@@ -1073,7 +1666,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                                 _value(
                                   _formatAmount(''),
                                   size: 14.sp,
-                                  weight: FontWeight.w900,
+                                  weight: FontWeight.w700,
                                   color: const Color(0xFF15A98A),
                                 ),
                               ],
@@ -1102,6 +1695,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                     type: type,
                     userIds: [userId],
                     variant: ApprovalActionButtonsVariant.pill,
+                    showHrApproveConfirmation: true,
                     pillWidth: pillWidth,
                     pillHeight: 36.w,
                     pillSpacing: 24.w,

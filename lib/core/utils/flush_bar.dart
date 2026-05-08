@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:el_race/main.dart' show navKey;
+import 'package:el_race/core/app_globals.dart' show navKey;
 
 /// Overlay-based flush bar that does NOT push a navigator route,
 /// avoiding '!_debugLocked' assertion failures when the navigator

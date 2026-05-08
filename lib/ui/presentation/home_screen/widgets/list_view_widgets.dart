@@ -1,5 +1,5 @@
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/report_module/presentation/screens/report_listing/project_reports_screen.dart';
+import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_page.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashScreen.dart';
 import 'package:el_race/ui/presentation/home_screen/data/widget_model.dart';
@@ -624,8 +624,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             translate('home.media').toUpperCase(),
             style: GoogleFonts.poppins(
               color: Colors.white,
-              fontSize: 24.w,
-              fontWeight: FontWeight.w400,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
               letterSpacing: 1.9,
             ),
           ),
@@ -648,7 +648,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       backgroundImagePath: 'assets/newapp/my_report_widget_background.png',
       onClick: (isReorderMode || isDisabled)
           ? null
-          : () => Util.pushPage(const ProjectReportsScreen(), context),
+          : () => Util.pushPage(const ReportAppHomeScreen(), context),
       topPadding: true,
       childWidget: const SizedBox.shrink(),
       // childWidget: Container(

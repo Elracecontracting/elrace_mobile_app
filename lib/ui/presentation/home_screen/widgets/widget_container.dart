@@ -14,6 +14,13 @@ class WidgetContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isAuthenticated = SharedPref.isUserAuthenticated();
+    final loginData = SharedPref.getLoginData();
+    final isCheckInWidgetDisabled =
+        loginData.result?.data?.defaultWidgets?.data?.checkinWidget?.isDisabled ==
+            true;
+    final isSwipeEnabled = isAuthenticated && !isCheckInWidgetDisabled;
+
     return Container(
       //width: ScreenUtil().screenWidth,
       width: double.infinity,
@@ -73,7 +80,7 @@ class WidgetContainer extends StatelessWidget {
                 ),
 
                 Opacity(
-                  opacity: !SharedPref.isUserAuthenticated() ? 0.5 : 1,
+                  opacity: isSwipeEnabled ? 1 : 0.5,
                   child: SizedBox(
                     width: double.infinity,
                     height: 190.h,
@@ -113,7 +120,7 @@ class WidgetContainer extends StatelessWidget {
                                 children: [
                                   // Swipe button
                                   IgnorePointer(
-                                    ignoring: !SharedPref.isUserAuthenticated(),
+                                    ignoring: !isSwipeEnabled,
                                     child: const CustomSwipeButton(),
                                   ),
                                 ],

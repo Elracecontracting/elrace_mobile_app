@@ -897,10 +897,12 @@ class _PettyCashDraftSummaryScreenState
                 Text(
                   widget.title,
                   style: GoogleFonts.poppins(
-                    fontSize: 23,
+                    fontSize: widget.title.length > 12 ? 19 : 23,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF111111),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.visible,
                 ),
               ],
             ),
@@ -1150,7 +1152,7 @@ class _PettyCashDraftSummaryScreenState
                 maxLines: null,
                 overflow: TextOverflow.visible,
                 style: GoogleFonts.poppins(
-                  fontSize: 22,
+                  fontSize: 18,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF111111),
                 ),

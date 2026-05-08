@@ -5,7 +5,6 @@ import 'package:el_race/report_module/data/models/report_pdf_model.dart';
 import 'package:el_race/report_module/data/services/report_hive_service.dart';
 import 'package:el_race/ui/presentation/call_screen/data/repository.dart';
 import 'package:flutter/foundation.dart';
-import 'package:el_race/main.dart';
 import 'package:el_race/report_module/core/utils/flush_bar.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
 import 'package:dio/dio.dart' as dio;
@@ -15,6 +14,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
+
+import '../../../core/app_globals.dart';
 
 ReportProvider reportProvider =
     Provider.of<ReportProvider>(navKey.currentContext!, listen: false);
@@ -33,6 +34,7 @@ class ReportProvider extends ChangeNotifier {
 
   // ── Local report-type cache (survives app restart) ──────────────
   static const _reportTypePrefix = 'report_type_';
+  static const _pdfReportPrefix = 'pdf_report_';
 
   Future<void> _saveReportType(String reportId, String reportType) async {
     final prefs = await SharedPreferences.getInstance();
@@ -42,6 +44,33 @@ class ReportProvider extends ChangeNotifier {
   Future<String?> _getReportType(String reportId) async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('$_reportTypePrefix$reportId');
+  }
+
+  Future<void> _savePdfReportId(String pdfKey, String reportId) async {
+    if (pdfKey.trim().isEmpty || reportId.trim().isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_pdfReportPrefix$pdfKey', reportId);
+  }
+
+  String _extractPdfReportId(Map<String, dynamic> item) {
+    final direct = item['report_id'] ??
+        item['reportId'] ??
+        item['site_report_id'] ??
+        item['parent_report_id'] ??
+        item['project_report_id'] ??
+        item['main_report_id'];
+    if (direct != null && direct != false) {
+      final value = direct.toString().trim();
+      if (value.isNotEmpty) return value;
+    }
+
+    final report = item['report'];
+    if (report is Map && report['id'] != null) {
+      final value = report['id'].toString().trim();
+      if (value.isNotEmpty) return value;
+    }
+
+    return '';
   }
 
   Future<void> _restoreReportTypes() async {
@@ -145,14 +174,30 @@ class ReportProvider extends ChangeNotifier {
     // print(jsonData);
     _setLoading(false);
 
-    final createdReport = FolderModel.fromJson(jsonData['data']);
-    _folders.insert(0, createdReport);
+    if (jsonData['data'] == null) return;
+    var createdFolder = FolderModel.fromJson(jsonData['data']);
+    _folders.insert(0, createdFolder);
     notifyListeners();
+
+    final createdReport = await createReport(
+      title: createdFolder.name,
+      folderID: createdFolder.id,
+      companyName: description,
+    );
+    if (createdReport != null) {
+      createdFolder = createdFolder.copyWith(reportCount: 1);
+      final index = _folders.indexWhere((f) => f.id == createdFolder.id);
+      if (index != -1) {
+        _folders[index] = createdFolder;
+        notifyListeners();
+      }
+    }
   }
 
-  Future<void> createReport({
+  Future<ReportModel?> createReport({
     required String title,
     required String folderID,
+    String? companyName,
     String? reportType,
   }) async {
     _setLoading(true);
@@ -163,15 +208,19 @@ class ReportProvider extends ChangeNotifier {
             'name': title,
             'company_id': companyId,
             'folder_id': folderID,
-            'company': "test", //todo remove
-            if (reportType != null) 'report_type': reportType,
+            'company': (companyName?.trim().isNotEmpty ?? false)
+                ? companyName!.trim()
+                : "test",
+            if (reportType?.trim().isNotEmpty ?? false)
+              'report_type': reportType!.trim(),
           });
     final jsonData = await _handleResponse(await request.send());
     print(jsonData);
     _setLoading(false);
-    ReportModel createdReport = ReportModel.fromJson(jsonData['data']);
-    // If API doesn't return reportType, preserve what we sent
-    if (createdReport.reportType == null && reportType != null) {
+    if (jsonData['data'] == null) return null;
+    var createdReport = ReportModel.fromJson(jsonData['data']);
+    if (createdReport.reportType == null &&
+        (reportType?.trim().isNotEmpty ?? false)) {
       createdReport = ReportModel(
         id: createdReport.id,
         name: createdReport.name,
@@ -179,7 +228,7 @@ class ReportProvider extends ChangeNotifier {
         folderId: createdReport.folderId,
         createdAt: createdReport.createdAt,
         updatedAt: createdReport.updatedAt,
-        reportType: reportType,
+        reportType: reportType!.trim(),
       );
     }
     // Persist report type locally so it survives app restart
@@ -189,6 +238,7 @@ class ReportProvider extends ChangeNotifier {
     _reports.insert(0, createdReport);
     _sortReportsNewestFirst();
     notifyListeners();
+    return createdReport;
   }
 
   Future<void> updateReport(
@@ -257,6 +307,8 @@ class ReportProvider extends ChangeNotifier {
 
       _folders = (jsonData['data'] as List)
           .map((e) => FolderModel.fromJson(e))
+          .toList()
+          .reversed
           .toList();
     } catch (e) {
       debugPrint('Error in fetchAllFolders: $e');
@@ -350,6 +402,30 @@ class ReportProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<ReportModel?> getOrCreateSingleReportForFolder(
+      FolderModel folder) async {
+    await fetchAllReports(folderID: folder.id);
+
+    if (_reports.isNotEmpty) {
+      final normalizedFolderName = folder.name.trim().toLowerCase();
+      final sameNameIndex = _reports.indexWhere(
+        (report) => report.name.trim().toLowerCase() == normalizedFolderName,
+      );
+      if (sameNameIndex != -1) return _reports[sameNameIndex];
+
+      // Existing folders may already have old reports with custom names.
+      // Keep the user's data and open the newest report instead of creating
+      // duplicates; all newly created folders get a same-name report below.
+      return _reports.first;
+    }
+
+    return createReport(
+      title: folder.name,
+      folderID: folder.id,
+      companyName: folder.description,
+    );
+  }
+
   Future<ReportDetailModel?> getReportDetail(ReportModel report) async {
     Box<ReportDetailModel> reportDetailBox =
         await ReportHiveService.getReportDetailBox();
@@ -393,6 +469,7 @@ class ReportProvider extends ChangeNotifier {
           'emp_id': empId,
           'company_id': companyId,
           'folder_id': folderId,
+          'report_id': reportId,
         });
       final streamed = await request.send();
       final res = await streamed.stream.bytesToString();
@@ -404,29 +481,56 @@ class ReportProvider extends ChangeNotifier {
       if (body['status'] != 'success' || body['data'] == null) return [];
 
       final List<dynamic> data = body['data'];
+      final prefs = await SharedPreferences.getInstance();
 
       // Filter: generated PDFs have a non-empty s3_key and/or report_link
       final pdfItems = data.where((item) {
-        final rawS3 = item['s3_key'];
+        if (item is! Map) return false;
+        final map = Map<String, dynamic>.from(item);
+        final rawS3 = map['s3_key'];
         final hasS3 = rawS3 != null &&
             rawS3 != false &&
             rawS3.toString().trim().isNotEmpty;
-        final rawLink = item['report_link'];
+        final rawLink = map['report_link'];
         final hasLink = rawLink != null &&
             rawLink != false &&
             rawLink.toString().trim().isNotEmpty;
-        return hasS3 || hasLink;
+        if (!hasS3 && !hasLink) return false;
+
+        final serverReportId = _extractPdfReportId(map);
+        if (serverReportId.isNotEmpty) return serverReportId == reportId;
+
+        final localKeys = [
+          map['s3_key'],
+          map['file_id'],
+          map['id'],
+          map['report_link'],
+        ];
+        for (final key in localKeys) {
+          final value = key?.toString().trim() ?? '';
+          if (value.isEmpty) continue;
+          final localReportId = prefs.getString('$_pdfReportPrefix$value');
+          if (localReportId != null) return localReportId == reportId;
+        }
+
+        // If the backend does not return report_id and we do not have a local
+        // association, do not show the file for every report in the folder.
+        return false;
       }).toList();
 
-      print('📋 Found ${pdfItems.length} generated PDFs out of ${data.length} items');
+      print(
+          '📋 Found ${pdfItems.length} generated PDFs out of ${data.length} items');
 
       return pdfItems.map((item) {
+        final map = Map<String, dynamic>.from(item as Map);
+        final pdfReportId = _extractPdfReportId(map);
         return ReportPdfModel(
-          fileId: (item['s3_key'] ?? '').toString(),
-          id: (item['id'] ?? '').toString(),
-          fileName: (item['name'] ?? '').toString(),
-          createdAt: (item['create_at'] ?? item['created_at'] ?? '').toString(),
-          reportLink: (item['report_link'] ?? '').toString(),
+          fileId: (map['s3_key'] ?? map['file_id'] ?? '').toString(),
+          id: (map['id'] ?? '').toString(),
+          reportId: pdfReportId.isNotEmpty ? pdfReportId : reportId,
+          fileName: (map['name'] ?? map['file_name'] ?? '').toString(),
+          createdAt: (map['create_at'] ?? map['created_at'] ?? '').toString(),
+          reportLink: (map['report_link'] ?? '').toString(),
         );
       }).toList();
     } catch (e) {
@@ -481,6 +585,7 @@ class ReportProvider extends ChangeNotifier {
         '$baseUrl/api/upload_site_report',
         queryParameters: {
           'folder_id': folderId,
+          'report_id': reportId,
           'file_name': cleanName,
         },
         data: formData,
@@ -507,16 +612,23 @@ class ReportProvider extends ChangeNotifier {
           final d = body!['data'] is Map<String, dynamic>
               ? body['data'] as Map<String, dynamic>
               : <String, dynamic>{};
-          return ReportPdfModel(
-            fileId: (d['file_id'] ?? '').toString(),
-            fileName: (d['file_name'] ?? cleanName).toString(),
-            createdAt: (d['created_at'] ?? '').toString(),
+          final uploadedPdf = ReportPdfModel(
+            fileId: (d['file_id'] ?? d['s3_key'] ?? '').toString(),
+            id: (d['id'] ?? '').toString(),
+            reportId: reportId,
+            fileName: (d['file_name'] ?? d['name'] ?? cleanName).toString(),
+            createdAt: (d['created_at'] ?? d['create_at'] ?? '').toString(),
             reportLink: (d['report_link'] ?? '').toString(),
           );
+          await _savePdfReportId(uploadedPdf.fileId, reportId);
+          await _savePdfReportId(uploadedPdf.id, reportId);
+          await _savePdfReportId(uploadedPdf.reportLink, reportId);
+          return uploadedPdf;
         }
       }
 
-      print('Upload failed with status: ${response.statusCode} body: ${response.data}');
+      print(
+          'Upload failed with status: ${response.statusCode} body: ${response.data}');
       return null;
     } on dio.DioException catch (e) {
       print('Dio exception during PDF upload: ${e.message}');
@@ -680,21 +792,55 @@ class ReportProvider extends ChangeNotifier {
     required String reportId,
     required String itemId,
   }) async {
-    try {
-      var request = http.MultipartRequest(
-          'POST', Uri.parse('$baseUrl/report-items/delete'))
-        ..fields.addAll({
-          'emp_id': empID,
-          'report_id': reportId,
-          'item_id': itemId,
-        });
+    final endpointCandidates = <String>[
+      '$baseUrl/api/delete_report_item',
+      '$baseUrl/report-items/delete',
+    ];
 
-      await _handleResponse(await request.send());
-      return true;
-    } catch (e) {
-      debugPrint('Error deleting report item: $e');
-      return false;
+    final fieldCandidates = <Map<String, String>>[
+      {
+        'emp_id': empID,
+        'report_id': reportId,
+        'item_id': itemId,
+      },
+      {
+        'emp_id': empID,
+        'report_id': reportId,
+        'id': itemId,
+      },
+    ];
+
+    for (final endpoint in endpointCandidates) {
+      for (final fields in fieldCandidates) {
+        try {
+          final request = http.MultipartRequest('POST', Uri.parse(endpoint))
+            ..fields.addAll(fields);
+          debugPrint('🗑️ deleteReportItem: url=$endpoint fields=$fields');
+
+          final response = await request.send();
+          final res = await response.stream.bytesToString();
+          debugPrint(
+              '🗑️ deleteReportItem response ${response.statusCode}: $res');
+
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            continue;
+          }
+
+          final jsonData = json.decode(res);
+          if (jsonData is Map<String, dynamic>) {
+            final status = jsonData['status']?.toString().toLowerCase();
+            final success = jsonData['success'];
+            if (status == 'success' || success == true) {
+              return true;
+            }
+          }
+        } catch (e) {
+          debugPrint('Error deleting report item via $endpoint: $e');
+        }
+      }
     }
+
+    return false;
   }
 
   /// Fetch full report detail (with items) from the server

@@ -91,7 +91,6 @@ class SliderProvider extends ChangeNotifier {
 
       // Build banner payload directly from API response.
       _bannerDetails = _announcements
-          .take(5)
           .map(
             (item) => AnnouncementDetailsModel(
               id: item.id,

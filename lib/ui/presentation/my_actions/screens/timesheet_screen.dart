@@ -1,5 +1,5 @@
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
-import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
+import 'package:el_race/ui/presentation/my_actions/widgets/my_actions_pagination_mixin.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -13,14 +13,21 @@ class TimesheetScreen extends StatefulWidget {
   State<TimesheetScreen> createState() => _TimesheetScreenState();
 }
 
-class _TimesheetScreenState extends State<TimesheetScreen> {
-  final MyActionsRepository _repo = MyActionsRepository();
-  late final Future<List<MyActionItem>> _future;
+class _TimesheetScreenState extends State<TimesheetScreen>
+    with MyActionsPaginationMixin<TimesheetScreen> {
+  @override
+  MyActionsType get actionsType => MyActionsType.timesheet;
 
   @override
   void initState() {
     super.initState();
-    _future = _repo.fetchByType(MyActionsType.timesheet);
+    initActionsPagination();
+  }
+
+  @override
+  void dispose() {
+    disposeActionsPagination();
+    super.dispose();
   }
 
   String _statusBadgeAsset(String status) {
@@ -36,16 +43,11 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     }
   }
 
-  String _statusText(String status) {
-    final value = status.trim().toUpperCase();
-    return value.isEmpty ? 'UNKNOWN' : value;
-  }
-
   String _formatDate(String? dateRaw) {
-    if (dateRaw == null || dateRaw.trim().isEmpty) return '-- -- ----';
+    if (dateRaw == null || dateRaw.trim().isEmpty) return '--/--/----';
     final parsed = DateTime.tryParse(dateRaw);
     if (parsed == null) return dateRaw;
-    return DateFormat('dd MMM yyyy').format(parsed);
+    return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
   @override
@@ -55,21 +57,21 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: FutureBuilder<List<MyActionItem>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+        child: Builder(
+          builder: (context) {
+            if (actionsInitialLoading) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
+            if (actionsError != null && actionItems.isEmpty) {
               return Center(
                 child: Padding(
                   padding: EdgeInsets.all(20.w),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.cloud_off, size: 60.w, color: const Color(0xFFB5B7C1)),
+                      Icon(Icons.cloud_off,
+                          size: 60.w, color: const Color(0xFFB5B7C1)),
                       SizedBox(height: 16.h),
                       Text(
                         'Service not available',
@@ -88,57 +90,68 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                           color: const Color(0xFF9AA0A6),
                         ),
                       ),
+                      SizedBox(height: 14.h),
+                      TextButton(
+                        onPressed: retryInitialActionsLoad,
+                        child: const Text('Retry'),
+                      ),
                     ],
                   ),
                 ),
               );
             }
 
-            final items = snapshot.data ?? const <MyActionItem>[];
+            final items = List<MyActionItem>.from(actionItems);
 
-            return ListView(
-              padding: EdgeInsets.only(top: 10.h, bottom: 80.h),
-              children: [
-                const _ActionsHeader(
-                  iconAsset: 'assets/png/my-req-frame.png',
-                  title: 'TIMESHEETS',
-                ),
-                SizedBox(height: 12.h),
-                if (items.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 30.h),
-                      child: Text(
-                        'No timesheets found.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF5A5A5A),
+            return RefreshIndicator(
+              onRefresh: refreshActions,
+              child: ListView(
+                controller: actionsScrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(top: 10.h, bottom: 80.h),
+                children: [
+                  const _ActionsHeader(
+                    iconAsset: 'assets/png/my-req-frame.png',
+                    title: 'TIMESHEETS',
+                  ),
+                  SizedBox(height: 12.h),
+                  if (items.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 30.h),
+                        child: Text(
+                          'No timesheets found.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A5A5A),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ...items.map(
+                      (item) => Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 12.w, vertical: 7.h),
+                        child: _TimesheetCard(
+                          clientName: item.project?.trim().isNotEmpty == true
+                              ? item.project!
+                              : 'Client Name',
+                          projectName: item.name.trim().isEmpty
+                              ? 'PROJECT NAME'
+                              : item.name,
+                          formanName: item.employeeName.trim().isEmpty
+                              ? 'Forman Name'
+                              : item.employeeName,
+                          dateText: _formatDate(item.date),
+                          statusBadgeAsset: _statusBadgeAsset(item.status),
                         ),
                       ),
                     ),
-                  )
-                else
-                  ...items.map(
-                    (item) => Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12.w, vertical: 7.h),
-                      child: _TimesheetCard(
-                        clientName: item.project?.trim().isNotEmpty == true
-                            ? item.project!
-                            : 'Client Name',
-                        projectName: item.name.trim().isEmpty
-                            ? 'PROJECT NAME'
-                            : item.name,
-                        formanName: item.employeeName.trim().isEmpty
-                            ? 'Forman Name'
-                            : item.employeeName,
-                        dateText: _formatDate(item.date),
-                        statusBadgeAsset: _statusBadgeAsset(item.status),
-                      ),
-                    ),
-                  ),
-              ],
+                  buildActionsPaginationFooter(),
+                ],
+              ),
             );
           },
         ),
@@ -248,7 +261,7 @@ class _TimesheetCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF484848).withOpacity(0.72),
+                    color: const Color(0xB8484848),
                   ),
                 ),
                 SizedBox(height: 8.h),

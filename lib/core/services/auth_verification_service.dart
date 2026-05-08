@@ -9,7 +9,6 @@ import 'package:el_race/core/services/biometric_auth_service.dart';
 enum AuthMethod {
   faceRecognition,
   fingerprint,
-  password,
   none,
 }
 
@@ -41,7 +40,6 @@ class AuthVerificationService {
   final BiometricAuthService _biometricService = BiometricAuthService.instance;
 
   // Keys for SharedPreferences
-  static const String _userPinKey = 'user_verification_pin';
   static const String _preferredAuthMethodKey = 'preferred_auth_method';
 
   /// Check if device supports biometric authentication (fingerprint/face)
@@ -94,7 +92,7 @@ class AuthVerificationService {
   /// Authenticate using device biometrics (fingerprint or Face ID)
   Future<AuthResult> authenticateWithBiometrics({
     String localizedReason = 'الرجاء التحقق من هويتك للمتابعة',
-    bool biometricOnly = false,
+    bool biometricOnly = true,
   }) async {
     if (AppConfigService.instance.isTestMode) {
       return AuthResult(
@@ -150,39 +148,6 @@ class AuthVerificationService {
     );
   }
 
-  /// Save user PIN for password authentication
-  Future<void> setUserPin(String pin) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_userPinKey, pin);
-  }
-
-  /// Check if user has set a PIN
-  Future<bool> hasUserPin() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey(_userPinKey);
-  }
-
-  /// Verify user PIN
-  Future<AuthResult> verifyPin(String enteredPin) async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedPin = prefs.getString(_userPinKey);
-
-    if (storedPin == null) {
-      return AuthResult(
-        success: false,
-        method: AuthMethod.password,
-        message: 'لم يتم تعيين رمز PIN',
-      );
-    }
-
-    final isValid = storedPin == enteredPin;
-    return AuthResult(
-      success: isValid,
-      method: AuthMethod.password,
-      message: isValid ? 'تم التحقق بنجاح' : 'رمز PIN غير صحيح',
-    );
-  }
-
   /// Get the best available authentication method for this device
   Future<AuthMethod> getBestAvailableMethod() async {
     // First priority: device biometrics (fingerprint/Face ID)
@@ -198,8 +163,8 @@ class AuthVerificationService {
       }
     }
 
-    // Fallback: password/PIN
-    return AuthMethod.password;
+    // No PIN/password fallback is allowed.
+    return AuthMethod.none;
   }
 
   /// Get all available authentication methods based on device capabilities
@@ -223,9 +188,6 @@ class AuthVerificationService {
         methods.add(AuthMethod.fingerprint);
       }
     }
-
-    // Always add password/PIN as fallback
-    methods.add(AuthMethod.password);
 
     return methods;
   }
@@ -252,6 +214,7 @@ class AuthVerificationService {
   /// Show authentication options dialog and return result
   Future<AuthResult?> showAuthOptionsDialog(BuildContext context) async {
     final availableMethods = await getAvailableMethods();
+    if (!context.mounted) return null;
 
     return showDialog<AuthResult>(
       context: context,
@@ -282,29 +245,6 @@ class AuthOptionsDialog extends StatefulWidget {
 class _AuthOptionsDialogState extends State<AuthOptionsDialog> {
   bool _isLoading = false;
   String? _errorMessage;
-  final TextEditingController _pinController = TextEditingController();
-  final TextEditingController _confirmPinController = TextEditingController();
-  bool _showPinInput = false;
-  bool _isSettingNewPin = false;
-  bool? _hasExistingPin;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkExistingPin();
-  }
-
-  Future<void> _checkExistingPin() async {
-    final hasPin = await widget.authService.hasUserPin();
-    setState(() => _hasExistingPin = hasPin);
-  }
-
-  @override
-  void dispose() {
-    _pinController.dispose();
-    _confirmPinController.dispose();
-    super.dispose();
-  }
 
   Future<void> _authenticateWithFingerprint() async {
     setState(() {
@@ -317,69 +257,14 @@ class _AuthOptionsDialogState extends State<AuthOptionsDialog> {
       biometricOnly: true,
     );
 
+    if (!mounted) return;
+
     setState(() => _isLoading = false);
 
     if (result.success) {
       Navigator.of(context).pop(result);
     } else {
       setState(() => _errorMessage = result.message);
-    }
-  }
-
-  Future<void> _authenticateWithPin() async {
-    if (_pinController.text.isEmpty) {
-      setState(() => _errorMessage = 'الرجاء إدخال رمز PIN');
-      return;
-    }
-
-    if (_pinController.text.length < 4) {
-      setState(() => _errorMessage = 'رمز PIN يجب أن يكون 4 أرقام على الأقل');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    // If setting new PIN
-    if (_isSettingNewPin) {
-      if (_confirmPinController.text.isEmpty) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'الرجاء تأكيد رمز PIN';
-        });
-        return;
-      }
-
-      if (_pinController.text != _confirmPinController.text) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'رمز PIN غير متطابق';
-        });
-        return;
-      }
-
-      // Save new PIN
-      await widget.authService.setUserPin(_pinController.text);
-      setState(() => _isLoading = false);
-
-      Navigator.of(context).pop(AuthResult(
-        success: true,
-        method: AuthMethod.password,
-        message: 'تم تعيين رمز PIN بنجاح',
-      ));
-    } else {
-      // Verify existing PIN
-      final result = await widget.authService.verifyPin(_pinController.text);
-
-      setState(() => _isLoading = false);
-
-      if (result.success) {
-        Navigator.of(context).pop(result);
-      } else {
-        setState(() => _errorMessage = result.message);
-      }
     }
   }
 
@@ -403,8 +288,6 @@ class _AuthOptionsDialogState extends State<AuthOptionsDialog> {
                 padding: EdgeInsets.all(20),
                 child: CircularProgressIndicator(),
               )
-            else if (_showPinInput)
-              _buildPinInput()
             else
               _buildAuthOptions(),
             if (_errorMessage != null)
@@ -424,11 +307,6 @@ class _AuthOptionsDialogState extends State<AuthOptionsDialog> {
           onPressed: () => Navigator.of(context).pop(null),
           child: const Text('إلغاء'),
         ),
-        if (_showPinInput)
-          ElevatedButton(
-            onPressed: _authenticateWithPin,
-            child: const Text('تأكيد'),
-          ),
       ],
     );
   }
@@ -454,21 +332,6 @@ class _AuthOptionsDialogState extends State<AuthOptionsDialog> {
             subtitle: 'استخدم بصمة الإصبع للتحقق',
             onTap: _authenticateWithFingerprint,
             color: const Color(0xFF28A745),
-          ),
-
-        // Password/PIN option (fallback)
-        if (widget.availableMethods.contains(AuthMethod.password))
-          _buildAuthOption(
-            icon: Icons.lock,
-            title: _hasExistingPin == true ? 'رمز PIN' : 'تعيين رمز PIN',
-            subtitle: _hasExistingPin == true
-                ? 'أدخل رمز PIN للتحقق'
-                : 'قم بإنشاء رمز PIN جديد',
-            onTap: () => setState(() {
-              _showPinInput = true;
-              _isSettingNewPin = _hasExistingPin != true;
-            }),
-            color: const Color(0xFF6C757D),
           ),
       ],
     );
@@ -498,7 +361,7 @@ class _AuthOptionsDialogState extends State<AuthOptionsDialog> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -506,7 +369,7 @@ class _AuthOptionsDialogState extends State<AuthOptionsDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 28),
@@ -539,77 +402,6 @@ class _AuthOptionsDialogState extends State<AuthOptionsDialog> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildPinInput() {
-    final isNewPin = _hasExistingPin == false;
-
-    return Column(
-      children: [
-        IconButton(
-          onPressed: () => setState(() {
-            _showPinInput = false;
-            _isSettingNewPin = false;
-            _pinController.clear();
-            _confirmPinController.clear();
-            _errorMessage = null;
-          }),
-          icon: const Icon(Icons.arrow_back),
-        ),
-        const SizedBox(height: 16),
-        const Icon(Icons.lock, size: 48, color: Color(0xFF6C757D)),
-        const SizedBox(height: 16),
-        Text(
-          isNewPin ? 'تعيين رمز PIN جديد' : 'أدخل رمز PIN',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        if (isNewPin)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Text(
-              'لم يتم تعيين رمز PIN بعد. الرجاء إنشاء رمز جديد.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _pinController,
-          keyboardType: TextInputType.number,
-          obscureText: true,
-          textAlign: TextAlign.center,
-          maxLength: 6,
-          decoration: InputDecoration(
-            hintText: '****',
-            labelText: isNewPin ? 'رمز PIN الجديد' : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            counterText: '',
-          ),
-          style: const TextStyle(fontSize: 24, letterSpacing: 8),
-        ),
-        if (isNewPin) ...[
-          const SizedBox(height: 16),
-          TextField(
-            controller: _confirmPinController,
-            keyboardType: TextInputType.number,
-            obscureText: true,
-            textAlign: TextAlign.center,
-            maxLength: 6,
-            decoration: InputDecoration(
-              hintText: '****',
-              labelText: 'تأكيد رمز PIN',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              counterText: '',
-            ),
-            style: const TextStyle(fontSize: 24, letterSpacing: 8),
-          ),
-        ],
-      ],
     );
   }
 }

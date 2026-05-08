@@ -4,6 +4,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/attachment_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/partner_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/project_model.dart';
+import 'package:el_race/ui/presentation/my_projects/data/models/project_manager_filter_item.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/user_project_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/user_projects_response.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/folder_model.dart';
@@ -18,8 +19,18 @@ abstract class ProjectRemoteDataSourceImpl {
   Future<List<PartnerModel>> fetchPartnerProjects(
       {int? partnerId, String? keyword});
   Future<List<ProjectModel>> fetchProjectsByPartnerId(int partnerId);
+  Future<List<ProjectModel>> fetchProjectsByFilters({
+    int? agreementId,
+    int? partnerId,
+    int? projectManagerId,
+    int? cityId,
+    String? keyword,
+  });
   Future<List<FolderModel>> fetchProjectFolders();
   Future<UserProjectsResponse> fetchClientsList();
+  Future<List<ProjectManagerFilterItem>> fetchProjectManagersList();
+  Future<List<ProjectManagerFilterItem>> fetchClientsGroupedList(
+      {required String groupBy});
   Future<ProjectDocumentsResponse> fetchProjectDocuments(int projectId,
       {String? folderType});
   Future<FolderContentsResponse> fetchFolderContents(
@@ -81,7 +92,8 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
   @override
   Future<List<AttachmentModel>> fetchProjectAttachments(String projectId,
       {String? folderType}) async {
-    debugPrint("🔶 fetchProjectAttachments CALLED with projectId: $projectId, folderType: $folderType");
+    debugPrint(
+        "🔶 fetchProjectAttachments CALLED with projectId: $projectId, folderType: $folderType");
     final token = _getToken();
 
     final headers = {
@@ -170,6 +182,17 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
 
   @override
   Future<List<ProjectModel>> fetchProjectsByPartnerId(int partnerId) async {
+    return fetchProjectsByFilters(partnerId: partnerId);
+  }
+
+  @override
+  Future<List<ProjectModel>> fetchProjectsByFilters({
+    int? agreementId,
+    int? partnerId,
+    int? projectManagerId,
+    int? cityId,
+    String? keyword,
+  }) async {
     final token = _getToken();
 
     final headers = {
@@ -182,31 +205,46 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
+      "method": "call",
       "params": {
+        "agreement": agreementId,
+        "agreement_id": agreementId,
         "partner_id": partnerId,
-        "keyword": null,
+        "project_manager_id": projectManagerId,
+        "city_id": cityId,
+        "keyword": keyword,
       },
     });
 
     final response = await _client.post(url, headers: headers, body: body);
 
-    debugPrint("fetchProjectsByPartnerId: ${response.body}");
+    debugPrint("fetchProjectsByFilters: ${response.body}");
 
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
 
-      // Check if the response has the expected structure
       if (decoded['result'] != null &&
           decoded['result']['status'] == 'success' &&
           decoded['result']['data'] != null) {
         final List data = decoded['result']['data'];
 
-        // Extract projects from the partner data
-        List<ProjectModel> allProjects = [];
-        for (var partnerData in data) {
-          final projectsList = partnerData['projects'] as List<dynamic>? ?? [];
-          for (var projectJson in projectsList) {
-            allProjects.add(ProjectModel.fromJson(projectJson));
+        final List<ProjectModel> allProjects = [];
+        for (final partnerData in data) {
+          if (partnerData is! Map) continue;
+
+          final partnerMap = Map<String, dynamic>.from(partnerData);
+          final projectsList = partnerMap['projects'];
+          if (projectsList is List) {
+            for (final projectJson in projectsList) {
+              if (projectJson is Map<String, dynamic>) {
+                allProjects.add(ProjectModel.fromJson(projectJson));
+              } else if (projectJson is Map) {
+                allProjects.add(ProjectModel.fromJson(
+                    Map<String, dynamic>.from(projectJson)));
+              }
+            }
+          } else if (partnerMap.containsKey('project_id')) {
+            allProjects.add(ProjectModel.fromJson(partnerMap));
           }
         }
 
@@ -216,7 +254,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       }
     } else {
       throw Exception(
-          'Failed to load projects by partner: ${response.statusCode}');
+          'Failed to load filtered projects: ${response.statusCode}');
     }
   }
 
@@ -325,6 +363,58 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
   }
 
   @override
+  Future<List<ProjectManagerFilterItem>> fetchProjectManagersList() async {
+    return fetchClientsGroupedList(groupBy: 'project_manager');
+  }
+
+  @override
+  Future<List<ProjectManagerFilterItem>> fetchClientsGroupedList(
+      {required String groupBy}) async {
+    final token = _getToken();
+
+    final headers = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token",
+    };
+
+    final url = Uri.parse("https://erp.elrace.com/api/clients/list");
+
+    final body = jsonEncode({
+      "jsonrpc": "2.0",
+      "method": "call",
+      "params": {
+        "group_by": groupBy,
+      },
+    });
+
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = body;
+
+    final streamedResponse = await _client.send(request);
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load grouped clients: ${response.statusCode}');
+    }
+
+    final decoded = json.decode(response.body) as Map<String, dynamic>;
+    final result = decoded['result'] as Map<String, dynamic>?;
+    if (result == null || result['status'] != 'success') {
+      throw Exception('Invalid grouped clients response format');
+    }
+
+    final list = (result['data'] as List<dynamic>? ?? const <dynamic>[])
+        .whereType<Map>()
+        .map((e) =>
+            ProjectManagerFilterItem.fromJson(Map<String, dynamic>.from(e)))
+        .toList(growable: false);
+
+    return list;
+  }
+
+  @override
   Future<ProjectDocumentsResponse> fetchProjectDocuments(int projectId,
       {String? folderType}) async {
     final token = _getToken();
@@ -387,7 +477,8 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       "Authorization": "Bearer $token",
     };
 
-    final url = Uri.parse("https://erp.elrace.com/api/projects/documents/folder");
+    final url =
+        Uri.parse("https://erp.elrace.com/api/projects/documents/folder");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",

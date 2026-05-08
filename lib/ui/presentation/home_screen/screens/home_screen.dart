@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:el_race/core/biometric/unified_biometric_helper.dart';
 import 'package:el_race/core/services/attendance_status_sync_service.dart';
-import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/location_bloc/location_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_home_content_widget.dart';
@@ -18,8 +17,6 @@ import 'package:flutter_translate/flutter_translate.dart';
 import 'package:get/get.dart';
 import 'package:location/location.dart';
 import 'package:el_race/core/services/app_config_service.dart';
-import '../../tasks_dashboard/screens/tasks_dashboard_screen.dart';
-import '../../tasks/data/task_model.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -34,12 +31,23 @@ class HomeScreenPage extends StatefulWidget {
     super.key,
   });
 
+  static bool _didAuthenticateThisSession = false;
+  static bool _isAuthenticating = false;
+
+  /// Reset the biometric gate so the next login triggers it again.
+  static void resetAuthSession() {
+    _didAuthenticateThisSession = false;
+    _isAuthenticating = false;
+  }
+
   @override
   State<HomeScreenPage> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreenPage>
     with WidgetsBindingObserver {
+  // auth flags are stored on the widget class so they can be reset from outside
+
   // bool isMuted = false; // default value
   bool isCheckedIn = false;
   final _locationBloc = LocationBloc();
@@ -63,31 +71,41 @@ class _HomeScreenState extends State<HomeScreenPage>
     _checkLocationService(); // Check location service on initialization
     _locationBloc.add(GetCurrentLocationET());
 
-    // After login: authenticate with biometric / PIN
-    if (!AppConfigService.instance.shouldSkipFaceId) {
+    // After login: authenticate with biometrics only once per app session.
+    // Do not ask again when returning from Contacts or other tabs to Home.
+    if (!AppConfigService.instance.shouldSkipFaceId &&
+        !HomeScreenPage._didAuthenticateThisSession &&
+        !HomeScreenPage._isAuthenticating) {
       _authenticateAfterLogin();
     }
     // List of pages or widgets that you want to display for each navigation ite
   }
 
-  /// Authenticate user right after login using device biometrics or PIN.
-  /// If the device has no biometrics and no PIN is set yet, setup PIN first,
-  /// then verify immediately.
+  /// Authenticate user right after login using device biometrics only.
+  /// PIN, passcode, password, and pattern fallback are not allowed.
   Future<void> _authenticateAfterLogin() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
-
-    // Setup PIN if needed (no biometrics + no PIN)
-    final needs = await UnifiedBiometricHelper.needsSetup();
-    if (needs && mounted) {
-      await UnifiedBiometricHelper.setupPin(context);
+    if (HomeScreenPage._didAuthenticateThisSession || HomeScreenPage._isAuthenticating) {
+      return;
     }
 
-    if (!mounted) return;
+    HomeScreenPage._isAuthenticating = true;
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) {
+      HomeScreenPage._isAuthenticating = false;
+      return;
+    }
 
-    // Now actually authenticate (Face ID / fingerprint / PIN)
+    // Now actually authenticate (Face ID / fingerprint only)
     bool authenticated = false;
     while (!authenticated && mounted) {
+      final hasBiometrics = await UnifiedBiometricHelper.isBiometricAvailable();
+      if (!mounted) break;
+
+      if (!hasBiometrics && mounted) {
+        await _showBiometricRequiredDialog();
+        continue;
+      }
+
       authenticated = await UnifiedBiometricHelper.authenticate(
         context: context,
         title: 'تحقق من الهوية',
@@ -105,6 +123,32 @@ class _HomeScreenState extends State<HomeScreenPage>
         await Future.delayed(const Duration(seconds: 2));
       }
     }
+
+    if (authenticated) {
+      HomeScreenPage._didAuthenticateThisSession = true;
+    }
+    HomeScreenPage._isAuthenticating = false;
+  }
+
+  Future<void> _showBiometricRequiredDialog() async {
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('البصمة مطلوبة'),
+        content: const Text(
+          'يجب تفعيل بصمة الوجه أو بصمة الإصبع على الجهاز للمتابعة. رمز PIN أو كلمة المرور غير مسموحين لأسباب أمنية.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إعادة المحاولة'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -160,14 +204,6 @@ class _HomeScreenState extends State<HomeScreenPage>
     );
   }
 
-  void _navigateToTasksDashboard(BuildContext context, List<TaskModel> tasks) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const TasksDashboardScreen(),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     // final screenWidth = MediaQuery.of(context).size.width;
@@ -187,7 +223,7 @@ class _HomeScreenState extends State<HomeScreenPage>
           const MainHomeContentWidget(),
           // Bottom Nav Arrow
           // ArraowVisibalityBottomNav(),
-          
+
           // زر حفظ عائم (Floating Save Button)
           BlocBuilder<HomeBloc, HomeState>(
             buildWhen: (previous, current) => current is ReorderModeChanged,
@@ -212,7 +248,8 @@ class _HomeScreenState extends State<HomeScreenPage>
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF4CAF50).withOpacity(0.6),
+                                color: const Color(0xFF4CAF50)
+                                    .withValues(alpha: 0.6),
                                 blurRadius: 24,
                                 offset: const Offset(0, 8),
                               ),

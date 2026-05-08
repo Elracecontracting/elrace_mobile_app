@@ -1,21 +1,11 @@
 import 'dart:convert';
 
 import 'package:el_race/chat/models/models.dart';
+import 'package:el_race/core/app_globals.dart';
 import 'package:el_race/core/services/attendance_status_sync_service.dart';
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/main.dart';
 import 'package:el_race/ui/chat/chat_screen.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/screens/hr_details_screen.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/screens/invoice_details_screen.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/screens/pettycash_details_screen.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/screens/rfq_details_screen.dart';
-import 'package:el_race/ui/presentation/Notification/notification_screen.dart';
-import 'package:el_race/ui/presentation/circular_announcement/screens/circular_announcement_screen.dart';
-import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
-import 'package:el_race/ui/presentation/tasks_dashboard/screens/task_details.dart'
-    as dashboard_task_details;
-import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/string_utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -31,23 +21,18 @@ class FirebaseService {
 
   // Track processed notification message IDs to avoid duplicate handling
   static final Set<String> _processedMessageIds = {};
-  static String? _pendingTapPayload;
-  static bool _isHandlingTap = false;
-
-  /// True once the home screen is fully loaded and ready for deep-link
-  /// navigation. Notification taps received before this point are queued
-  /// and replayed via [markHomeReady] to avoid navigating during splash.
+  static String? _pendingChatTapPayload;
+  static bool _isHandlingChatTap = false;
   static bool _isHomeReady = false;
 
-  /// Call this after the app navigates beyond SplashScreen to HomeScreen so
-  /// that any pending notification tap can be replayed with a proper context.
+  /// Call this after splash/home is ready so queued chat-notification taps can
+  /// be replayed with a valid app context.
   static void markHomeReady() {
     _isHomeReady = true;
     processPendingNotificationTap();
   }
 
-  /// Call this when the app is restarted from the inactivity-timeout splash
-  /// so we wait again for the home screen before replaying any queued tap.
+  /// Call this when the app returns to splash and chat taps must wait again.
   static void markHomeNotReady() {
     _isHomeReady = false;
   }
@@ -101,7 +86,8 @@ class FirebaseService {
         print("   - Payload: $payload");
         print("   - Action ID: ${response.actionId}");
         print("   - Notification ID: ${response.id}");
-        // Handle notification tap - navigate to notification screen if needed
+        // General notifications are view-only. Chat notifications still open
+        // their conversation.
         _handleNotificationTap(payload);
       },
     );
@@ -109,8 +95,8 @@ class FirebaseService {
     // Create the high_importance_channel used by FCM foreground notifications.
     // Without this, Android 8+ silently drops or demotes notifications because
     // the channel referenced in AndroidManifest meta-data doesn't exist.
-    final androidImpl = _flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
+    final androidImpl =
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidImpl != null) {
       await androidImpl.createNotificationChannel(
@@ -420,7 +406,7 @@ class FirebaseService {
       title,
       body.isEmpty ? null : body,
       platformDetails,
-      payload: message.data.toString(), // Add payload for tap handling
+      payload: _buildEnrichedPayload(message),
     );
   }
 
@@ -511,476 +497,180 @@ class FirebaseService {
   }
 
   static void _handleNotificationTap(String? payload) {
-    if (_isHandlingTap) {
-      _pendingTapPayload = payload;
-      return;
-    }
-
-    final navigator = navKey.currentState;
-    if (navigator == null || navKey.currentContext == null) {
-      _pendingTapPayload = payload;
-      print('⚠️ Navigation is not ready yet. Tap payload queued.');
-      return;
-    }
-
-    // Guard against navigating while the splash screen is still running.
-    // Detail screens (HrDetails, NotificationScreen, etc.) require the full
-    // app context (HomeBloc, providers, authenticated session) that is only
-    // available after the splash screen completes. Queue the tap so
-    // markHomeReady() can replay it once HomeScreen is mounted.
-    if (!_isHomeReady) {
-      _pendingTapPayload = payload;
-      print('⚠️ Home not ready yet (splash still active). Tap payload queued.');
-      return;
-    }
-
-    _isHandlingTap = true;
-    print('\n🔔 [HANDLE TAP] Starting to handle notification tap');
+    print('\n🔔 [HANDLE TAP] Notification tapped');
     print('   - Payload: $payload');
-    print('   - Context available: ${navKey.currentContext != null}');
 
-    // Parse payload to check for circular/announcement type
-    Map<String, dynamic>? payloadData;
-    try {
-      if (payload != null && payload.isNotEmpty) {
-        // Try to parse as JSON if it looks like JSON
-        if (payload.startsWith('{')) {
-          payloadData = jsonDecode(payload);
-        } else {
-          // Handle the toString() format: {key: value, key2: value2}
-          final cleanPayload = payload.replaceAll('{', '').replaceAll('}', '');
-          final pairs = cleanPayload.split(',');
-          payloadData = {};
-          for (final pair in pairs) {
-            final keyValue = pair.split(':');
-            if (keyValue.length >= 2) {
-              final key = keyValue[0].trim();
-              final value = keyValue.sublist(1).join(':').trim();
-              payloadData[key] = value;
-            }
-          }
-        }
-        print('   - Parsed payload: $payloadData');
-      }
-    } catch (e) {
-      print('   - Failed to parse payload: $e');
+    final payloadData = _parseNotificationPayload(payload);
+    final category = (payloadData['category'] ?? payloadData['type'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+
+    if (_isChatNotificationPayload(payloadData, category)) {
+      _handleChatNotificationTap(payload, payloadData);
+      return;
     }
 
-    // Check if this is a circular or announcement notification
-    final category = payloadData?['category']?.toString().toLowerCase() ??
-        payloadData?['type']?.toString().toLowerCase() ??
-        '';
-    final itemId = int.tryParse(payloadData?['id']?.toString() ?? '');
-
-    print('   - Category: $category');
-    print('   - Item ID: $itemId');
-
-    // Navigate based on notification type
-    try {
-      // Chat message notification — navigate directly to ChatScreen
-      if (category == 'chat_message' || category == 'chat') {
-        final chatId = payloadData?['chat_id']?.toString();
-        final chatTitle = payloadData?['chat_title']?.toString() ?? '';
-        final chatTypeStr = payloadData?['chat_type']?.toString() ?? 'dm';
-        print('   - ✅ Chat notification! Navigating to ChatScreen...');
-        print('   - chatId=$chatId, title=$chatTitle, type=$chatTypeStr');
-
-        if (chatId != null && chatId.isNotEmpty) {
-          // Lazy-import-safe: use dynamic import approach
-          _navigateToChatScreen(navigator, chatId, chatTitle, chatTypeStr);
-          return;
-        }
-      }
-
-      // Attendance update notification — go to app home to see refreshed widget.
-      if (_isAttendancePayloadData(payloadData)) {
-        print('   - ✅ Attendance notification! Navigating to Main/Home...');
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const MainScreen(),
-            settings: const RouteSettings(name: '/main_home_from_attendance'),
-          ),
-          (_) => false,
-        );
-
-        // Schedule a post-frame attendance refresh so the newly created
-        // widget tree (CustomSwipeButton / HomeBloc) picks up latest data.
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          AttendanceStatusSyncService.refreshFromServer(
-            reason: 'attendance_notification_tap',
-          );
-        });
-        return;
-      }
-
-      if (category == 'circular' || category == 'announcement') {
-        // Navigate to CircularAnnouncementScreen
-        print('   - ✅ Navigating to Circular/Announcement screen...');
-
-        final initialTabIndex = category == 'announcement' ? 1 : 0;
-
-        // Push MainScreen as base so the user can navigate back home,
-        // then push CircularAnnouncementScreen on top.
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const MainScreen(),
-            settings: const RouteSettings(name: '/main'),
-          ),
-          (_) => false,
-        );
-        navigator.push(
-          MaterialPageRoute(
-            builder: (context) => CircularAnnouncementScreen(
-              initialTabIndex: initialTabIndex,
-              autoOpenItemId: itemId,
-              autoOpenCategory: category,
-            ),
-            settings: const RouteSettings(name: '/circular_announcement'),
-          ),
-        );
-        print('   - ✅ Navigation to Circular/Announcement completed!');
-        return;
-      }
-
-      // Task notification — open task details
-      if (category == 'task') {
-        final taskId = payloadData?['task_id']?.toString();
-        final isFirebaseTask =
-            payloadData?['is_firebase_task']?.toString() != 'false';
-        print('   - ✅ Task notification! taskId=$taskId, firebase=$isFirebaseTask');
-
-        if (taskId != null && taskId.isNotEmpty && isFirebaseTask) {
-          navigator.push(
-            MaterialPageRoute(
-              builder: (_) =>
-                  dashboard_task_details.TaskDetailsScreen(taskId: taskId),
-              settings: const RouteSettings(name: '/task_details'),
-            ),
-          );
-          print('   - ✅ Task navigation completed!');
-          return;
-        }
-        // For Odoo tasks, fall through to notification screen
-      }
-
-      final recordType = _resolveRecordTypeFromPayload(payloadData);
-      final recordId = _extractRecordIdFromPayload(payloadData);
-      if (_navigateToLinkedRecordDetail(navigator, recordType, recordId)) {
-        print('   - ✅ Navigated to detailed notification target');
-        return;
-      }
-
-      // Default: Navigate to notification screen.
-      // Push MainScreen as base first so the user can always navigate
-      // back to home (logo tap / back button won't get stuck).
-      print('   - ✅ Navigating to notification screen...');
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const MainScreen(),
-          settings: const RouteSettings(name: '/main'),
-        ),
-        (_) => false,
-      );
-      navigator.push(
-        MaterialPageRoute(
-          builder: (context) => const NotificationScreen(),
-          settings: const RouteSettings(name: '/notification'),
-        ),
-      );
-      print('   - ✅ Navigation completed!');
-    } finally {
-      _isHandlingTap = false;
-
-      // If another tap arrived while handling this one, process the latest.
-      if (_pendingTapPayload != null && _pendingTapPayload != payload) {
-        final nextPayload = _pendingTapPayload;
-        _pendingTapPayload = null;
-        processPendingNotificationTap(forcePayload: nextPayload);
-      }
-    }
+    print('   - View-only notification; no navigation.');
   }
 
   static void processPendingNotificationTap({String? forcePayload}) {
-    final payload = forcePayload ?? _pendingTapPayload;
+    final payload = forcePayload ?? _pendingChatTapPayload;
     if (payload == null || payload.isEmpty) return;
 
-    _pendingTapPayload = null;
+    _pendingChatTapPayload = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handleNotificationTap(payload);
     });
   }
 
-  /// Builds a JSON payload string from an FCM message, merging the
-  /// notification title/body into the data map so that text-based
-  /// record-type detection works even when the server only sends
-  /// title/body in the `notification` block (not in `data`).
   static String _buildEnrichedPayload(RemoteMessage message) {
     final enriched = Map<String, dynamic>.from(message.data);
-    final n = message.notification;
-    if (n != null) {
-      enriched.putIfAbsent('title', () => n.title ?? '');
-      enriched.putIfAbsent('body', () => n.body ?? '');
+    final notification = message.notification;
+    if (notification != null) {
+      enriched.putIfAbsent('title', () => notification.title ?? '');
+      enriched.putIfAbsent('body', () => notification.body ?? '');
     }
+
+    return _encodePayload(enriched);
+  }
+
+  static String _encodePayload(Map<String, dynamic> data) {
     try {
-      return jsonEncode(enriched);
+      return jsonEncode(data);
     } catch (_) {
-      return enriched.toString();
+      return data.toString();
     }
   }
 
-  static int? _toInt(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    return int.tryParse(value.toString());
+  static Map<String, dynamic> _parseNotificationPayload(String? payload) {
+    if (payload == null || payload.trim().isEmpty) {
+      return {};
+    }
+
+    final trimmed = payload.trim();
+    if (trimmed.startsWith('{')) {
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is Map) {
+          return decoded.map(
+            (key, value) => MapEntry(key.toString(), value),
+          );
+        }
+      } catch (_) {
+        // Fall back to parsing the Dart Map.toString() format used by older
+        // notification payloads.
+      }
+    }
+
+    final result = <String, dynamic>{};
+    final content = trimmed
+        .replaceFirst(RegExp(r'^\{'), '')
+        .replaceFirst(RegExp(r'\}$'), '');
+
+    for (final pair in content.split(RegExp(r',\s*'))) {
+      final separatorIndex = pair.indexOf(':');
+      if (separatorIndex <= 0) continue;
+
+      final key = pair.substring(0, separatorIndex).trim();
+      final value = pair.substring(separatorIndex + 1).trim();
+      if (key.isNotEmpty) {
+        result[key] = value;
+      }
+    }
+
+    return result;
   }
 
-  static int? _extractRecordIdFromPayload(Map<String, dynamic>? data) {
-    if (data == null) return null;
-
-    final candidates = <dynamic>[
-      data['record_id'],
-      data['recordId'],
-      data['res_id'],
-      data['resId'],
-      data['request_id'],
-      data['hr_request_id'],
-      data['rfq_id'],
-      data['invoice_id'],
-      data['petty_cash_id'],
-      data['expense_id'],
-      data['po_id'],
-      data['lpo_id'],
-      data['id'],
-    ];
-
-    for (final candidate in candidates) {
-      final id = _toInt(candidate);
-      if (id != null) return id;
-    }
-    return null;
-  }
-
-  static String _normalizeType(dynamic value) {
-    return (value ?? '')
-        .toString()
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '');
-  }
-
-  static String _resolveRecordTypeFromPayload(Map<String, dynamic>? data) {
-    if (data == null || data.isEmpty) return '';
-
-    // --- Step 1: check type/model/category fields ---
-    final candidates = <dynamic>[
-      data['record_type'],
-      data['target_type'],
-      data['model_name'],
-      data['model'],
-      data['module'],
-      data['entity'],
-      data['resource_type'],
-      data['type'],
-      data['screen'],
-      data['category'],
-    ];
-
-    bool hasLpoKey = false;
-    bool hasRfqKey = false;
-    bool hasInvoiceKey = false;
-    bool hasHrKey = false;
-    bool hasPettyKey = false;
-
-    // --- Step 2: check presence of specific ID key names in data ---
-    for (final key in data.keys) {
-      final normalized = _normalizeType(key);
-      if (normalized.contains('lpo') || normalized.contains('poid')) {
-        hasLpoKey = true;
-      }
-      if (normalized.contains('rfq')) hasRfqKey = true;
-      if (normalized.contains('invoice')) hasInvoiceKey = true;
-      if (normalized.contains('hrrequest') ||
-          normalized == 'requestid' ||
-          normalized.contains('employee')) {
-        hasHrKey = true;
-      }
-      if (normalized.contains('pettycash') || normalized.contains('expense')) {
-        hasPettyKey = true;
-      }
-    }
-
-    for (final candidate in candidates) {
-      final normalized = _normalizeType(candidate);
-      if (normalized.isEmpty ||
-          normalized == 'notification' ||
-          normalized == 'announcement' ||
-          normalized == 'circular') {
-        continue;
-      }
-
-      if (normalized.contains('rfq') || normalized == 'purchasequotation') {
-        return 'rfq';
-      }
-      if (normalized.contains('invoice') ||
-          normalized.contains('accountmove')) {
-        return 'invoice';
-      }
-      if (normalized.contains('pettycash') ||
-          normalized.contains('hrexpensesheet') ||
-          normalized == 'expense' ||
-          normalized.contains('expense')) {
-        return 'pettycash';
-      }
-      if (normalized == 'hr' ||
-          normalized.contains('hrrequest') ||
-          normalized.contains('leaverequest') ||
-          normalized.contains('employeerequest')) {
-        return 'hr';
-      }
-      if (normalized.contains('lpo') ||
-          normalized == 'po' ||
-          normalized.contains('purchaseorder')) {
-        return hasRfqKey ? 'rfq' : 'lpo';
-      }
-    }
-
-    // --- Step 3: fall back to key-name hints ---
-    if (hasRfqKey) return 'rfq';
-    if (hasInvoiceKey) return 'invoice';
-    if (hasPettyKey) return 'pettycash';
-    if (hasLpoKey) return 'lpo';
-    if (hasHrKey) return 'hr';
-
-    // --- Step 4: text matching from any title/body fields in data ---
-    final text = [
-      data['title'],
-      data['body'],
-      data['message'],
-      data['notification_title'],
-      data['subject'],
-    ].whereType<String>().join(' ').toLowerCase();
-
-    if (text.contains('rfq')) return 'rfq';
-    if (text.contains('invoice')) return 'invoice';
-    if (text.contains('petty cash') || text.contains('expense')) {
-      return 'pettycash';
-    }
-    if (text.contains('lpo') || text.contains('purchase order')) return 'lpo';
-    if (text.contains('hr request') ||
-        text.contains('leave request') ||
-        text.contains(' hr ')) {
-      return 'hr';
-    }
-
-    return '';
-  }
-
-  static bool _navigateToLinkedRecordDetail(
-    NavigatorState navigator,
-    String recordType,
-    int? recordId,
+  static bool _isChatNotificationPayload(
+    Map<String, dynamic> payloadData,
+    String category,
   ) {
-    if (recordType.isEmpty || recordId == null) return false;
+    return category == 'chat_message' ||
+        category == 'chat' ||
+        payloadData.containsKey('chat_id') ||
+        payloadData.containsKey('chatId');
+  }
 
-    // Always push MainScreen first as the base so the user can navigate
-    // back home via Back button or logo tap.
-    void _pushWithBase(Widget detailScreen, String routeName) {
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => const MainScreen(),
-          settings: const RouteSettings(name: '/main'),
-        ),
-        (_) => false,
-      );
-      navigator.push(
-        MaterialPageRoute(
-          builder: (_) => detailScreen,
-          settings: RouteSettings(name: routeName),
-        ),
-      );
+  static void _handleChatNotificationTap(
+    String? rawPayload,
+    Map<String, dynamic> payloadData,
+  ) {
+    if (_isHandlingChatTap) {
+      _pendingChatTapPayload = rawPayload;
+      return;
     }
 
-    switch (recordType) {
-      case 'hr':
-        _pushWithBase(
-          HrDetailsScreen(requestId: '$recordId', type: 'HR'),
-          '/notification_hr_details',
-        );
-        return true;
-      case 'rfq':
-        _pushWithBase(
-          RfqDetailsScreen(requestId: '$recordId', type: 'RFQ'),
-          '/notification_rfq_details',
-        );
-        return true;
-      case 'invoice':
-        _pushWithBase(
-          InvoiceDetailsScreen(requestId: '$recordId', type: 'INVOICE'),
-          '/notification_invoice_details',
-        );
-        return true;
-      case 'pettycash':
-        _pushWithBase(
-          PettyCashDetailsScreen(requestId: '$recordId', type: 'PETTYCASH'),
-          '/notification_pettycash_details',
-        );
-        return true;
-      case 'lpo':
-        Util.openLpoPdfReport(navKey.currentContext!, recordId);
-        return true;
-      default:
-        return false;
+    final navigator = navKey.currentState;
+    if (navigator == null || navKey.currentContext == null || !_isHomeReady) {
+      _pendingChatTapPayload = rawPayload;
+      print('   - Chat tap queued until navigation is ready.');
+      return;
+    }
+
+    _isHandlingChatTap = true;
+    try {
+      final chatId =
+          (payloadData['chat_id'] ?? payloadData['chatId'] ?? '').toString();
+      if (chatId.trim().isEmpty) {
+        print('   - Chat notification missing chat_id; no navigation.');
+        return;
+      }
+
+      final chatTitle = (payloadData['chat_title'] ??
+              payloadData['chatTitle'] ??
+              payloadData['title'] ??
+              'Chat')
+          .toString();
+      final chatType = _resolveChatType(payloadData);
+
+      _navigateToChatScreen(navigator, chatId, chatTitle, chatType);
+    } finally {
+      _isHandlingChatTap = false;
+
+      if (_pendingChatTapPayload != null &&
+          _pendingChatTapPayload != rawPayload) {
+        final nextPayload = _pendingChatTapPayload;
+        _pendingChatTapPayload = null;
+        processPendingNotificationTap(forcePayload: nextPayload);
+      }
     }
   }
 
-  static bool _isAttendancePayloadData(Map<String, dynamic>? payloadData) {
-    if (payloadData == null || payloadData.isEmpty) return false;
+  static String _resolveChatType(Map<String, dynamic> payloadData) {
+    for (final key in const [
+      'chat_type',
+      'chatType',
+      'conversation_type',
+      'type',
+    ]) {
+      final normalized =
+          (payloadData[key] ?? '').toString().trim().toLowerCase();
+      if (normalized == 'dm' ||
+          normalized == 'role' ||
+          normalized == 'group' ||
+          normalized == 'support') {
+        return normalized;
+      }
+    }
 
-    final searchSpace = <String>[
-      payloadData['category']?.toString() ?? '',
-      payloadData['type']?.toString() ?? '',
-      payloadData['model']?.toString() ?? '',
-      payloadData['model_name']?.toString() ?? '',
-      payloadData['event']?.toString() ?? '',
-      payloadData['action']?.toString() ?? '',
-      payloadData['topic']?.toString() ?? '',
-      payloadData['refresh_attendance']?.toString() ?? '',
-      payloadData['attendance_refresh']?.toString() ?? '',
-      payloadData['refresh_today_status']?.toString() ?? '',
-    ].join(' ').toLowerCase();
-
-    return searchSpace.contains('hr.attendance') ||
-        searchSpace.contains('attendance') ||
-        searchSpace.contains('biotime') ||
-        searchSpace.contains('check_in') ||
-        searchSpace.contains('check_out') ||
-        searchSpace.contains('check in') ||
-        searchSpace.contains('check out') ||
-        searchSpace.contains('checkout');
+    return 'dm';
   }
 
-  /// Navigate to ChatScreen from a push notification tap
   static void _navigateToChatScreen(
     NavigatorState navigator,
     String chatId,
     String chatTitle,
     String chatTypeStr,
   ) {
-    // Import dynamically to avoid circular deps
     try {
-      final chatType = chatTypeStr == 'support'
-          ? ChatType.support
-          : chatTypeStr == 'role'
-              ? ChatType.role
-              : ChatType.dm;
+      final chatType = ChatType.fromString(chatTypeStr.toLowerCase().trim());
 
-      // Determine peerUid for DM chats
       String? peerUid;
-      if (chatType == ChatType.dm) {
+      if (chatType == ChatType.dm && chatId.startsWith('dm_')) {
         final currentUid = FirebaseAuth.instance.currentUser?.uid;
         if (currentUid != null) {
-          final allParts = chatId.substring(3); // remove 'dm_'
+          final allParts = chatId.substring(3);
           if (allParts.startsWith('${currentUid}_')) {
             peerUid = allParts.substring(currentUid.length + 1);
           } else if (allParts.endsWith('_$currentUid')) {
@@ -994,15 +684,16 @@ class FirebaseService {
         MaterialPageRoute(
           builder: (_) => ChatScreen(
             chatId: chatId,
-            title: chatTitle,
+            title: chatTitle.trim().isEmpty ? 'Chat' : chatTitle,
             chatType: chatType,
             peerUid: peerUid,
           ),
+          settings: const RouteSettings(name: '/chat_from_notification'),
         ),
       );
-      print('   - ✅ Chat navigation completed!');
+      print('   - Chat notification opened chatId=$chatId');
     } catch (e) {
-      print('   - ❌ Chat navigation failed: $e');
+      print('   - Chat navigation failed: $e');
     }
   }
 }

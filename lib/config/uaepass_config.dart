@@ -23,9 +23,11 @@ class UaepassUiMessages {
 /// UAE PASS Configuration
 /// 
 /// Contains all configuration values for UAE PASS integration.
-/// Use [UaepassConfig.forCurrentEnvironment()] to auto-select based on build mode.
-/// - Debug  → [UaepassConfig.staging()]
-/// - Release → [UaepassConfig.production()]
+/// Use [UaepassConfig.forCurrentEnvironment()] to select the active UAE PASS
+/// environment.
+/// - All build modes currently use [UaepassConfig.staging()]
+/// - Switch release back to [UaepassConfig.production()] after UAE PASS provides
+///   the production client_id.
 /// 
 /// ## Feature Flags
 /// 
@@ -189,14 +191,12 @@ class UaepassConfig {
         uri.path == deepLinkErrorPath;
   }
 
-  /// Returns the appropriate config based on the current build mode.
-  /// - [kDebugMode] → staging
-  /// - Release     → production
+  /// Returns the active UAE PASS config.
+  ///
+  /// Temporary behavior: release also uses staging until the production
+  /// client_id is configured.
   static UaepassConfig forCurrentEnvironment() {
-    if (kDebugMode) {
-      return staging();
-    }
-    return production();
+    return staging();
   }
 
   /// Staging configuration (stg-id.uaepass.ae)

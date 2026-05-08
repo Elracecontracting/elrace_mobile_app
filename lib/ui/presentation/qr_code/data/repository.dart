@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/ui/presentation/signin/data/repository.dart';
 import 'package:el_race/utils/api_query.dart';
 import 'package:el_race/utils/urll_utils.dart';
@@ -11,22 +12,54 @@ class QrCodeRepository {
   ApiQuery apiQuery = ApiQuery();
   final UserRepo userRepo = UserRepo();
 
+  int? _resolveEmployeeId(LoginResponseModel loginResponse) {
+    final data = loginResponse.result?.data;
+    if (data == null) return null;
+
+    final profileId = data.emp_profile_id?.trim();
+    if (profileId != null && profileId.isNotEmpty) {
+      final parsed = int.tryParse(profileId);
+      if (parsed != null) return parsed;
+    }
+
+    final employeeId = data.emp_id?.trim();
+    if (employeeId != null && employeeId.isNotEmpty) {
+      return int.tryParse(employeeId);
+    }
+
+    return null;
+  }
+
+  Future<LoginResponseModel?> _getLoginResponseWhenReady() async {
+    LoginResponseModel? lastResponse;
+
+    for (int attempt = 0; attempt < 5; attempt++) {
+      lastResponse = await userRepo.getLoginResponse();
+      final hasSession = lastResponse?.result?.data != null &&
+          (lastResponse?.result?.token?.isNotEmpty ?? false) &&
+          lastResponse != null &&
+          _resolveEmployeeId(lastResponse) != null;
+
+      if (hasSession) return lastResponse;
+
+      if (attempt < 4) {
+        await Future.delayed(Duration(milliseconds: 250 * (attempt + 1)));
+      }
+    }
+
+    return lastResponse;
+  }
+
   Future<Uint8List?> getQrCodeImage() async {
     try {
-      final loginResponse = await userRepo.getLoginResponse();
+      final loginResponse = await _getLoginResponseWhenReady();
 
       if (loginResponse?.result?.data == null) {
         log('❌ No login data found');
         return null;
       }
 
-      // Try emp_profile_id first, fallback to emp_id
-      int? empId;
-      if (loginResponse!.result!.data!.emp_profile_id != null) {
-        empId = int.tryParse(loginResponse.result!.data!.emp_profile_id!);
-      } else if (loginResponse.result!.data!.emp_id != null) {
-        empId = int.tryParse(loginResponse.result!.data!.emp_id!);
-      }
+      final empId = _resolveEmployeeId(loginResponse!);
 
       if (empId == null) {
         log('❌ No employee ID found in login response (tried emp_profile_id and emp_id)');
@@ -77,11 +110,25 @@ class QrCodeRepository {
   }
 
   Future<Uint8List?> getQrCodeImageDirect() async {
+    for (int attempt = 0; attempt < 3; attempt++) {
+      final qrCode = await _getQrCodeImageDirectOnce();
+      if (qrCode != null && qrCode.isNotEmpty) return qrCode;
+
+      if (attempt < 2) {
+        print('🔄 QR Code load retry ${attempt + 1}/2 scheduled...');
+        await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+      }
+    }
+
+    return null;
+  }
+
+  Future<Uint8List?> _getQrCodeImageDirectOnce() async {
     try {
       print('\n🚀 ========== QR CODE LOADING START ==========');
 
       // Get current user's login data
-      final loginResponse = await userRepo.getLoginResponse();
+      final loginResponse = await _getLoginResponseWhenReady();
       print('📦 Login Response: ${loginResponse != null ? "Found" : "NULL"}');
 
       if (loginResponse?.result?.data == null) {
@@ -94,15 +141,8 @@ class QrCodeRepository {
       print('👤 emp_id: ${loginResponse!.result!.data!.emp_id}');
       print('👤 emp_profile_id: ${loginResponse.result!.data!.emp_profile_id}');
 
-      // Try emp_profile_id first, fallback to emp_id
-      int? empId;
-      if (loginResponse.result!.data!.emp_profile_id != null) {
-        empId = int.tryParse(loginResponse.result!.data!.emp_profile_id!);
-        print('✅ Using emp_profile_id: $empId');
-      } else if (loginResponse.result!.data!.emp_id != null) {
-        empId = int.tryParse(loginResponse.result!.data!.emp_id!);
-        print('✅ Using emp_id: $empId');
-      }
+      final empId = _resolveEmployeeId(loginResponse);
+      print('✅ Resolved employee ID for QR: $empId');
 
       if (empId == null) {
         print(
@@ -113,8 +153,11 @@ class QrCodeRepository {
 
       // Get authentication token
       final token = loginResponse.result?.token;
+        final tokenPreview = token != null && token.isNotEmpty
+          ? '${token.substring(0, token.length < 20 ? token.length : 20)}...'
+          : 'NULL/EMPTY';
       print(
-          '🔑 Token: ${token != null && token.isNotEmpty ? "${token.substring(0, 20)}..." : "NULL/EMPTY"}');
+          '🔑 Token: $tokenPreview');
 
       if (token == null || token.isEmpty) {
         print('❌ ERROR: No authentication token found');
@@ -154,7 +197,13 @@ class QrCodeRepository {
         if (response.data != null && response.data.length > 0) {
           print('✅ QR Code loaded successfully!');
           print('🔚 ========== QR CODE LOADING SUCCESS ==========\n');
-          return response.data;
+          final data = response.data;
+          if (data is Uint8List) return data;
+          if (data is List<int>) return Uint8List.fromList(data);
+
+          print('❌ ERROR: Unexpected QR data type: ${data.runtimeType}');
+          print('🔚 ========== QR CODE LOADING FAILED ==========\n');
+          return null;
         } else {
           print('❌ ERROR: Response data is empty');
           print('🔚 ========== QR CODE LOADING FAILED ==========\n');

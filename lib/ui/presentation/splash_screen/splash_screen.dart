@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:el_race/core/services/update_service.dart';
+import 'package:el_race/core/app_globals.dart' show appInitCompleter;
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/firebase_service.dart';
-import 'package:el_race/main.dart' show appInitCompleter;
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/ui/widgets/update_dialog.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +14,6 @@ import 'package:el_race/core/security/device_security_service.dart';
 import 'package:provider/provider.dart';
 import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provider.dart';
 import 'package:video_player/video_player.dart';
-import 'package:el_race/resources/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -27,6 +28,7 @@ class _SplashScreenState extends State<SplashScreen> {
   bool _didScheduleNavigation = false;
   late VideoPlayerController _videoController;
   bool _isVideoReady = false;
+  final Completer<void> _videoCompletedCompleter = Completer<void>();
 
   @override
   void initState() {
@@ -37,10 +39,12 @@ class _SplashScreenState extends State<SplashScreen> {
       ..initialize().then((_) {
         if (mounted) {
           setState(() => _isVideoReady = true);
+          _videoController.addListener(_onVideoProgress);
           _videoController.play();
         }
       }).catchError((e) {
         print('⚠️ Video init error: $e');
+        _completeVideoIfNeeded();
       });
 
     // Defer security check & QR clear to after the first frame so
@@ -101,13 +105,18 @@ class _SplashScreenState extends State<SplashScreen> {
   /// Wait for both: 1) minimum 3-second splash, 2) heavy init complete,
   /// 3) security check, then navigate.
   Future<void> _waitForInitAndNavigate() async {
-    // Run minimum splash delay and heavy init wait in parallel
-    await Future.wait([
-      Future.delayed(const Duration(seconds: 3)),
+    // Wait for BOTH heavy init and intro video completion.
+    await Future.wait<void>([
       appInitCompleter.future.timeout(
         const Duration(seconds: 12),
         onTimeout: () {
           print('⚠️ Heavy init timeout in splash – continuing anyway');
+        },
+      ),
+      _videoCompletedCompleter.future.timeout(
+        const Duration(seconds: 20),
+        onTimeout: () {
+          print('⚠️ Video completion timeout in splash – continuing anyway');
         },
       ),
     ]);
@@ -130,6 +139,25 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!_isDeviceSecure) return;
 
     _navigateToNextScreen();
+  }
+
+  void _onVideoProgress() {
+    if (!_videoController.value.isInitialized) return;
+
+    final duration = _videoController.value.duration;
+    final position = _videoController.value.position;
+
+    if (duration == Duration.zero) return;
+
+    if (position >= duration - const Duration(milliseconds: 100)) {
+      _completeVideoIfNeeded();
+    }
+  }
+
+  void _completeVideoIfNeeded() {
+    if (!_videoCompletedCompleter.isCompleted) {
+      _videoCompletedCompleter.complete();
+    }
   }
 
   /// Wait for security check to complete (up to 5 seconds)
@@ -239,7 +267,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryColor,
+      backgroundColor: Colors.white,
       body: _isVideoReady
           ? SizedBox.expand(
               child: FittedBox(
@@ -251,12 +279,13 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
             )
-          : const SizedBox.expand(),  // Dark bg while video loads (< 100ms)
+          : const SizedBox.expand(),
     );
   }
 
   @override
   void dispose() {
+    _videoController.removeListener(_onVideoProgress);
     _videoController.dispose();
     super.dispose();
   }

@@ -85,11 +85,6 @@ class MyActionItem {
         json['employee_name'] ?? json['employee'] ?? json['requester_name'];
 
     String parseFileLink(Map<String, dynamic> data) {
-      // ── DEBUG: dump ALL fields in the raw report item ──
-      print('[parseFileLink] ALL keys in item: ${data.keys.toList()}');
-      data.forEach((k, v) => print('[parseFileLink]   $k => $v (${v.runtimeType})'));
-      // ── End debug ──
-
       final candidates = <dynamic>[
         data['report_link'],
         data['file_url'],
@@ -111,7 +106,6 @@ class MyActionItem {
       for (final c in candidates) {
         final s = _safeString(c).trim();
         if (s.isNotEmpty) {
-          print('[parseFileLink] FOUND link: $s');
           return s;
         }
       }
@@ -123,12 +117,10 @@ class MyActionItem {
           map['url'] ?? map['link'] ?? map['public_url'] ?? map['download_url'],
         ).trim();
         if (nested.isNotEmpty) {
-          print('[parseFileLink] FOUND link in attachment: $nested');
           return nested;
         }
       }
 
-      print('[parseFileLink] NO link found for item id=${data['id']}');
       return '';
     }
 
@@ -139,11 +131,12 @@ class MyActionItem {
       name: _safeString(nameRaw),
       reference:
           _safeString(json['reference'] ?? json['ref'] ?? json['number']),
-      date: _safeString(json['date'] ??
-          json['last_updated_on'] ??
-          json['accounting_date'] ??
+        date: _safeString(json['last_updated_on'] ??
           json['updated_at'] ??
-          json['create_date']),
+          json['write_date'] ??
+          json['create_date'] ??
+          json['accounting_date'] ??
+          json['date']),
       project: _safeString(json['project']),
       vendor: _safeString(json['vendor']),
       amountTotal: amountRaw is num

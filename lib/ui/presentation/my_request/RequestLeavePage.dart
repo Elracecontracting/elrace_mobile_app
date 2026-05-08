@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/signin/data/repository.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:el_race/utils/color_utils.dart';
 import '../../widgets/custom_slider_button.dart';
-import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 
 class RequestDetailsPage extends StatefulWidget {
@@ -28,15 +26,12 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   String description = '';
   String duration = '';
   DateTime? startDate;
-  LoginResponseModel? _loginResponse;
   DateTime? endDate;
   String selectedLeaveType = "SHORT";
   String? leaveBalance;
-  static String empID = "";
   String certificateNo = ''; // Certificate number for sick leave
   final GlobalKey<CustomSliderButtonState> _sliderKey =
       GlobalKey<CustomSliderButtonState>();
-  final UserRepo userRepo = UserRepo();
 
   @override
   void initState() {
@@ -46,11 +41,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     if (initial == 'SICK' || initial == 'SHORT' || initial == 'ANNUAL') {
       selectedLeaveType = initial!;
     }
-    _initAsync();
-  }
-
-  Future<void> _initAsync() async {
-    await fetchleaveBalance();
+    fetchleaveBalance();
   }
 
   // End date is readonly; calculated from startDate + duration (if both present)
@@ -192,19 +183,9 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   }
 
   Future<void> fetchleaveBalance() async {
-    // Ensure empID and companyId are initialized before proceeding
-    await init(); // Ensure init is complete
-  }
-
-  Future<void> init() async {
-    print("initcalled");
-    leaveBalance = (await userRepo.getLoginResponse())!
-        .result!
-        .data!
-        .leaveBalance
-        .toString();
-    print("0000");
-    print(leaveBalance);
+    setState(() {
+      leaveBalance = SharedPref.getCachedLeaveBalance();
+    });
   }
 
   @override
@@ -225,8 +206,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: EdgeInsets.only(
-                        bottom:
-                            MediaQuery.of(context).viewInsets.bottom),
+                        bottom: MediaQuery.of(context).viewInsets.bottom),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Container(
@@ -390,7 +370,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 50.0),
                               child: Text(
-                                translate('common.balance_leave'),
+                                '${translate('common.balance_leave')}: ${leaveBalance ?? SharedPref.getCachedLeaveBalance()} days',
                                 style: GoogleFonts.poppins(
                                   fontSize: 16, // You can adjust size as needed
                                   fontWeight: FontWeight.w500,
@@ -706,7 +686,4 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
 
   TextStyle _infoTextStyle() => const TextStyle(
       fontSize: 15, fontWeight: FontWeight.bold, color: appFontColor);
-
-  TextStyle _infoTextStyle_1() => const TextStyle(
-      fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey);
 }

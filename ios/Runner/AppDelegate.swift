@@ -42,23 +42,41 @@ import UserNotifications
     )
     vpnChannel.setMethodCallHandler { call, result in
       if call.method == "isVpnActive" {
-        // Check IKEv2 / IPSec VPN profiles
+        // Check IKEv2 / IPSec VPN profiles first (synchronous)
         let sysVpnStatus = NEVPNManager.shared().connection.status
         let sysVpnActive = sysVpnStatus == .connected || sysVpnStatus == .connecting
+        print("🔒 iOS NEVPNManager status: \(sysVpnStatus) - Active: \(sysVpnActive)")
+        
         if sysVpnActive {
+          print("✅ iOS: System VPN detected via NEVPNManager")
           result(true)
           return
         }
-        // Check Tunnel Provider VPN apps (most VPN apps use this)
+        
+        // Check Tunnel Provider VPN apps (most VPN apps use this) - Asynchronous
+        print("🔒 iOS: Checking TunnelProvider VPN apps...")
         NETunnelProviderManager.loadAllFromPreferences { managers, error in
-          guard error == nil, let managers = managers else {
+          if let error = error {
+            print("⚠️ iOS: Error loading VPN preferences: \(error.localizedDescription)")
             result(false)
             return
           }
-          let vpnActive = managers.contains {
-            let status = $0.connection.status
-            return status == .connected || status == .connecting
+          
+          guard let managers = managers else {
+            print("⚠️ iOS: No VPN managers returned (managers is nil)")
+            result(false)
+            return
           }
+          
+          print("🔒 iOS: Loaded \(managers.count) VPN managers")
+          let vpnActive = managers.contains { manager in
+            let status = manager.connection.status
+            let isActive = status == .connected || status == .connecting
+            print("   - VPN Manager status: \(status) - Active: \(isActive)")
+            return isActive
+          }
+          
+          print(vpnActive ? "✅ iOS: TunnelProvider VPN detected" : "❌ iOS: No TunnelProvider VPN detected")
           result(vpnActive)
         }
       } else {

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/signin/data/repository.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,7 +22,6 @@ class RequestLeavePageNew extends StatefulWidget {
 }
 
 class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
-  final UserRepo userRepo = UserRepo();
   static const Color _primary = Color(0xFF151544);
   static const Color _accentGrey = Color(0xFF5E5E5E);
   DateTime? startDate;
@@ -34,21 +32,12 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   String certificateNo = '';
   String description = '';
   bool isLoading = false;
-
-  // Holiday list includes:
-  // Only official public holidays (NOT weekends)
-  // Weekends are regular working days that can be selected
   final Set<DateTime> holidays = {};
-  final Set<DateTime> officialHolidays = {}; // Official holidays from API
+  final Set<DateTime> officialHolidays = {};
   bool isLoadingHolidays = false;
-
-  // Minimum start date (20 days from now for SHORT leave)
-  late DateTime minimumStartDate;
 
   // SHORT leave restrictions
   static const int maxShortLeaveDays = 7; // Maximum 7 days for SHORT leave
-  static const int shortLeaveGapDays =
-      30; // Minimum 30 days gap between SHORT leaves
 
   // Text formatting states
   bool isBold = false;
@@ -57,105 +46,10 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   bool isNumberedList = false;
   final TextEditingController _descController = TextEditingController();
 
-  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
-
   @override
   void initState() {
     super.initState();
-    _initializeMinimumDate();
-    _fetchHolidaysFromAPI();
     _initAsync();
-  }
-
-  void _initializeMinimumDate() {
-    // Only annual leave requires 20-day advance notice.
-    if (widget.leaveType == 'ANNUAL') {
-      minimumStartDate = DateTime.now().add(const Duration(days: 20));
-    } else {
-      minimumStartDate = DateTime.now();
-    }
-  }
-
-  Future<void> _fetchHolidaysFromAPI() async {
-    setState(() => isLoadingHolidays = true);
-
-    try {
-      final token = SharedPref.getLoginData().result?.token;
-      final url = Uri.parse('https://erp.elrace.com/api/public/holidays');
-
-      debugPrint('🔵 === FETCHING HOLIDAYS FROM API ===');
-      debugPrint('🔵 URL: $url');
-      debugPrint('🔵 Token: ${token?.substring(0, 20)}...');
-
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'jsonrpc': '2.0',
-          'params': {
-            'token': token,
-          }
-        }),
-      );
-
-      debugPrint('🔵 Response Status: ${response.statusCode}');
-      debugPrint('🔵 Response Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
-
-        debugPrint('🔵 Parsed Result: $result');
-
-        if (result['result'] != null && result['result'] is List) {
-          final List<dynamic> holidayList = result['result'];
-
-          debugPrint(
-              '🔵 Total Holiday Periods from API: ${holidayList.length}');
-
-          for (var holiday in holidayList) {
-            try {
-              final String dateFrom = holiday['date_from'];
-              final String dateTo = holiday['date_to'];
-              final String name = holiday['name'] ?? 'Holiday';
-
-              final startDate = DateTime.parse(dateFrom);
-              final endDate = DateTime.parse(dateTo);
-
-              // Add all days in the holiday range
-              DateTime current = startDate;
-              while (current.isBefore(endDate) ||
-                  current.isAtSameMomentAs(endDate)) {
-                final holidayDate =
-                    DateTime(current.year, current.month, current.day);
-                holidays.add(holidayDate);
-                officialHolidays
-                    .add(holidayDate); // Add to official holidays list
-                current = current.add(const Duration(days: 1));
-              }
-
-              debugPrint('🔵 Added holiday: $name ($dateFrom to $dateTo)');
-            } catch (e) {
-              debugPrint('❌ Error parsing holiday: $e');
-            }
-          }
-
-          debugPrint('🔵 Total holidays loaded from API: ${holidays.length}');
-        } else {
-          debugPrint('⚠️ No holidays in API response');
-        }
-      } else {
-        debugPrint('❌ API returned status: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('❌ Error fetching holidays from API: $e');
-    }
-
-    debugPrint('🔵 Total holidays after adding weekends: ${holidays.length}');
-
-    setState(() => isLoadingHolidays = false);
   }
 
   Future<void> _initAsync() async {
@@ -164,10 +58,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
   Future<void> _fetchLeaveBalance() async {
     try {
-      final loginData = SharedPref.getLoginData();
-      final balance = loginData.result?.data?.leaveBalance?.toString();
       setState(() {
-        leaveBalance = (balance != null && balance.isNotEmpty) ? balance : '0';
+        leaveBalance = SharedPref.getCachedLeaveBalance();
       });
       debugPrint('✅ Leave Balance fetched: $leaveBalance');
     } catch (e) {
@@ -179,25 +71,6 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   }
 
   void _onDateSelected(DateTime date) {
-    // Check if date is selectable
-    if (!_isDateSelectable(date)) {
-      String errorMessage = 'Selected date is not available. ';
-
-      if (_isHoliday(date)) {
-        errorMessage += 'Cannot select a holiday.';
-      } else if (_isWithin3DaysOfHoliday(date)) {
-        errorMessage +=
-            'Cannot select dates within 3 days before or 4 days after official holidays.';
-      } else if (date.isBefore(minimumStartDate)) {
-        errorMessage += 'Must be at least 20 days from request date.';
-      } else {
-        errorMessage += 'Please choose a valid working day.';
-      }
-
-      _showErrorDialog(errorMessage);
-      return;
-    }
-
     setState(() {
       if (startDate == null || (endDate != null)) {
         startDate = date;
@@ -213,58 +86,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     });
   }
 
-  bool _isDateSelectable(DateTime date) {
-    // Cannot select past dates (applies to all leave types including SICK)
-    final today = _dateOnly(DateTime.now());
-    if (_dateOnly(date).isBefore(today)) {
-      debugPrint('🔴 Date not selectable: $date (Past date)');
-      return false;
-    }
-
-    // Cannot select dates before minimum start date
-    if (_dateOnly(date).isBefore(_dateOnly(minimumStartDate))) {
-      debugPrint(
-          '🔴 Date not selectable: $date (Before minimum: $minimumStartDate)');
-      return false;
-    }
-
-    // Cannot select holidays
-    if (_isHoliday(date)) {
-      debugPrint('🔴 Date not selectable: $date (Holiday)');
-      return false;
-    }
-
-    debugPrint('🟢 Date selectable: $date');
-    return true;
-  }
-
   bool _isHoliday(DateTime date) {
     return holidays.any((holiday) => _isSameDay(holiday, date));
-  }
-
-  bool _isWithin3DaysOfHoliday(DateTime date) {
-    // Check if date is within restricted days before or after any OFFICIAL holiday
-    // Restriction: 3 days BEFORE holiday + 4 days AFTER holiday
-    // This prevents employees from applying leave close to official holidays
-    // NOTE: This applies to official holidays only, NOT weekends
-    for (final holiday in officialHolidays) {
-      final daysDifference = date.difference(holiday).inDays;
-
-      // Check if date is 3 days before the holiday (negative difference)
-      if (daysDifference < 0 && daysDifference >= -3) {
-        debugPrint(
-            '🔴 Date blocked: $date (${daysDifference.abs()} days before holiday)');
-        return true;
-      }
-
-      // Check if date is 4 days after the holiday (positive difference)
-      if (daysDifference > 0 && daysDifference <= 4) {
-        debugPrint(
-            '🔴 Date blocked: $date ($daysDifference days after holiday)');
-        return true;
-      }
-    }
-    return false;
   }
 
   int _calculateWorkingDays(DateTime start, DateTime end) {
@@ -455,7 +278,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
       case 'SHORT':
         return 'Please be aware that you are eligible for 4 leaves per year';
       case 'ANNUAL':
-        return 'Must submit 20 days in advance. Blocked 3 days before & 4 days after official holidays.';
+        return 'Please select your leave dates and submit your request.';
       default:
         return 'Please be aware that you have to submit your request 15 days prior your leave start date.';
     }
@@ -463,24 +286,6 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading indicator while holidays are being fetched
-    if (isLoadingHolidays) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
-        appBar: const HeaderWidget(),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading holidays...'),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: const HeaderWidget(),
@@ -852,15 +657,9 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
           date.isAfter(startDate!) &&
           date.isBefore(endDate!);
 
-      final isSelectable = _isDateSelectable(date);
-      const bool enforceHolidayBlocks = false;
-      final isHolidayDate = enforceHolidayBlocks && _isHoliday(date);
-      final isNearHoliday =
-          enforceHolidayBlocks && _isWithin3DaysOfHoliday(date);
-
       days.add(
         GestureDetector(
-          onTap: isSelectable ? () => _onDateSelected(date) : null,
+          onTap: () => _onDateSelected(date),
           child: Container(
             width: 32.w,
             height: 32.w,
@@ -870,34 +669,16 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                   ? _accentGrey
                   : isInRange
                       ? _accentGrey.withAlpha(64)
-                      : isHolidayDate
-                          ? Colors.red.withAlpha(25)
-                          : isNearHoliday
-                              ? Colors.orange.withAlpha(25)
-                              : Colors.transparent,
+                      : Colors.transparent,
               shape: BoxShape.circle,
-              border: !isSelectable && !isHolidayDate && !isNearHoliday
-                  ? Border.all(color: Colors.grey.withAlpha(50), width: 1)
-                  : null,
             ),
             alignment: Alignment.center,
             child: Text(
               '$day',
               style: TextStyle(
                 fontSize: 12.sp,
-                color: isSelected
-                    ? Colors.white
-                    : !isSelectable
-                        ? Colors.grey.withAlpha(128)
-                        : isHolidayDate
-                            ? Colors.red
-                            : isNearHoliday
-                                ? Colors.orange
-                                : Colors.black,
+                color: isSelected ? Colors.white : Colors.black,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                decoration: (isHolidayDate || isNearHoliday) && !isSelected
-                    ? TextDecoration.lineThrough
-                    : null,
               ),
             ),
           ),

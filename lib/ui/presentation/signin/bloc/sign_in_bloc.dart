@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:dio/dio.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 import 'package:el_race/data/services/hive_service.dart';
@@ -84,12 +85,13 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
           log('USER_TOKEN: $_token');
           // ======================================
 
-          emit(InitialSignedInST(loginResponse: loginResponseModel));
-          emit(const LoadingST(isLoading: false));
           await userRepo.setLoginResponse(loginResponseModel);
           await userRepo.setISLoggedIn(true);
+          await SharedPref().setPreferencesBoolean('isRegistered', true);
           // Update login state in Hive for background service
           await HiveService.setUserLoggedIn(true);
+          emit(InitialSignedInST(loginResponse: loginResponseModel));
+          emit(const LoadingST(isLoading: false));
         } else {
           final message = loginResponseModel.result?.message ??
               'Login failed. Please try again.';

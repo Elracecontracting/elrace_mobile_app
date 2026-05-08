@@ -250,31 +250,47 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
 
     if (_generating) return;
 
-    // Enforce maximum 3 generated files per report
-    if (_pdfs.length >= 3) {
-      showFlushBar(context,
-          message:
-              'Maximum 3 generated reports allowed. Please delete one before generating a new one.');
-      return;
-    }
-
-    if (_pdfs
-        .where((p) =>
-            p.fileName == nameController.text ||
-            p.fileName == ("${nameController.text}.pdf"))
-        .isNotEmpty) {
-      showFlushBar(context,
-          message:
-              "A report with the same name already exists. Please change the name and try again.");
-      return;
-    }
-
     _generating = true;
-    _generationProgress = 10;
-    _generationStatus = 'Preparing report...';
+    _generationProgress = 5;
+    _generationStatus = 'Checking report limit...';
     if (mounted) setState(() {});
 
     try {
+      // Re-fetch the latest list so the limit/duplicate checks use fresh data.
+      final freshPdfs = await reportProvider.fetchReports(
+        empId: ReportProvider.empID,
+        reportId: widget.reportDetailModel.report.id,
+        folderId: widget.reportDetailModel.report.folderId,
+      );
+      _pdfs = freshPdfs;
+      if (mounted) setState(() {});
+
+      if (freshPdfs.length >= 3) {
+        showFlushBar(context,
+            message:
+                'Maximum 3 generated reports allowed. Please delete one before generating a new one.');
+        _generating = false;
+        _generationProgress = 0;
+        _generationStatus = '';
+        if (mounted) setState(() {});
+        return;
+      }
+
+      if (freshPdfs
+          .where((p) =>
+              p.fileName == nameController.text ||
+              p.fileName == ("${nameController.text}.pdf"))
+          .isNotEmpty) {
+        showFlushBar(context,
+            message:
+                "A report with the same name already exists. Please change the name and try again.");
+        _generating = false;
+        _generationProgress = 0;
+        _generationStatus = '';
+        if (mounted) setState(() {});
+        return;
+      }
+
       _generationProgress = 45;
       _generationStatus = 'Generating PDF...';
       if (mounted) setState(() {});
@@ -326,6 +342,12 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
         }
       } else {
         showFlushBar(context, message: 'Failed to upload generated report.');
+      }
+    } catch (e) {
+      print('Report generation error: $e');
+      if (mounted) {
+        showFlushBar(context,
+            message: 'Failed to generate report. Please try again.');
       }
     } finally {
       _generating = false;

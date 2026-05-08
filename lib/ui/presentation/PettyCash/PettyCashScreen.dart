@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashDraftScreen.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashList.dart';
-import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashSubmittedScreen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
@@ -287,107 +286,108 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                     ),
                   ),
                 )
-          : _error.isNotEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Failed to load petty cash home',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black87,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _error,
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black54,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 18),
-                        ElevatedButton(
-                          onPressed: _fetchPettyCashHome,
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _fetchPettyCashHome,
-                  child: ListView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    children: [
-                      _buildHeroSection(context),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
-                        child: Row(
+              : _error.isNotEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Expanded(
-                              child: Text(
-                                'Recent ${math.min(_home.recentSheets.length, 10)}/10',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black.withOpacity(0.28),
-                                ),
+                            Text(
+                              'Failed to load petty cash home',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black87,
                               ),
+                              textAlign: TextAlign.center,
                             ),
-                            InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const PettyCashSubmittedScreen(),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'View More',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black.withOpacity(0.28),
-                                ),
+                            const SizedBox(height: 10),
+                            Text(
+                              _error,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black54,
                               ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 18),
+                            ElevatedButton(
+                              onPressed: _fetchPettyCashHome,
+                              child: const Text('Retry'),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      if (_home.recentSheets.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(22, 24, 22, 40),
-                          child: Center(
-                            child: Text(
-                              'No recent expense sheets',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black54,
-                              ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _fetchPettyCashHome,
+                      child: ListView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: EdgeInsets.zero,
+                        children: [
+                          _buildHeroSection(context),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Recent ${math.min(_home.recentSheets.length, 10)}/10',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black.withOpacity(0.28),
+                                    ),
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const PettyCashSubmittedScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: Text(
+                                    'View More',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black.withOpacity(0.28),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        )
-                      else
-                        ..._home.recentSheets
-                            .take(10)
-                            .map(_buildRecentSheetRow),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
+                          const SizedBox(height: 10),
+                          if (_home.recentSheets.isEmpty)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(22, 24, 22, 40),
+                              child: Center(
+                                child: Text(
+                                  'No recent expense sheets',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            ..._home.recentSheets
+                                .take(10)
+                                .map(_buildRecentSheetRow),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
     );
   }
 
@@ -579,10 +579,11 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
   Widget _buildDashboardAction({
     required IconData icon,
     required String label,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
   }) {
     return InkWell(
       onTap: onTap,
+      enableFeedback: onTap != null,
       borderRadius: BorderRadius.circular(18),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -609,14 +610,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const PettyCashPopUpScreen(),
-            ),
-          );
-        },
+        onTap: null,
+        enableFeedback: false,
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 22),
           padding: const EdgeInsets.symmetric(vertical: 14),

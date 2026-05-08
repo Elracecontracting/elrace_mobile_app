@@ -37,6 +37,19 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
     _loadPdf();
   }
 
+  void _goBack() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    if (rootNavigator.canPop()) {
+      rootNavigator.pop();
+    }
+  }
+
   Future<void> _loadPdf() async {
     try {
       final response = await http.get(Uri.parse(widget.pdfUrl));
@@ -123,13 +136,19 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
     // Only strip characters that are truly invalid in file names, keep spaces and dots
     final safeName = rawName.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
     final fileName = safeName.toLowerCase().endsWith('.pdf') ? safeName : '$safeName.pdf';
+
+    final renderObject = context.findRenderObject();
+    final shareOrigin = renderObject is RenderBox
+        ? (renderObject.localToGlobal(Offset.zero) & renderObject.size)
+        : const Rect.fromLTWH(1, 1, 1, 1);
+
     await Share.shareXFiles([
       XFile.fromData(
         _pdfBytes!,
         name: fileName,
         mimeType: 'application/pdf',
       ),
-    ]);
+    ], sharePositionOrigin: shareOrigin);
   }
 
   @override
@@ -141,7 +160,7 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF0E3A76)),
-          onPressed: () => Navigator.pop(context),
+          onPressed: _goBack,
         ),
         title: Text(
           widget.title ?? 'LPO Report',

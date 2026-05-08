@@ -19,6 +19,8 @@ import 'package:el_race/data/services/task_notification_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:provider/provider.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/data/models/folder_model.dart';
@@ -93,7 +95,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     final results = await Future.wait([
       TaskOptionsApiService.getProjects(),
       TeamsApiService.getUniqueDepartments(),
-      TeamMembersApiService.instance.getTeamMembers(),
+      TeamMembersApiService.instance.getTeamMembers(forceRefresh: true),
     ]);
 
     if (mounted) {
@@ -1427,12 +1429,15 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   /// Build avatar for a selected member with remove option
   Widget _buildSelectedMemberAvatar(
       TeamMember member, Function(TeamMember) onRemove) {
+    final imageProvider = _memberImageProvider(member.image);
+    final displayName = _memberDisplayName(member.name);
+
     return GestureDetector(
       onLongPress: () => onRemove(member),
       child: Stack(
         children: [
           // Avatar with image or initials
-          member.image != null && member.image!.isNotEmpty
+          imageProvider != null
               ? Container(
                   width: 44,
                   height: 44,
@@ -1440,7 +1445,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.grey[300]!, width: 2),
                     image: DecorationImage(
-                      image: NetworkImage(member.image!),
+                      image: imageProvider,
                       fit: BoxFit.cover,
                       onError: (_, __) {},
                     ),
@@ -1456,8 +1461,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      member.name.isNotEmpty
-                          ? member.name[0].toUpperCase()
+                      displayName.isNotEmpty
+                          ? displayName[0].toUpperCase()
                           : '?',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
@@ -1486,6 +1491,66 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         ],
       ),
     );
+  }
+
+  String _memberDisplayName(String rawName) {
+    final cleaned = rawName
+        .replaceFirst(RegExp(r'^\s*\d+\s*[-:|#]*\s*'), '')
+        .trim();
+    final parts = cleaned.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    if (parts.isEmpty) return rawName.trim();
+    if (parts.length == 1) return parts.first;
+    return '${parts[0]} ${parts[1]}';
+  }
+
+  ImageProvider? _memberImageProvider(String? rawImage) {
+    if (rawImage == null) return null;
+    final value = rawImage.trim();
+    if (value.isEmpty) return null;
+
+    if (value.startsWith('data:image')) {
+      final commaIndex = value.indexOf(',');
+      if (commaIndex == -1) return null;
+      final base64Part = value.substring(commaIndex + 1).trim();
+      final bytes = _decodeBase64Safe(base64Part);
+      if (bytes != null) return MemoryImage(bytes);
+      return null;
+    }
+
+    if (_looksLikeBase64(value)) {
+      final bytes = _decodeBase64Safe(value);
+      if (bytes != null) return MemoryImage(bytes);
+      return null;
+    }
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return NetworkImage(value);
+    }
+
+    if (value.startsWith('//')) {
+      return NetworkImage('https:$value');
+    }
+
+    if (value.startsWith('/')) {
+      return NetworkImage('https://erp.elrace.com$value');
+    }
+
+    return NetworkImage('https://erp.elrace.com/$value');
+  }
+
+  Uint8List? _decodeBase64Safe(String value) {
+    try {
+      return base64Decode(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _looksLikeBase64(String value) {
+    if (value.length < 64) return false;
+    if (value.contains(' ')) return false;
+    final normalized = value.replaceAll('\n', '').replaceAll('\r', '');
+    return RegExp(r'^[A-Za-z0-9+/=]+$').hasMatch(normalized);
   }
 
   /// Show member picker bottom sheet
@@ -2076,15 +2141,83 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
   }
 
   void _filterMembers(String query) {
+    final q = query.trim().toLowerCase();
     setState(() {
-      if (query.isEmpty) {
+      if (q.isEmpty) {
         _filteredMembers = widget.members;
       } else {
         _filteredMembers = widget.members
-            .where((m) => m.name.toLowerCase().contains(query.toLowerCase()))
+            .where((m) {
+              final displayName = _memberDisplayName(m.name).toLowerCase();
+              final fullName = m.name.toLowerCase();
+              final department = (m.department ?? '').toLowerCase();
+              return displayName.contains(q) ||
+                  fullName.contains(q) ||
+                  department.contains(q);
+            })
             .toList();
       }
     });
+  }
+
+  String _memberDisplayName(String rawName) {
+    final cleaned = rawName
+        .replaceFirst(RegExp(r'^\s*\d+\s*[-:|#]*\s*'), '')
+        .trim();
+    final parts = cleaned.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    if (parts.isEmpty) return rawName.trim();
+    if (parts.length == 1) return parts.first;
+    return '${parts[0]} ${parts[1]}';
+  }
+
+  ImageProvider? _memberImageProvider(String? rawImage) {
+    if (rawImage == null) return null;
+    final value = rawImage.trim();
+    if (value.isEmpty) return null;
+
+    if (value.startsWith('data:image')) {
+      final commaIndex = value.indexOf(',');
+      if (commaIndex == -1) return null;
+      final base64Part = value.substring(commaIndex + 1).trim();
+      final bytes = _decodeBase64Safe(base64Part);
+      if (bytes != null) return MemoryImage(bytes);
+      return null;
+    }
+
+    if (_looksLikeBase64(value)) {
+      final bytes = _decodeBase64Safe(value);
+      if (bytes != null) return MemoryImage(bytes);
+      return null;
+    }
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return NetworkImage(value);
+    }
+
+    if (value.startsWith('//')) {
+      return NetworkImage('https:$value');
+    }
+
+    if (value.startsWith('/')) {
+      return NetworkImage('https://erp.elrace.com$value');
+    }
+
+    return NetworkImage('https://erp.elrace.com/$value');
+  }
+
+  Uint8List? _decodeBase64Safe(String value) {
+    try {
+      return base64Decode(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _looksLikeBase64(String value) {
+    if (value.length < 64) return false;
+    if (value.contains(' ')) return false;
+    final normalized = value.replaceAll('\n', '').replaceAll('\r', '');
+    return RegExp(r'^[A-Za-z0-9+/=]+$').hasMatch(normalized);
   }
 
   @override
@@ -2194,19 +2327,20 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                       final member = _filteredMembers[index];
                       final isSelected =
                           widget.selectedMembers.any((m) => m.id == member.id);
+                      final displayName = _memberDisplayName(member.name);
+                      final imageProvider = _memberImageProvider(member.image);
 
                       return ListTile(
                         onTap: () {
                           widget.onMemberSelected(member);
                           setState(() {}); // Refresh to show selection
                         },
-                        leading: member.image != null &&
-                                member.image!.isNotEmpty
+                        leading: imageProvider != null
                             ? CircleAvatar(
                                 radius: 20.w,
                                 backgroundColor:
                                     const Color(0xFF1A1A53).withOpacity(0.1),
-                                backgroundImage: NetworkImage(member.image!),
+                                backgroundImage: imageProvider,
                                 onBackgroundImageError: (_, __) {},
                                 child: Container(
                                   decoration: BoxDecoration(
@@ -2226,8 +2360,8 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                                     ? const Color(0xFF4CAF50)
                                     : const Color(0xFF1A1A53).withOpacity(0.1),
                                 child: Text(
-                                  member.name.isNotEmpty
-                                      ? member.name[0].toUpperCase()
+                                  displayName.isNotEmpty
+                                      ? displayName[0].toUpperCase()
                                       : '?',
                                   style: GoogleFonts.poppins(
                                     fontWeight: FontWeight.w600,
@@ -2238,7 +2372,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                                 ),
                               ),
                         title: Text(
-                          member.name,
+                          displayName,
                           style: GoogleFonts.poppins(
                             fontSize: 15.sp,
                             fontWeight:
@@ -2246,9 +2380,10 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                             color: const Color(0xFF1A1A53),
                           ),
                         ),
-                        subtitle: member.jobPosition != null
+                        subtitle: member.department != null &&
+                                member.department!.trim().isNotEmpty
                             ? Text(
-                                member.jobPosition!,
+                                member.department!.trim(),
                                 style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
                                   color: Colors.grey.shade600,

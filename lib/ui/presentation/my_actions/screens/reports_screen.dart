@@ -1,10 +1,11 @@
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
-import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
+import 'package:el_race/ui/presentation/my_actions/widgets/my_actions_pagination_mixin.dart';
 import 'package:el_race/ui/presentation/my_documents/screens/attachment_viewer_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -13,14 +14,21 @@ class ReportsScreen extends StatefulWidget {
   State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-class _ReportsScreenState extends State<ReportsScreen> {
-  final MyActionsRepository _repo = MyActionsRepository();
-  late final Future<List<MyActionItem>> _future;
+class _ReportsScreenState extends State<ReportsScreen>
+    with MyActionsPaginationMixin<ReportsScreen> {
+  @override
+  MyActionsType get actionsType => MyActionsType.reports;
 
   @override
   void initState() {
     super.initState();
-    _future = _repo.fetchByType(MyActionsType.reports);
+    initActionsPagination();
+  }
+
+  @override
+  void dispose() {
+    disposeActionsPagination();
+    super.dispose();
   }
 
   String _formatDisplayDate(String? rawDate) {
@@ -29,17 +37,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     final parsed = DateTime.tryParse(input);
     if (parsed == null) return input;
-
-    final day = parsed.day.toString().padLeft(2, '0');
-    final month = parsed.month.toString().padLeft(2, '0');
-    final year = parsed.year.toString();
-    final hour24 = parsed.hour;
-    final minute = parsed.minute.toString().padLeft(2, '0');
-    final isPm = hour24 >= 12;
-    final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
-    final period = isPm ? 'Pm' : 'Am';
-
-    return '$day/$month/$year  At $hour12:$minute $period';
+    return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
   Future<void> _openReportLink(
@@ -89,14 +87,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: FutureBuilder<List<MyActionItem>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+        child: Builder(
+          builder: (context) {
+            if (actionsInitialLoading) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
+            if (actionsError != null && actionItems.isEmpty) {
               return Center(
                 child: Padding(
                   padding: EdgeInsets.all(20.w),
@@ -123,13 +120,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           color: const Color(0xFF9AA0A6),
                         ),
                       ),
+                      SizedBox(height: 14.h),
+                      TextButton(
+                        onPressed: retryInitialActionsLoad,
+                        child: const Text('Retry'),
+                      ),
                     ],
                   ),
                 ),
               );
             }
 
-            final items = snapshot.data ?? const <MyActionItem>[];
+            final items = List<MyActionItem>.from(actionItems);
 
             // Map API items to display items
             final reportItems = items.map((item) {
@@ -145,65 +147,71 @@ class _ReportsScreenState extends State<ReportsScreen> {
               );
             }).toList();
 
-            return ListView(
-              padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
-              children: [
-                // Header
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10.h),
-                  child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          'assets/png/my-reports-frame.png',
-                          width: 26.w,
-                          height: 26.w,
-                          fit: BoxFit.contain,
-                          color: const Color(0xFFD21B2E),
-                          colorBlendMode: BlendMode.srcIn,
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'MY REPORTS',
+            return RefreshIndicator(
+              onRefresh: refreshActions,
+              child: ListView(
+                controller: actionsScrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
+                children: [
+                  // Header
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            'assets/png/my-reports-frame.png',
+                            width: 26.w,
+                            height: 26.w,
+                            fit: BoxFit.contain,
+                            color: const Color(0xFFD21B2E),
+                            colorBlendMode: BlendMode.srcIn,
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'MY REPORTS',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF101C36),
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  if (reportItems.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(top: 24.h),
+                      child: Center(
+                        child: Text(
+                          'No reports found.',
                           style: GoogleFonts.poppins(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF101C36),
-                            letterSpacing: 0.2,
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A5A5A),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                if (reportItems.isEmpty)
-                  Padding(
-                    padding: EdgeInsets.only(top: 24.h),
-                    child: Center(
-                      child: Text(
-                        'No reports found.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF5A5A5A),
+                      ),
+                    )
+                  else
+                    ...reportItems.map(
+                      (item) => Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 16.w, vertical: 7.h),
+                        child: _ReportRequestCard(
+                          item: item,
+                          onTap: () => _openReportLink(context, item),
                         ),
                       ),
                     ),
-                  )
-                else
-                  ...reportItems.map(
-                    (item) => Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
-                      child: _ReportRequestCard(
-                        item: item,
-                        onTap: () => _openReportLink(context, item),
-                      ),
-                    ),
-                  ),
-              ],
+                  buildActionsPaginationFooter(),
+                ],
+              ),
             );
           },
         ),

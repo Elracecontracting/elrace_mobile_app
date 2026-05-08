@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -104,8 +105,17 @@ Future<String> saveImageToAppStorage(File originalImage, String report) async {
     await targetFolder.create(recursive: true);
   }
 
-  String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+  final random = Random();
+  final timestamp = DateTime.now().microsecondsSinceEpoch;
+  final randomSuffix = random.nextInt(1 << 32).toRadixString(16);
+  String fileName = '${timestamp}_$randomSuffix.jpg';
   String newPath = targetFolder.path + fileName;
+
+  while (await File(newPath).exists()) {
+    final retrySuffix = random.nextInt(1 << 32).toRadixString(16);
+    fileName = '${DateTime.now().microsecondsSinceEpoch}_$retrySuffix.jpg';
+    newPath = targetFolder.path + fileName;
+  }
 
   try {
     final File newFile = await originalImage.copy(newPath);

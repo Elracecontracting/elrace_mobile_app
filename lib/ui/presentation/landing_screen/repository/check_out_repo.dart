@@ -40,16 +40,18 @@ class CheckOutRepo {
       };
 
       // Compute fresh timestamp at call time (NOT at import time)
-      final String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+      final String formattedDate =
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+      final parsedDeviceId = int.tryParse(deviceInfo ?? '');
 
       Map<String, dynamic> data = {
         "jsonrpc": "2.0",
         "params": {
           "user_id": int.tryParse(userID.toString()) ?? 0,
-          "device_id": deviceInfo,
+          "device_id": parsedDeviceId ?? deviceInfo,
           "checkout_date_time": formattedDate,
-          "check_out_long": long,
-          "check_out_lat": lat,
+          "check_out_long": double.tryParse(long) ?? long,
+          "check_out_lat": double.tryParse(lat) ?? lat,
           "check_in_record_id": checkInRecordId,
         }
       };

@@ -4,6 +4,7 @@ class UserProjectModel {
   final int totalProjects;
   final double totalProjectsAmount;
   final String? photoUrl;
+  final int? agreementId;
   final String? agreementNo;
   final String? cityId;
 
@@ -13,12 +14,27 @@ class UserProjectModel {
     required this.totalProjects,
     required this.totalProjectsAmount,
     this.photoUrl,
+    this.agreementId,
     this.agreementNo,
     this.cityId,
   });
 
   factory UserProjectModel.fromJson(Map<String, dynamic> json) {
+    int? parseId(dynamic value) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is List && value.isNotEmpty) return parseId(value.first);
+      if (value is Map) {
+        return parseId(value['id'] ?? value['agreement_id']);
+      }
+      return int.tryParse(value?.toString() ?? '');
+    }
+
     final idValue = json['id'];
+    final agreementIdValue = json['agreement_id'] ??
+        json['agreement'] ??
+        json['agreementId'] ??
+        json['project_agreement_id'];
 
     // Fix malformed photo URL from API (erp.elrace.compublic -> erp.elrace.com/public)
     String? photoUrl = json['photo_url']?.toString();
@@ -36,6 +52,7 @@ class UserProjectModel {
       totalProjectsAmount:
           (json['total_projects_amount'] as num?)?.toDouble() ?? 0.0,
       photoUrl: photoUrl,
+      agreementId: parseId(agreementIdValue),
       agreementNo: json['agreement_no']?.toString(),
       cityId: json['city_id'] is List && (json['city_id'] as List).length > 1
           ? (json['city_id'] as List)[1]?.toString()
@@ -50,6 +67,7 @@ class UserProjectModel {
       'total_projects': totalProjects,
       'total_projects_amount': totalProjectsAmount,
       'photo_url': photoUrl,
+      'agreement_id': agreementId,
       'agreement_no': agreementNo,
       'city_id': cityId,
     };

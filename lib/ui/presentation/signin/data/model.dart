@@ -222,7 +222,12 @@ class Data {
                 ? int.tryParse(json["branch_id"])
                 : null),
         partnerId: json["partner_id"],
-        leaveBalance: json["leave_balance"],
+        leaveBalance: _stringOrNull(
+          json["leave_balance"] ??
+              json["leaveBalance"] ??
+              json["balance_leave"] ??
+              json["remaining_leave_days"],
+        ),
         webBaseUrl: json["web.base.url"],
         userCompanies: json["user_companies"] == null
             ? null
@@ -286,7 +291,7 @@ class Data {
         "company_id": companyId,
         "branch_id": branchId,
         "partner_id": partnerId,
-        "leaveBalance": leaveBalance,
+        "leave_balance": leaveBalance,
         "web.base.url": webBaseUrl,
         "user_companies": userCompanies?.toJson(),
         "user_branches": userBranches?.toJson(),
@@ -307,6 +312,15 @@ class Data {
         "default_widgets": defaultWidgets?.toJson(),
         "default_operating_unit_id": default_operating_unit_id,
       };
+
+  static String? _stringOrNull(dynamic value) {
+    if (value == null || value == false || value == true) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty) return null;
+    final lower = text.toLowerCase();
+    if (lower == 'false' || lower == 'null') return null;
+    return text;
+  }
 }
 
 class CacheHashes {
@@ -482,6 +496,7 @@ class DefaultWidgets {
 
 class WidgetsData {
   final WidgetInfo? attendanceWidget;
+  final WidgetInfo? checkinWidget;
   final WidgetInfo? myRequestWidget;
   final WidgetInfo? myDocumentsWidget;
   final WidgetInfo? myProjectsWidget;
@@ -493,6 +508,7 @@ class WidgetsData {
 
   WidgetsData({
     this.attendanceWidget,
+    this.checkinWidget,
     this.myRequestWidget,
     this.myDocumentsWidget,
     this.myProjectsWidget,
@@ -508,6 +524,10 @@ class WidgetsData {
             ? null
             : WidgetInfo.fromJson(
                 json["attendance_widget"] as Map<String, dynamic>),
+      checkinWidget: json["checkin_widget"] == null
+        ? null
+        : WidgetInfo.fromJson(
+          json["checkin_widget"] as Map<String, dynamic>),
         myRequestWidget: json["my_request_widget"] == null
             ? null
             : WidgetInfo.fromJson(
@@ -522,8 +542,7 @@ class WidgetsData {
                 json["my_projects_widget"] as Map<String, dynamic>),
         mediaWidget: json["media_widget"] == null
             ? null
-            : WidgetInfo.fromJson(
-                json["media_widget"] as Map<String, dynamic>),
+            : WidgetInfo.fromJson(json["media_widget"] as Map<String, dynamic>),
         myReportsWidget: json["my_reports_widget"] == null
             ? null
             : WidgetInfo.fromJson(
@@ -543,6 +562,7 @@ class WidgetsData {
 
   Map<String, dynamic> toJson() => {
         "attendance_widget": attendanceWidget?.toJson(),
+      "checkin_widget": checkinWidget?.toJson(),
         "my_request_widget": myRequestWidget?.toJson(),
         "my_documents_widget": myDocumentsWidget?.toJson(),
         "my_projects_widget": myProjectsWidget?.toJson(),
@@ -591,12 +611,14 @@ class WidgetInfo {
   // ---------- typed helpers ----------
 
   /// Returns the numeric value of [recordToShow] when it is a plain number.
-  int? get recordCount =>
-      recordToShow is int ? recordToShow as int : int.tryParse(recordToShow?.toString() ?? '');
+  int? get recordCount => recordToShow is int
+      ? recordToShow as int
+      : int.tryParse(recordToShow?.toString() ?? '');
 
   /// Returns [recordToShow] as a key→value map when it is an object.
-  Map<String, dynamic>? get recordMap =>
-      recordToShow is Map ? Map<String, dynamic>.from(recordToShow as Map) : null;
+  Map<String, dynamic>? get recordMap => recordToShow is Map
+      ? Map<String, dynamic>.from(recordToShow as Map)
+      : null;
 }
 
 // ── Typed record helpers ──────────────────────────────────────────────────────
@@ -643,8 +665,7 @@ class MediaRecord {
   const MediaRecord({required this.mediaCount, required this.files});
   factory MediaRecord.fromMap(Map<String, dynamic> m) =>
       MediaRecord(mediaCount: m["media_count"] ?? 0, files: m["files"] ?? 0);
-  Map<String, dynamic> toJson() =>
-      {"media_count": mediaCount, "files": files};
+  Map<String, dynamic> toJson() => {"media_count": mediaCount, "files": files};
 }
 
 class MyNotesRecord {
@@ -663,8 +684,7 @@ class LpoRecord {
   const LpoRecord({required this.total, required this.completed});
   factory LpoRecord.fromMap(Map<String, dynamic> m) =>
       LpoRecord(total: m["total"] ?? 0, completed: m["completed"] ?? 0);
-  Map<String, dynamic> toJson() =>
-      {"total": total, "completed": completed};
+  Map<String, dynamic> toJson() => {"total": total, "completed": completed};
 }
 
 Map<String, dynamic>? _tryDecodeCertificate(String value) {

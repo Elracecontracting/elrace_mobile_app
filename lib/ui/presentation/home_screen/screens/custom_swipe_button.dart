@@ -37,6 +37,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   late AnimationController _checkmarkController;
   late AnimationController _bounceController;
   bool isProcessingFace = false;
+  bool _isApiLoading = false;
 
   // Time display variables - updated via BlocListener
   String _checkInDisplayTime = '00:00:00';
@@ -475,6 +476,227 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     );
   }
 
+  void _showAttendanceApiMessage({
+    required String title,
+    required String message,
+    required Color color,
+    required IconData icon,
+  }) {
+    if (!mounted || message.trim().isEmpty) return;
+
+    final normalizedMessage = message.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final messageHeader = _attendanceMessageHeader(normalizedMessage);
+    final messageItems = _attendanceMessageItems(normalizedMessage);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Row(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 320,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(dialogContext).size.height * 0.42,
+              ),
+              child: Scrollbar(
+                thumbVisibility: messageItems.length > 6,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        messageHeader,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          height: 1.4,
+                          color: Color(0xFF303030),
+                        ),
+                      ),
+                      if (messageItems.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        ...messageItems.map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    '•',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    item,
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.35,
+                                      color: Color(0xFF3A3A3A),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                'OK',
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _setApiLoading(bool isLoading) {
+    if (!mounted || _isApiLoading == isLoading) return;
+    setState(() {
+      _isApiLoading = isLoading;
+    });
+  }
+
+  String _attendanceMessageHeader(String message) {
+    final colonIndex = message.indexOf(':');
+    if (colonIndex > 0) {
+      final header = message.substring(0, colonIndex + 1).trim();
+      final hasListAfterColon =
+          message.substring(colonIndex + 1).contains(RegExp(r'[,،]\s*'));
+      return hasListAfterColon ? header : message;
+    }
+
+    final commaParts = message
+        .split(RegExp(r'[,،]\s*'))
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (commaParts.length >= 3) {
+      final firstPart = _sanitizeAttendanceText(commaParts.first);
+      if (firstPart.endsWith(':')) return firstPart;
+      return '$firstPart:';
+    }
+
+    return _sanitizeAttendanceText(message);
+  }
+
+  List<String> _attendanceMessageItems(String message) {
+    final colonIndex = message.indexOf(':');
+    if (colonIndex > 0) {
+      final tail = message.substring(colonIndex + 1).trim();
+      if (!tail.contains(RegExp(r'[,،]\s*'))) return const [];
+
+      final items = tail
+          .split(RegExp(r'[,،]\s*'))
+          .map((item) => _sanitizeAttendanceText(item))
+          .where((item) => item.isNotEmpty)
+          .toList();
+
+      return items.length > 1 ? items : const [];
+    }
+
+    final parts = message
+        .split(RegExp(r'[,،]\s*'))
+      .map((part) => _sanitizeAttendanceText(part))
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (parts.length < 3) return const [];
+
+    final items = parts.sublist(1);
+
+    return items.length > 1 ? items : const [];
+  }
+
+  String _sanitizeAttendanceText(String text) {
+    return text
+        .trim()
+        .replaceAll('[', '')
+        .replaceAll(']', '')
+        .replaceAll(RegExp(r'\s{2,}'), ' ')
+        .trim();
+  }
+
+  Future<void> _restoreAfterCheckInFailure() async {
+    await SharedPref().setPreferencesBoolean('isCheckedIn', false);
+    await SharedPref().setPreferenceInt('checkInRecordId', 0);
+    await SharedPref().setPreferencesString('checkInDisplayTime', '00:00:00');
+    await Get.find<TimerController>().stopTimer();
+    await AutoCheckoutService.cancelAutoCheckout();
+    await CheckInReminderNotificationService().updateReminders();
+    _stopLiveTimer();
+
+    if (!mounted) return;
+    setState(() {
+      isCheckedIn = false;
+      _isVisualCheckedIn = false;
+      dragOffset = 0;
+      _checkInDisplayTime = '00:00:00';
+      _totalHoursDisplay = '00:00';
+      startSwipe = false;
+    });
+  }
+
+  Future<void> _restoreAfterCheckOutFailure() async {
+    await SharedPref().setPreferencesBoolean('isCheckedIn', true);
+    await Get.find<TimerController>().startTimer();
+    await AutoCheckoutService.scheduleAutoCheckout();
+    await CheckInReminderNotificationService().updateReminders();
+    _startLiveTimer();
+
+    if (!mounted) return;
+    setState(() {
+      isCheckedIn = true;
+      _isVisualCheckedIn = true;
+      dragOffset = buttonWidth - knobSize;
+      startSwipe = false;
+    });
+  }
+
   void _onDragEnd() async {
     final threshold = buttonWidth * 0.6;
     if ((!isCheckedIn && dragOffset >= threshold) ||
@@ -502,7 +724,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           isCheckedIn: isCheckedIn,
           onConfirmed: () async {
             // Bypass authentication if test mode OR faceIdEnabled=false from backend config
-            print('🔐 Face ID check: shouldSkipFaceId=${AppConfigService.instance.shouldSkipFaceId}, '
+            print(
+                '🔐 Face ID check: shouldSkipFaceId=${AppConfigService.instance.shouldSkipFaceId}, '
                 'isTestMode=${AppConfigService.instance.isTestMode}, '
                 'faceIdEnabled=${AppConfigService.instance.faceIdEnabled}');
             if (AppConfigService.instance.shouldSkipFaceId) {
@@ -563,9 +786,11 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     } else {
       // Perform global check-out (manual)
       final checkInRecordId = SharedPref().getPreferenceInt('checkInRecordId');
-      print('🔴 _performCheckInOut: CHECK-OUT requested, checkInRecordId=$checkInRecordId');
+      print(
+          '🔴 _performCheckInOut: CHECK-OUT requested, checkInRecordId=$checkInRecordId');
       if (checkInRecordId == 0) {
-        print('⚠️ _performCheckInOut: checkInRecordId is 0! Sending anyway — backend should resolve.');
+        print(
+            '⚠️ _performCheckInOut: checkInRecordId is 0! Sending anyway — backend should resolve.');
       }
       sl
           .get<CheckOutBloc>()
@@ -603,13 +828,46 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
         // Listen to CheckInBloc to update time display after successful check-in
         BlocListener<CheckInBloc, CheckInState>(
           bloc: sl.get<CheckInBloc>(),
-          listener: (context, state) {
-            if (state is CheckedInST || state is CheckInWarningST) {
+          listener: (context, state) async {
+            if (state is CheckInLoadingST) {
+              if (state.isLoading) {
+                _setApiLoading(true);
+              } else {
+                _setApiLoading(false);
+              }
+            } else if (state is CheckedInST) {
+              _setApiLoading(false);
               // Reload display times after successful check-in
               _loadDisplayTimes();
               // بدء العداد التصاعدي
               _startLiveTimer();
+              _showAttendanceApiMessage(
+                title: 'Check-In Success',
+                message: state.message,
+                color: const Color(0xFF28A745),
+                icon: Icons.check_circle,
+              );
+            } else if (state is CheckInWarningST) {
+              _setApiLoading(false);
+              _loadDisplayTimes();
+              _startLiveTimer();
+              _showAttendanceApiMessage(
+                title: 'Check-In Warning',
+                message: state.warningMessage,
+                color: const Color(0xFFFFA000),
+                icon: Icons.warning,
+              );
+            } else if (state is CheckInErrorST) {
+              _setApiLoading(false);
+              await _restoreAfterCheckInFailure();
+              _showAttendanceApiMessage(
+                title: 'Invalid Project Location',
+                message: state.errorMessage,
+                color: const Color(0xFFDC3545),
+                icon: Icons.error,
+              );
             } else if (state is CheckInBlockedST) {
+              _setApiLoading(false);
               // Check-in is blocked due to time restriction (after 11:59 AM)
               _resetPosition();
               final timeStr =
@@ -621,200 +879,237 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
         // Listen to CheckOutBloc to update time display after successful check-out
         BlocListener<CheckOutBloc, CheckOutState>(
           bloc: sl.get<CheckOutBloc>(),
-          listener: (context, state) {
-            if (state is CheckedOutST || state is CheckOutWarningST) {
+          listener: (context, state) async {
+            if (state is CheckOutLoadingST) {
+              if (state.isLoading) {
+                _setApiLoading(true);
+              } else {
+                _setApiLoading(false);
+              }
+            } else if (state is CheckedOutST) {
+              _setApiLoading(false);
               // Reload display times after successful check-out
               _loadDisplayTimes();
               // إيقاف العداد التصاعدي
               _stopLiveTimer();
+              _showAttendanceApiMessage(
+                title: 'Check-Out Success',
+                message: state.message,
+                color: const Color(0xFF28A745),
+                icon: Icons.check_circle,
+              );
+            } else if (state is CheckOutWarningST) {
+              _setApiLoading(false);
+              _loadDisplayTimes();
+              _stopLiveTimer();
+              _showAttendanceApiMessage(
+                title: 'Check-Out Warning',
+                message: state.warningMessage,
+                color: const Color(0xFFFFA000),
+                icon: Icons.warning,
+              );
+            } else if (state is CheckOutErrorST) {
+              _setApiLoading(false);
+              await _restoreAfterCheckOutFailure();
+              _showAttendanceApiMessage(
+                title: 'Check-Out Error',
+                message: state.errorMessage,
+                color: const Color(0xFFDC3545),
+                icon: Icons.error,
+              );
             }
           },
         ),
       ],
-      child: Center(
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Finger animation GIF on top left (behind swipe)
-            Positioned(
-              left: -80,
-              top: -80,
-              child: Opacity(
-                opacity: 0.4,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    bottomRight: Radius.circular(23),
-                  ),
-                  child: Image.asset(
-                    'assets/gif/finger-print.gif',
-                    width: 150,
-                    height: 160,
-                    fit: BoxFit.cover,
+      child: Stack(
+        children: [
+          Center(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Finger animation GIF on top left (behind swipe)
+                Positioned(
+                  left: -80,
+                  top: -80,
+                  child: Opacity(
+                    opacity: 0.4,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        bottomRight: Radius.circular(23),
+                      ),
+                      child: Image.asset(
+                        'assets/gif/finger-print.gif',
+                        width: 150,
+                        height: 160,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Main swipe button container
-                GestureDetector(
-                  onHorizontalDragStart: (_) =>
-                      setState(() => isDragging = true),
-                  onHorizontalDragUpdate: (details) {
-                    setState(() {
-                      dragOffset += details.delta.dx;
-                      dragOffset =
-                          dragOffset.clamp(0.0, buttonWidth - knobSize);
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Main swipe button container
+                    GestureDetector(
+                      onHorizontalDragStart: (_) =>
+                          setState(() => isDragging = true),
+                      onHorizontalDragUpdate: (details) {
+                        setState(() {
+                          dragOffset += details.delta.dx;
+                          dragOffset =
+                              dragOffset.clamp(0.0, buttonWidth - knobSize);
 
-                      // Calculate swipe progress for smooth visual transitions
-                      final progress = dragOffset / (buttonWidth - knobSize);
+                          // Calculate swipe progress for smooth visual transitions
+                          final progress = dragOffset / (buttonWidth - knobSize);
 
-                      if (dragOffset > 2.0) {
-                        startSwipe = true;
-                        // Smooth visual state transition based on swipe progress
-                        if (progress > 0.5) {
-                          if (_isVisualCheckedIn != !isCheckedIn) {
-                            _isVisualCheckedIn = !isCheckedIn;
-                            // Haptic feedback when visual state changes
-                            HapticFeedback.lightImpact();
+                          if (dragOffset > 2.0) {
+                            startSwipe = true;
+                            // Smooth visual state transition based on swipe progress
+                            if (progress > 0.5) {
+                              if (_isVisualCheckedIn != !isCheckedIn) {
+                                _isVisualCheckedIn = !isCheckedIn;
+                                // Haptic feedback when visual state changes
+                                HapticFeedback.lightImpact();
+                              }
+                            } else {
+                              if (_isVisualCheckedIn != isCheckedIn) {
+                                _isVisualCheckedIn = isCheckedIn;
+                              }
+                            }
+                          } else {
+                            startSwipe = false;
+                            if (_isVisualCheckedIn != isCheckedIn) {
+                              _isVisualCheckedIn = isCheckedIn;
+                            }
                           }
-                        } else {
-                          if (_isVisualCheckedIn != isCheckedIn) {
-                            _isVisualCheckedIn = isCheckedIn;
-                          }
-                        }
-                      } else {
-                        startSwipe = false;
-                        if (_isVisualCheckedIn != isCheckedIn) {
-                          _isVisualCheckedIn = isCheckedIn;
-                        }
-                      }
-                    });
-                  },
-                  onHorizontalDragEnd: (_) => _onDragEnd(),
-                  child: Container(
-                    width: buttonWidth,
-                    height: buttonHeight,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(40),
-                      color: const Color(0xFFFFFFFF),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(40),
-                      child: Stack(
-                        clipBehavior: Clip.hardEdge,
-                        children: [
-                          // Center text with dynamic color and opacity transition
-                          Center(
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                // First text (SWIPE TO CHECK IN) - fades out during swipe
-                                Opacity(
-                                  opacity: _isVisualCheckedIn
-                                      ? 0.0
-                                      : 1.0 -
-                                          (dragOffset /
-                                                  (buttonWidth - knobSize))
-                                              .clamp(0.0, 1.0),
-                                  child: Text(
-                                    translate(
-                                        'custom_swipe_button.swipe_to_check_in'),
-                                    style: GoogleFonts.poppins(
-                                      color: const Color(0xFF151544),
-                                      fontSize: 18.sp,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                                // Second text (SWIPE TO CHECK OUT) - fades in during swipe
-                                Opacity(
-                                  opacity: _isVisualCheckedIn
-                                      ? 1.0
-                                      : (dragOffset / (buttonWidth - knobSize))
-                                          .clamp(0.0, 1.0),
-                                  child: Text(
-                                    translate(
-                                        'custom_swipe_button.swipe_to_check_out'),
-                                    style: GoogleFonts.poppins(
-                                      color: const Color(0xFF151544),
-                                      fontSize: 18.sp,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Dynamic chevron GIF that changes based on state
-                          Positioned(
-                            left: _isVisualCheckedIn ? null : dragOffset + 2,
-                            right: _isVisualCheckedIn
-                                ? (buttonWidth - dragOffset - knobSize)
-                                : null,
-                            top: (buttonHeight - 40) / 2,
-                            child: Builder(
-                              builder: (context) {
-                                // Calculate progress (0.0 to 1.0)
-                                final progress =
-                                    (dragOffset / (buttonWidth - knobSize))
-                                        .clamp(0.0, 1.0);
-
-                                // Calculate opacity and scaleX based on progress
-                                // Gradually fade out and shrink horizontally as approaching center
-                                // Then fade in and expand horizontally after passing center
-                                double opacity;
-                                double scaleX;
-
-                                if (progress <= 0.5) {
-                                  // First half: gradually fade out and shrink towards center
-                                  opacity = 1.0 - (progress * 2); // 1.0 -> 0.0
-                                  scaleX = 1.0 - (progress * 2); // 1.0 -> 0.0
-                                } else {
-                                  // Second half: gradually fade in and expand from center
-                                  opacity = (progress - 0.5) * 2; // 0.0 -> 1.0
-                                  scaleX = (progress - 0.5) * 2; // 0.0 -> 1.0
-                                }
-
-                                return AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 300),
-                                  transitionBuilder: (child, anim) =>
-                                      FadeTransition(
-                                          opacity: anim, child: child),
-                                  child: Transform(
-                                    transform: Matrix4.identity()
-                                      ..scale(scaleX, 1.0),
-                                    alignment: Alignment.center,
-                                    child: Opacity(
-                                      opacity: opacity,
-                                      child: Transform.flip(
-                                        key: ValueKey(_isVisualCheckedIn),
-                                        flipX: _isVisualCheckedIn,
-                                        child: ColorFiltered(
-                                          colorFilter: ColorFilter.mode(
-                                            _isVisualCheckedIn
-                                                ? const Color(0xFF81819d)
-                                                : const Color(0xFF848484),
-                                            BlendMode.srcIn,
-                                          ),
-                                          child: Image.asset(
-                                            'assets/gif/arrow_animation.gif',
-                                            width: 50,
-                                            height: 36.88,
-                                            fit: BoxFit.cover,
-                                          ),
+                        });
+                      },
+                      onHorizontalDragEnd: (_) => _onDragEnd(),
+                      child: Container(
+                        width: buttonWidth,
+                        height: buttonHeight,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(40),
+                          color: const Color(0xFFFFFFFF),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(40),
+                          child: Stack(
+                            clipBehavior: Clip.hardEdge,
+                            children: [
+                              // Center text with dynamic color and opacity transition
+                              Center(
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // First text (SWIPE TO CHECK IN) - fades out during swipe
+                                    Opacity(
+                                      opacity: _isVisualCheckedIn
+                                          ? 0.0
+                                          : 1.0 -
+                                              (dragOffset /
+                                                      (buttonWidth - knobSize))
+                                                  .clamp(0.0, 1.0),
+                                      child: Text(
+                                        translate(
+                                            'custom_swipe_button.swipe_to_check_in'),
+                                        style: GoogleFonts.poppins(
+                                          color: const Color(0xFF151544),
+                                          fontSize: 18.sp,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.5,
                                         ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                                    // Second text (SWIPE TO CHECK OUT) - fades in during swipe
+                                    Opacity(
+                                      opacity: _isVisualCheckedIn
+                                          ? 1.0
+                                          : (dragOffset / (buttonWidth - knobSize))
+                                              .clamp(0.0, 1.0),
+                                      child: Text(
+                                        translate(
+                                            'custom_swipe_button.swipe_to_check_out'),
+                                        style: GoogleFonts.poppins(
+                                          color: const Color(0xFF151544),
+                                          fontSize: 18.sp,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Dynamic chevron GIF that changes based on state
+                              Positioned(
+                                left: _isVisualCheckedIn ? null : dragOffset + 2,
+                                right: _isVisualCheckedIn
+                                    ? (buttonWidth - dragOffset - knobSize)
+                                    : null,
+                                top: (buttonHeight - 40) / 2,
+                                child: Builder(
+                                  builder: (context) {
+                                    // Calculate progress (0.0 to 1.0)
+                                    final progress =
+                                        (dragOffset / (buttonWidth - knobSize))
+                                            .clamp(0.0, 1.0);
+
+                                    // Calculate opacity and scaleX based on progress
+                                    // Gradually fade out and shrink horizontally as approaching center
+                                    // Then fade in and expand horizontally after passing center
+                                    double opacity;
+                                    double scaleX;
+
+                                    if (progress <= 0.5) {
+                                      // First half: gradually fade out and shrink towards center
+                                      opacity =
+                                          1.0 - (progress * 2); // 1.0 -> 0.0
+                                      scaleX =
+                                          1.0 - (progress * 2); // 1.0 -> 0.0
+                                    } else {
+                                      // Second half: gradually fade in and expand from center
+                                      opacity = (progress - 0.5) * 2; // 0.0 -> 1.0
+                                      scaleX = (progress - 0.5) * 2; // 0.0 -> 1.0
+                                    }
+
+                                    return AnimatedSwitcher(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      transitionBuilder: (child, anim) =>
+                                          FadeTransition(
+                                              opacity: anim, child: child),
+                                      child: Transform(
+                                        transform: Matrix4.identity()
+                                          ..scale(scaleX, 1.0),
+                                        alignment: Alignment.center,
+                                        child: Opacity(
+                                          opacity: opacity,
+                                          child: Transform.flip(
+                                            key: ValueKey(_isVisualCheckedIn),
+                                            flipX: _isVisualCheckedIn,
+                                            child: ColorFiltered(
+                                              colorFilter: ColorFilter.mode(
+                                                _isVisualCheckedIn
+                                                    ? const Color(0xFF81819d)
+                                                    : const Color(0xFF848484),
+                                                BlendMode.srcIn,
+                                              ),
+                                              child: Image.asset(
+                                                'assets/gif/arrow_animation.gif',
+                                                width: 50,
+                                                height: 36.88,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
 
                           // Old icon animation code (commented for reference)
                           // PositionedDirectional(
@@ -861,123 +1156,135 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                           // ),
 
                           // Swipe knob (invisible but functional)
-                          Positioned(
-                            left: dragOffset,
-                            top: (buttonHeight - knobSize) / 2,
-                            child: Container(
-                              width: knobSize,
-                              height: knobSize,
-                              decoration: BoxDecoration(
-                                color: Colors.transparent,
-                                borderRadius:
-                                    BorderRadius.circular(knobSize / 2),
+                              Positioned(
+                                left: dragOffset,
+                                top: (buttonHeight - knobSize) / 2,
+                                child: Container(
+                                  width: knobSize,
+                                  height: knobSize,
+                                  decoration: BoxDecoration(
+                                    color: Colors.transparent,
+                                    borderRadius:
+                                        BorderRadius.circular(knobSize / 2),
+                                  ),
+                                ),
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Timeline component below the button
+                    SizedBox(height: 24.h),
+                    SizedBox(
+                      width: buttonWidth * 1.0, // Adjusted width for timeline
+                      child: Column(
+                        children: [
+                          // Time labels above the timeline
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // Left time label - shows check-in time
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 8.w, vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  _checkInDisplayTime,
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+
+                              // Right time label - shows check-out time
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 8.w, vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  _checkOutDisplayTime,
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 8.h),
+
+                          // Timeline with circles on the line
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 25.w),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // The line in the middle
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Image.asset(
+                                        'assets/newapp/row.png',
+                                        height: 3,
+                                        fit: BoxFit.fill,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // Circles on top
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    // Left circle image
+                                    Image.asset(
+                                      'assets/newapp/left.png',
+                                      width: 10.w,
+                                      height: 15.w,
+                                    ),
+
+                                    // Right circle image
+                                    Image.asset(
+                                      'assets/newapp/right.png',
+                                      width: 10.w,
+                                      height: 15.w,
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ),
-
-                // Timeline component below the button
-                SizedBox(height: 24.h),
-                SizedBox(
-                  width: buttonWidth * 1.0, // Adjusted width for timeline
-                  child: Column(
-                    children: [
-                      // Time labels above the timeline
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Left time label - shows check-in time
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 8.w, vertical: 2.h),
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _checkInDisplayTime,
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-
-                          // Right time label - shows check-out time
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 8.w, vertical: 2.h),
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _checkOutDisplayTime,
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      SizedBox(height: 8.h),
-
-                      // Timeline with circles on the line
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 25.w),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // The line in the middle
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Image.asset(
-                                    'assets/newapp/row.png',
-                                    height: 3,
-                                    fit: BoxFit.fill,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            // Circles on top
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Left circle image
-                                Image.asset(
-                                  'assets/newapp/left.png',
-                                  width: 10.w,
-                                  height: 15.w,
-                                ),
-
-                                // Right circle image
-                                Image.asset(
-                                  'assets/newapp/right.png',
-                                  width: 10.w,
-                                  height: 15.w,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               ],
             ),
+          ),
+          if (_isApiLoading)
+            const Positioned.fill(
+              child: AbsorbPointer(
+                absorbing: true,
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ),
           ],
-        ),
       ),
     );
   }

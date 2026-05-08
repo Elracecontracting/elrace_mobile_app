@@ -3,7 +3,8 @@ import 'dart:convert';
 
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart' hide Message;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'
+    hide Message;
 
 import '../models/models.dart';
 import '../repositories/chat_repository.dart';
@@ -33,10 +34,12 @@ class ChatNotificationService {
   // Notification channel for Android
   static const String _channelId = 'chat_messages';
   static const String _channelName = 'Chat Messages';
-  static const String _channelDescription = 'Notifications for new chat messages';
+  static const String _channelDescription =
+      'Notifications for new chat messages';
 
-  // Callback for handling notification taps
-  void Function(String chatId, String chatTitle, ChatType chatType)? onNotificationTap;
+  // Callback for handling notification taps.
+  void Function(String chatId, String chatTitle, ChatType chatType)?
+      onNotificationTap;
 
   /// Initialize the notification service
   Future<void> initialize() async {
@@ -59,8 +62,8 @@ class ChatNotificationService {
     // FirebaseService.initialize() already set up the shared native platform
     // with a unified tap-handler. A second initialize() call would OVERRIDE
     // that handler, breaking notification-tap routing for FCM and other services.
-    // Chat notification taps are now routed through FirebaseService's handler
-    // using a JSON payload with category = "chat_message".
+    // Chat notification taps are routed through FirebaseService's unified
+    // handler using a JSON payload with category = "chat_message".
 
     print('✅ ChatNotificationService: Initialized');
   }
@@ -158,8 +161,6 @@ class ChatNotificationService {
         return '🎬 Video';
       case MessageType.signableDoc:
         return '📝 Document for signing';
-      default:
-        return '';
     }
   }
 
@@ -171,7 +172,8 @@ class ChatNotificationService {
     required ChatType chatType,
   }) async {
     // التحقق من إعدادات كتم إشعارات الشات
-    final isChatMuted = await NotificationStorageService.isChannelMuted('chat_message');
+    final isChatMuted =
+        await NotificationStorageService.isChannelMuted('chat_message');
     if (isChatMuted) return;
 
     // Generate unique notification ID from chat ID
@@ -201,8 +203,7 @@ class ChatNotificationService {
     );
 
     // JSON payload compatible with FirebaseService's unified tap-handler.
-    // FirebaseService._handleNotificationTap parses this and routes to ChatScreen
-    // when category == 'chat_message'.
+    // Only chat payloads navigate; other notification types remain view-only.
     final payload = jsonEncode({
       'category': 'chat_message',
       'chat_id': chatId,

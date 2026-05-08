@@ -22,6 +22,8 @@ class ApprovalActionButtons extends StatelessWidget {
   final double? pillSpacing;
   final bool showHrApproveConfirmation;
   final bool enableFakeApproveDemo;
+  final bool useProvidedComment;
+  final String? Function()? commentProvider;
 
   const ApprovalActionButtons({
     super.key,
@@ -39,7 +41,15 @@ class ApprovalActionButtons extends StatelessWidget {
     this.pillSpacing,
     this.showHrApproveConfirmation = false,
     this.enableFakeApproveDemo = false,
+    this.useProvidedComment = false,
+    this.commentProvider,
   });
+
+  String _resolveProvidedComment() {
+    final raw = commentProvider?.call() ?? '';
+    final trimmed = raw.trim();
+    return trimmed.isEmpty ? '..' : trimmed;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,14 +191,19 @@ class ApprovalActionButtons extends StatelessWidget {
                 ? null
                 : () async {
                     final token = SharedPref.getLoginData().result?.token ?? '';
-                    final String? comment =
-                        await _showCommentDialog(context, label);
+                    String finalComment = '..';
+                    if (useProvidedComment) {
+                      finalComment = _resolveProvidedComment();
+                    } else {
+                      final String? comment =
+                          await _showCommentDialog(context, label);
 
-                    if (!context.mounted) return;
-                    if (comment == null) {
-                      return;
+                      if (!context.mounted) return;
+                      if (comment == null) {
+                        return;
+                      }
+                      finalComment = comment;
                     }
-                    final finalComment = comment;
 
                     if (context.mounted) {
                       showDialog(
@@ -343,7 +358,9 @@ class ApprovalActionButtons extends StatelessWidget {
                     final token = SharedPref.getLoginData().result?.token ?? '';
                     String finalComment = '..';
 
-                    if (showHrApproveConfirmation) {
+                    if (useProvidedComment) {
+                      finalComment = _resolveProvidedComment();
+                    } else if (showHrApproveConfirmation) {
                       final decision =
                           await _showHrActionSliderDialog(context, label);
                       if (!context.mounted ||
@@ -434,11 +451,17 @@ class ApprovalActionButtons extends StatelessWidget {
                   },
             style: ElevatedButton.styleFrom(
               backgroundColor: color,
+              foregroundColor: Colors.white,
               disabledBackgroundColor: color.withValues(alpha: 0.4),
+              shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
                 borderRadius: pillBorderRadius ?? BorderRadius.circular(30),
               ),
-              elevation: isSelected ? 6 : 2,
             ),
             child: Text(
               '${label.substring(0, 1)}${label.substring(1).toLowerCase()}',
@@ -827,15 +850,19 @@ class ApprovalActionButtons extends StatelessWidget {
               ? null
               : () async {
                   final token = SharedPref.getLoginData().result?.token ?? '';
-                  final String? comment =
-                      await _showCommentDialog(context, label);
+                  String finalComment = '..';
+                  if (useProvidedComment) {
+                    finalComment = _resolveProvidedComment();
+                  } else {
+                    final String? comment =
+                        await _showCommentDialog(context, label);
 
-                  // If user cancelled the dialog or context is no longer valid, don't proceed
-                  if (!context.mounted) return;
-                  if (comment == null) return;
+                    // If user cancelled the dialog or context is no longer valid, don't proceed
+                    if (!context.mounted) return;
+                    if (comment == null) return;
 
-                  // Use comment if provided, otherwise use default
-                  final finalComment = comment;
+                    finalComment = comment;
+                  }
 
                   // Show loading immediately after comment is submitted
                   if (context.mounted) {

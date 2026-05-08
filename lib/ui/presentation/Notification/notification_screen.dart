@@ -1,15 +1,8 @@
-import 'dart:convert';
-
 import 'package:el_race/core/services/notification_storage_service.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/screens/hr_details_screen.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/screens/invoice_details_screen.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/screens/pettycash_details_screen.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/screens/rfq_details_screen.dart';
 import 'package:el_race/ui/presentation/Notification/notification_mute_settings_screen.dart';
 import 'package:el_race/ui/presentation/circular_announcement/data/circular_announcement_api_service.dart';
 import 'package:el_race/ui/presentation/circular_announcement/data/circular_announcement_model.dart';
 import 'package:el_race/ui/presentation/circular_announcement/widgets/circular_announcement_file_viewer.dart';
-import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -41,6 +34,7 @@ class _NotificationTabConfig {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
+  static const int _notificationPageSize = 10;
   static const List<_NotificationTabConfig> _fixedNotificationTabs = [
     _NotificationTabConfig(
       category: 'circular',
@@ -56,10 +50,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   int currentIndex = 0;
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _contentScrollController = ScrollController();
   List<GlobalKey> _tabKeys = <GlobalKey>[];
   List<_NotificationTabConfig> _notificationTabs = const [];
   List<Map<String, dynamic>> notifications = [];
   bool _isLoading = true;
+  bool _isLoadingMoreNotifications = false;
+  bool _hasMoreNotifications = true;
+  int _notificationOffset = 0;
 
   // Circular/Announcement API data
   final CircularAnnouncementApiService _circularApiService =
@@ -73,10 +71,43 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
+    _contentScrollController.addListener(_handleContentScroll);
     _loadDynamicCategories();
     _loadMuteSettings();
     _loadNotifications();
     _loadCircularAnnouncements(); // Load from API
+  }
+
+  @override
+  void dispose() {
+    _contentScrollController.removeListener(_handleContentScroll);
+    _contentScrollController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  bool get _isLocalNotificationTab {
+    if (_notificationTabs.isEmpty || currentIndex >= _notificationTabs.length) {
+      return true;
+    }
+
+    final selectedCategory = _notificationTabs[currentIndex].category;
+    return selectedCategory != 'announcement' && selectedCategory != 'circular';
+  }
+
+  void _handleContentScroll() {
+    if (!_contentScrollController.hasClients ||
+        !_isLocalNotificationTab ||
+        _isLoading ||
+        _isLoadingMoreNotifications ||
+        !_hasMoreNotifications) {
+      return;
+    }
+
+    final position = _contentScrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 300) {
+      _loadMoreNotifications();
+    }
   }
 
   String _normalizeCategory(String value) {
@@ -300,14 +331,28 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _loadNotifications() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isLoadingMoreNotifications = false;
+      _hasMoreNotifications = true;
+      _notificationOffset = 0;
+    });
     try {
       final loadedNotifications =
-          await NotificationStorageService.getNotifications();
+          await NotificationStorageService.getNotifications(
+        limit: _notificationPageSize,
+        offset: 0,
+      );
 
       if (mounted) {
         setState(() {
-          notifications = loadedNotifications;
+          notifications = List<Map<String, dynamic>>.from(
+            loadedNotifications,
+            growable: true,
+          );
+          _notificationOffset = loadedNotifications.length;
+          _hasMoreNotifications =
+              loadedNotifications.length >= _notificationPageSize;
           _isLoading = false;
         });
       }
@@ -316,6 +361,61 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _loadMoreNotifications() async {
+    if (_isLoading || _isLoadingMoreNotifications || !_hasMoreNotifications) {
+      return;
+    }
+
+    final nextOffset = _notificationOffset;
+    setState(() {
+      _isLoadingMoreNotifications = true;
+    });
+    try {
+      debugPrint(
+        'Notification load more API: /notifications params={limit: $_notificationPageSize, offset: $nextOffset}',
+      );
+      final loadedNotifications =
+          await NotificationStorageService.getNotifications(
+        limit: _notificationPageSize,
+        offset: nextOffset,
+      );
+      debugPrint(
+        'Notification load more response: offset=$nextOffset, count=${loadedNotifications.length}',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        final mergedNotifications = List<Map<String, dynamic>>.from(
+          notifications,
+          growable: true,
+        );
+        final existingIds = mergedNotifications
+            .map((notification) => '${notification['id'] ?? ''}')
+            .where((id) => id.isNotEmpty)
+            .toSet();
+
+        for (final notification in loadedNotifications) {
+          final id = '${notification['id'] ?? ''}';
+          if (id.isNotEmpty && existingIds.contains(id)) continue;
+          mergedNotifications.add(Map<String, dynamic>.from(notification));
+          if (id.isNotEmpty) existingIds.add(id);
+        }
+
+        notifications = mergedNotifications;
+    _notificationOffset = nextOffset + loadedNotifications.length;
+        _hasMoreNotifications =
+            loadedNotifications.length >= _notificationPageSize;
+        _isLoadingMoreNotifications = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading more notifications at offset=$nextOffset: $e');
+      if (!mounted) return;
+      setState(() {
+        _isLoadingMoreNotifications = false;
+      });
     }
   }
 
@@ -390,274 +490,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     });
     // Return false so Dismissible snaps back (item stays visible, now marked read)
     return false;
-  }
-
-  Map<String, dynamic> _extractNotificationData(Map<String, dynamic> item) {
-    final rawData = item['data'];
-    if (rawData is Map<String, dynamic>) {
-      return rawData;
-    }
-    if (rawData is Map) {
-      return Map<String, dynamic>.from(rawData);
-    }
-    if (rawData is String && rawData.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(rawData);
-        if (decoded is Map<String, dynamic>) {
-          return decoded;
-        }
-        if (decoded is Map) {
-          return Map<String, dynamic>.from(decoded);
-        }
-      } catch (_) {
-        // Ignore malformed JSON payload and fallback to empty map.
-      }
-    }
-    return {};
-  }
-
-  int? _toInt(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    return int.tryParse(value.toString());
-  }
-
-  int? _extractRecordId(Map<String, dynamic> item, Map<String, dynamic> data) {
-    final candidates = <dynamic>[
-      data['record_id'],
-      data['recordId'],
-      data['res_id'],
-      data['resId'],
-      data['request_id'],
-      data['hr_request_id'],
-      data['rfq_id'],
-      data['invoice_id'],
-      data['petty_cash_id'],
-      data['expense_id'],
-      data['po_id'],
-      data['lpo_id'],
-      data['id'],
-      item['record_id'],
-      item['recordId'],
-      item['res_id'],
-      item['resId'],
-      item['request_id'],
-      item['hr_request_id'],
-      item['rfq_id'],
-      item['invoice_id'],
-      item['petty_cash_id'],
-      item['expense_id'],
-      item['po_id'],
-      item['lpo_id'],
-    ];
-
-    for (final candidate in candidates) {
-      final id = _toInt(candidate);
-      if (id != null) return id;
-    }
-
-    return null;
-  }
-
-  String _normalizeType(dynamic value) {
-    return (value ?? '')
-        .toString()
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '');
-  }
-
-  String _resolveRecordType(
-      Map<String, dynamic> item, Map<String, dynamic> data) {
-    final candidates = <dynamic>[
-      data['record_type'],
-      data['target_type'],
-      data['model_name'],
-      data['model'],
-      data['module'],
-      data['entity'],
-      data['resource_type'],
-      data['type'],
-      data['screen'],
-      item['record_type'],
-      item['target_type'],
-      item['model_name'],
-      item['model'],
-      item['module'],
-      item['entity'],
-      item['resource_type'],
-      item['type'],
-      item['category'],
-    ];
-
-    bool hasLpoKey = false;
-    bool hasRfqKey = false;
-    bool hasInvoiceKey = false;
-    bool hasHrKey = false;
-    bool hasPettyKey = false;
-
-    final keyPool = <dynamic>[
-      ...data.keys,
-      ...item.keys,
-      data['po_id'],
-      data['lpo_id'],
-      data['rfq_id'],
-      data['invoice_id'],
-      data['request_id'],
-      data['hr_request_id'],
-      data['petty_cash_id'],
-      data['expense_id'],
-      item['po_id'],
-      item['lpo_id'],
-      item['rfq_id'],
-      item['invoice_id'],
-      item['request_id'],
-      item['hr_request_id'],
-      item['petty_cash_id'],
-      item['expense_id'],
-    ];
-
-    for (final key in keyPool) {
-      final normalized = _normalizeType(key);
-      if (normalized.contains('lpo') || normalized.contains('poid')) {
-        hasLpoKey = true;
-      }
-      if (normalized.contains('rfq')) {
-        hasRfqKey = true;
-      }
-      if (normalized.contains('invoice')) {
-        hasInvoiceKey = true;
-      }
-      if (normalized.contains('hrrequest') ||
-          normalized == 'requestid' ||
-          normalized.contains('employee')) {
-        hasHrKey = true;
-      }
-      if (normalized.contains('pettycash') || normalized.contains('expense')) {
-        hasPettyKey = true;
-      }
-    }
-
-    for (final candidate in candidates) {
-      final normalized = _normalizeType(candidate);
-      if (normalized.isEmpty ||
-          normalized == 'notification' ||
-          normalized == 'announcement' ||
-          normalized == 'circular') {
-        continue;
-      }
-
-      if (normalized.contains('rfq') || normalized == 'purchasequotation') {
-        return 'rfq';
-      }
-      if (normalized.contains('invoice') ||
-          normalized.contains('accountmove')) {
-        return 'invoice';
-      }
-      if (normalized.contains('pettycash') ||
-          normalized.contains('hrexpensesheet') ||
-          normalized == 'expense' ||
-          normalized.contains('expense')) {
-        return 'pettycash';
-      }
-      if (normalized == 'hr' ||
-          normalized.contains('hrrequest') ||
-          normalized.contains('leaverequest') ||
-          normalized.contains('employeerequest')) {
-        return 'hr';
-      }
-      if (normalized.contains('lpo') ||
-          normalized == 'po' ||
-          normalized.contains('purchaseorder')) {
-        return hasRfqKey ? 'rfq' : 'lpo';
-      }
-    }
-
-    if (hasRfqKey) return 'rfq';
-    if (hasInvoiceKey) return 'invoice';
-    if (hasPettyKey) return 'pettycash';
-    if (hasLpoKey) return 'lpo';
-    if (hasHrKey) return 'hr';
-
-    final text =
-        '${item['title'] ?? ''} ${item['body'] ?? ''}'.toString().toLowerCase();
-    if (text.contains('rfq')) return 'rfq';
-    if (text.contains('invoice')) return 'invoice';
-    if (text.contains('petty cash') || text.contains('expense')) {
-      return 'pettycash';
-    }
-    if (text.contains('lpo') || text.contains('purchase order')) return 'lpo';
-    if (text.contains('hr request') ||
-        text.contains('leave request') ||
-        text.contains('hr')) {
-      return 'hr';
-    }
-
-    return '';
-  }
-
-  Future<bool> _openLinkedRecord(Map<String, dynamic> item) async {
-    final data = _extractNotificationData(item);
-    final recordId = _extractRecordId(item, data);
-    final recordType = _resolveRecordType(item, data);
-
-    debugPrint(
-      'Notification redirect - type: $recordType, recordId: $recordId',
-    );
-
-    if (!mounted || recordId == null) return false;
-
-    switch (recordType) {
-      case 'hr':
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => HrDetailsScreen(
-              requestId: '$recordId',
-              type: 'HR',
-            ),
-          ),
-        );
-        return true;
-      case 'rfq':
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => RfqDetailsScreen(
-              requestId: '$recordId',
-              type: 'RFQ',
-            ),
-          ),
-        );
-        return true;
-      case 'invoice':
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => InvoiceDetailsScreen(
-              requestId: '$recordId',
-              type: 'INVOICE',
-            ),
-          ),
-        );
-        return true;
-      case 'pettycash':
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PettyCashDetailsScreen(
-              requestId: '$recordId',
-              type: 'PETTYCASH',
-            ),
-          ),
-        );
-        return true;
-      case 'lpo':
-        return Util.openLpoPdfReport(context, recordId);
-      default:
-        return false;
-    }
   }
 
   String _formatTime(String isoString) {
@@ -753,6 +585,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     child: Builder(
                       builder: (context) {
                         return SingleChildScrollView(
+                          controller: _contentScrollController,
                           physics: const BouncingScrollPhysics(),
                           padding: EdgeInsets.only(
                             bottom: context.systemBottomInset + 16,
@@ -960,8 +793,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: filteredNotifications.length,
+      itemCount:
+          filteredNotifications.length + (_isLoadingMoreNotifications ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index >= filteredNotifications.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         final item = filteredNotifications[index];
         final currentNotificationIcon = _notificationTabs.isNotEmpty &&
                 currentIndex < _notificationTabs.length
@@ -1113,9 +954,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
               if (!mounted) return;
             }
 
-            final openedRecord = await _openLinkedRecord(item);
-            if (!mounted || openedRecord) return;
-
             _showAnnouncementDialog(
               context,
               item['title'] ?? 'Notification',
@@ -1193,7 +1031,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
         Padding(
           padding: const EdgeInsets.only(left: 6, bottom: 10),
           child: Text(
-            _formatTime(item['timestamp'] ?? ''),
+            (item['timeAgo'] ?? '').toString().trim().isNotEmpty
+                ? item['timeAgo'].toString()
+                : _formatTime(item['timestamp'] ?? ''),
             style: const TextStyle(
               fontSize: 9,
               color: Colors.black54,

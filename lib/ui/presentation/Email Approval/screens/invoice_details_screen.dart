@@ -1,9 +1,8 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_action_buttons.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/file_binary.dart';
+import 'package:el_race/ui/presentation/lpo/screens/lpo_pdf_viewer_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -11,7 +10,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:math' as math;
 
 class InvoiceDetailsScreen extends StatefulWidget {
   final String requestId;
@@ -30,11 +29,55 @@ class InvoiceDetailsScreen extends StatefulWidget {
 }
 
 class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
+  static const String _localFakeInvoiceRequestId = 'LOCAL_FAKE_INVOICE_001';
   bool _isLoading = true;
   String _error = '';
 
   Map<String, dynamic> _formData = const {};
-  List<dynamic> _attachmentIds = const [];
+
+  bool get _isLocalFakeRequest =>
+      widget.requestId == _localFakeInvoiceRequestId;
+
+  Map<String, dynamic> _buildLocalFakeInvoiceData() {
+    return {
+      'request_no': 'INV/1254/89585',
+      'project_name': 'Project Name',
+      'department': 'Department',
+      'vendor_name': 'Al Ameen Interiors',
+      'vendor_tags': ['Ceiling', 'Civil', 'Fitout', 'Label'],
+      'work_order_no': '123345654874954652',
+      'request_date': '2025-01-10',
+      'material_type': 'Ceramic',
+      'contract_lpo': 'RCC/LPO/1231215',
+      'advance': '15000',
+      'progress': '60000',
+      'last_update': '2025-01-28',
+      'retention': '-',
+      'invoice_amount': '1000000',
+      'completion': '85',
+      'advance_percentage': '20%',
+      'last_update_percentage': '30%',
+      'retention_percentage': '10%',
+      'comment': '',
+      'client_photo_url': '',
+      'attachment_ids': ['1'],
+    };
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isLocalFakeRequest) {
+      final fake = _buildLocalFakeInvoiceData();
+      _formData = fake;
+      _isLoading = false;
+      return;
+    }
+    if (widget.initialData != null) {
+      _formData = Map<String, dynamic>.from(widget.initialData!);
+    }
+    _fetchInvoiceDetails();
+  }
 
   String _safe(dynamic v, {String fallback = ''}) {
     if (v == null) return fallback;
@@ -54,383 +97,50 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     return fallback;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.initialData != null) {
-      _formData = Map<String, dynamic>.from(widget.initialData!);
-      final rawAttachments = widget.initialData!['attachment_ids'];
-      if (rawAttachments is List) {
-        _attachmentIds = rawAttachments;
-      }
-    }
-    _fetchInvoiceDetails();
+  String _displayOrDash(String value) {
+    final normalized = value.trim();
+    return normalized.isEmpty ? '-' : normalized;
   }
 
-  Future<void> _fetchInvoiceDetails() async {
-    final token = SharedPref.getLoginData().result?.token;
-    final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-
-    final url = Uri.parse('https://erp.elrace.com/api/get_invoice_details');
-    final body = jsonEncode({
-      'jsonrpc': '2.0',
-      'params': {
-        'invoice_id': int.tryParse(widget.requestId),
-      },
-    });
-
-    print('══════════ [INVOICE] API REQUEST ══════════');
-    print('[INVOICE] URL: $url');
-    print('[INVOICE] METHOD: GET');
-    print(
-        '[INVOICE] HEADERS: ${headers.map((k, v) => MapEntry(k, k == "Authorization" ? "Bearer ***" : v))}');
-    print('[INVOICE] BODY: $body');
-    print('══════════════════════════════════════════');
-
-    try {
-      final request = http.Request('GET', url)
-        ..headers.addAll(headers)
-        ..body = body;
-
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-
-      print('══════════ [INVOICE] API RESPONSE ══════════');
-      print('[INVOICE] STATUS: ${response.statusCode}');
-      print('[INVOICE] BODY: ${response.body}');
-      print('════════════════════════════════════════════');
-
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Failed to load invoice details: ${response.statusCode}');
-      }
-
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final result = (decoded['result'] as Map?)?['data'] as Map?;
-      final formView =
-          (result?['form_view'] as Map?)?.cast<String, dynamic>() ??
-              <String, dynamic>{};
-      final attachmentIds = (result?['attachment_ids'] as List?) ?? const [];
-
-      print('[INVOICE] PARSED result keys: ${result?.keys.toList()}');
-      print('[INVOICE] PARSED formView keys: ${formView.keys.toList()}');
-      print('[INVOICE] PARSED formView: $formView');
-      print('[INVOICE] PARSED attachmentIds: $attachmentIds');
-
-      if (!mounted) return;
-      setState(() {
-        _formData = formView;
-        _attachmentIds = attachmentIds;
-        _isLoading = false;
-        _error = '';
-      });
-    } catch (e) {
-      print('══════════ [INVOICE] API ERROR ══════════');
-      print('[INVOICE] EXCEPTION: $e');
-      print('═════════════════════════════════════════');
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _viewAttachment() async {
-    if (_attachmentIds.isEmpty) {
-      Fluttertoast.showToast(
-        msg: 'No attachment found.',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.CENTER,
-        backgroundColor: Colors.black,
-        textColor: Colors.white,
-      );
-      return;
-    }
-
-    dynamic attachmentId;
-    final firstAttachment = _attachmentIds.first;
-    if (firstAttachment is Map) {
-      attachmentId = firstAttachment['attachment_id'] ??
-          firstAttachment['id'] ??
-          firstAttachment['res_id'];
-    } else {
-      attachmentId = firstAttachment;
-    }
-
-    final parsedAttachmentId = int.tryParse(_safe(attachmentId));
-    if (parsedAttachmentId == null || parsedAttachmentId <= 0) {
-      Fluttertoast.showToast(
-        msg: 'Invalid attachment id.',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.CENTER,
-        backgroundColor: Colors.black,
-        textColor: Colors.white,
-      );
-      return;
-    }
-
-    final token = SharedPref.getLoginData().result?.token;
-    final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-
-    final data = {
-      'jsonrpc': '2.0',
-      'params': {
-        'attachment_id': parsedAttachmentId,
-      },
-    };
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      final response = await Dio().fetch(
-        RequestOptions(
-          method: 'GET',
-          path: 'https://erp.elrace.com/api/get_attachment_details',
-          headers: headers,
-          data: data,
-          responseType: ResponseType.json,
-        ),
-      );
-
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
-
-      final resData = response.data as Map;
-      final result = resData['result'] as Map?;
-      final dataMap = result?['data'] as Map?;
-      final binaryBase64 = _pick([
-        dataMap?['attachment_binary_data'],
-        dataMap?['attachment_binary'],
-        dataMap?['datas'],
-        dataMap?['file_data'],
-      ]);
-      final fileName = dataMap?['attachment_name']?.toString() ?? '';
-      final publicUrl = _pick([
-        dataMap?['public_url'],
-        dataMap?['url'],
-        dataMap?['attachment_url'],
-      ]);
-
-      if (binaryBase64.isEmpty) {
-        print('══════════ [INVOICE] ATTACHMENT EMPTY BINARY ══════════');
-        print('[INVOICE] attachment_id: $parsedAttachmentId');
-        print('[INVOICE] response result keys: ${result?.keys.toList()}');
-        print('[INVOICE] response data keys: ${dataMap?.keys.toList()}');
-        print('═════════════════════════════════════════════════════════');
-
-        if (publicUrl.isNotEmpty) {
-          final resolvedUrl = publicUrl.startsWith('http://') ||
-                  publicUrl.startsWith('https://')
-              ? publicUrl
-              : 'https://erp.elrace.com$publicUrl';
-          final uri = Uri.tryParse(resolvedUrl);
-          if (uri != null && await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-            return;
-          }
-        }
-
-        Fluttertoast.showToast(
-          msg: 'Attachment exists but binary data is empty from API.',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-        );
-        return;
-      }
-
-      final pdfBytes = base64Decode(binaryBase64);
-      if (!mounted) return;
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => AttachmentPdfViewer(
-            pdfBytes: pdfBytes,
-            attchmentName: fileName,
-          ),
-        ),
-      );
-    } catch (e) {
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
-      Fluttertoast.showToast(
-        msg: 'Error: $e',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.CENTER,
-        backgroundColor: Colors.black,
-        textColor: Colors.white,
-      );
-    }
-  }
-
-  Widget _card({required Widget child, EdgeInsets? padding}) {
-    return Container(
-      width: double.infinity,
-      padding:
-          padding ?? EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F1F1),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: const Color(0xFF9F9F9F), width: 1),
-      ),
-      child: child,
-    );
-  }
-
-  Widget _sectionTitle(String text, {TextAlign? align}) {
-    return Text(
-      text,
-      textAlign: align,
-      style: GoogleFonts.poppins(
-        fontSize: 13.sp,
-        fontWeight: FontWeight.w800,
-        color: const Color(0xFFADADAD),
-        letterSpacing: 0.2,
-      ),
-    );
-  }
-
-  Widget _label(String text, {TextAlign? align}) {
-    return Text(
-      text,
-      textAlign: align,
-      style: GoogleFonts.poppins(
-        fontSize: 12.sp,
-        fontWeight: FontWeight.w700,
-        color: const Color(0xFFA9A9A9),
-      ),
-    );
-  }
-
-  Widget _value(String text,
-      {double? size, FontWeight? weight, Color? color, TextAlign? align}) {
-    return Text(
-      text,
-      textAlign: align,
-      style: GoogleFonts.poppins(
-        fontSize: size ?? 14.sp,
-        fontWeight: weight ?? FontWeight.w800,
-        color: color ?? const Color(0xFF0E0E0E),
-        letterSpacing: 0.1,
-      ),
-      maxLines: 2,
-      overflow: TextOverflow.visible,
-    );
-  }
-
-  Widget _tagChip(String text, Color bg, Color fg) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.w),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8.r),
-      ),
-      child: Text(
-        text,
-        style: GoogleFonts.poppins(
-          fontSize: 9.sp,
-          fontWeight: FontWeight.w700,
-          color: fg,
-        ),
-      ),
-    );
-  }
-
-  Widget _bulletLine({required String label, String? value, bool dim = false}) {
-    final hasValue = value != null && value.trim().isNotEmpty;
-    return Padding(
-      padding: EdgeInsets.only(bottom: 8.w),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(top: 4.w),
-            child: Text(
-              '•',
-              style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w700,
-                color: dim ? const Color(0xFFBDBDBD) : const Color(0xFF0E0E0E),
-              ),
-            ),
-          ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: label,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w800,
-                      color: dim
-                          ? const Color(0xFFBDBDBD)
-                          : const Color(0xFF131313),
-                    ),
-                  ),
-                  if (hasValue)
-                    TextSpan(
-                      text: ' $value',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w800,
-                        color: dim
-                            ? const Color(0xFFBDBDBD)
-                            : const Color(0xFF131313),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatAmount(String raw) {
-    final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
-    final value = double.tryParse(cleaned);
-    if (value == null) return raw;
-    if (value % 1 == 0) {
-      return NumberFormat('#,##0', 'en_US').format(value);
-    }
-    return NumberFormat('#,##0.##', 'en_US').format(value);
+  String _normalizeImageUrl(String? rawUrl) {
+    final value = (rawUrl ?? '').trim();
+    if (value.isEmpty) return '';
+    final uri = Uri.tryParse(value);
+    if (uri != null && uri.hasScheme) return value;
+    if (value.startsWith('/')) return 'https://erp.elrace.com$value';
+    return 'https://erp.elrace.com/$value';
   }
 
   String _formatDate(dynamic value) {
     final raw = _safe(value);
-    if (raw.isEmpty) return '';
+    if (raw.isEmpty) return '-';
     final normalized = raw.contains(' ') ? raw.replaceFirst(' ', 'T') : raw;
     final parsed = DateTime.tryParse(normalized) ?? DateTime.tryParse(raw);
     if (parsed == null) return raw;
     return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
-  String _formatCompletion(String raw) {
-    final value = raw.trim();
-    if (value.isEmpty) return '';
-    if (value.contains('%')) return value;
-    final numeric = double.tryParse(value.replaceAll(RegExp(r'[^0-9.\-]'), ''));
-    if (numeric == null) return value;
-    if (numeric % 1 == 0) return '${numeric.toInt()}%';
-    return '${numeric.toStringAsFixed(1)}%';
+  String _formatAmount(dynamic value) {
+    final raw = _safe(value);
+    if (raw.isEmpty) return '-';
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    final parsed = double.tryParse(cleaned);
+    if (parsed == null) return _displayOrDash(raw);
+    if (parsed % 1 == 0) {
+      return NumberFormat('#,##0', 'en_US').format(parsed);
+    }
+    return NumberFormat('#,##0.##', 'en_US').format(parsed);
+  }
+
+  double _parsePercent(dynamic value) {
+    final raw = _safe(value);
+    if (raw.isEmpty) return 0;
+    final cleaned =
+        raw.replaceAll('%', '').replaceAll(RegExp(r'[^0-9.\-]'), '');
+    final parsed = double.tryParse(cleaned);
+    if (parsed == null || parsed <= 0) return 0;
+    if (parsed > 100) return 100;
+    return parsed;
   }
 
   List<String> _extractTags(List<dynamic> candidates) {
@@ -453,12 +163,9 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       }
 
       final str = raw.toString().trim();
-      if (str.isEmpty ||
-          str.toLowerCase() == 'null' ||
-          str.toLowerCase() == 'false' ||
-          str.toLowerCase() == 'true') {
-        continue;
-      }
+      if (str.isEmpty) continue;
+      final lower = str.toLowerCase();
+      if (lower == 'null' || lower == 'false' || lower == 'true') continue;
 
       final parsed = str
           .split(RegExp(r'[,|]'))
@@ -478,22 +185,253 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     return const <String>[];
   }
 
-  String _normalizeImageUrl(String? rawUrl) {
-    final value = (rawUrl ?? '').trim();
-    if (value.isEmpty) return '';
-    final uri = Uri.tryParse(value);
-    if (uri != null && uri.hasScheme) return value;
-    if (value.startsWith('/')) return 'https://erp.elrace.com$value';
-    return 'https://erp.elrace.com/$value';
+  Future<void> _fetchInvoiceDetails() async {
+    final token = SharedPref.getLoginData().result?.token;
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
+    final url = Uri.parse('https://erp.elrace.com/api/get_invoice_details');
+    final commentParam = _pick([
+      _formData['comment'],
+      widget.initialData?['comment'],
+      _formData['note'],
+      widget.initialData?['note'],
+      _formData['description'],
+      widget.initialData?['description'],
+    ]);
+    final body = jsonEncode({
+      'jsonrpc': '2.0',
+      'params': {
+        'invoice_id': int.tryParse(widget.requestId),
+        'comment': commentParam,
+      },
+    });
+
+    // cURL debug
+    debugPrint('\n==== INVOICE DETAILS REQUEST ====');
+    debugPrint('curl -X GET "$url" \\');
+    headers.forEach((k, v) {
+      final safe = k == 'Authorization' ? 'Bearer [TOKEN]' : v;
+      debugPrint('  -H "$k: $safe" \\');
+    });
+    debugPrint('  -d \'$body\'');
+    debugPrint('=========================\n');
+
+    try {
+      final request = http.Request('GET', url)
+        ..headers.addAll(headers)
+        ..body = body;
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+
+      // raw response logging
+      debugPrint(
+          '\n==== INVOICE DETAILS RESPONSE (status: ${response.statusCode}) ====');
+      final rawBody = response.body;
+      const chunk = 800;
+      for (var i = 0; i < rawBody.length; i += chunk) {
+        debugPrint(rawBody.substring(
+            i, i + chunk > rawBody.length ? rawBody.length : i + chunk));
+      }
+      debugPrint('=========================\n');
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to load invoice details: ${response.statusCode}');
+      }
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final result = (decoded['result'] as Map?)?['data'] as Map?;
+      final formView =
+          (result?['form_view'] as Map?)?.cast<String, dynamic>() ??
+              <String, dynamic>{};
+
+      if (!mounted) return;
+      setState(() {
+        final merged = Map<String, dynamic>.from(_formData);
+        merged.addAll(formView);
+        _formData = merged;
+        _isLoading = false;
+        _error = '';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
-  Widget _buildVendorAvatar({
-    required String imageUrl,
-    required String vendorName,
-  }) {
-    final initials = vendorName.trim().isEmpty
-        ? 'VN'
-        : vendorName.trim().characters.first.toUpperCase();
+  Future<void> _viewAttachment() async {
+    final invoiceId = int.tryParse(widget.requestId);
+    if (invoiceId == null || invoiceId <= 0) {
+      Fluttertoast.showToast(
+        msg: 'Invalid invoice id.',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+      );
+      return;
+    }
+
+    final token = SharedPref.getLoginData().result?.token;
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
+    final data = {
+      'jsonrpc': '2.0',
+      'params': {
+        'invoice_id': invoiceId,
+      },
+    };
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://erp.elrace.com/api/invoice/report_url'),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+
+      if (response.statusCode != 200) {
+        Fluttertoast.showToast(
+          msg: 'Failed to load PDF: HTTP ${response.statusCode}',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+        );
+        return;
+      }
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final result = decoded['result'] as Map?;
+      final pdfUrl = result?['report_url']?.toString() ?? '';
+
+      if (pdfUrl.isEmpty) {
+        final error = decoded['error'] as Map?;
+        final errorData = error?['data'] as Map?;
+        Fluttertoast.showToast(
+          msg: result?['message']?.toString() ??
+              result?['error']?.toString() ??
+              errorData?['message']?.toString() ??
+              error?['message']?.toString() ??
+              'Failed to retrieve PDF URL.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => LpoPdfViewerScreen(
+            pdfUrl: pdfUrl,
+            title: 'Invoice ${_pick([
+                  _formData['request_no'],
+                  _formData['invoice_no_code'],
+                  _formData['invoice_no'],
+                  _formData['name'],
+                ], fallback: widget.requestId)}',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+      Fluttertoast.showToast(
+        msg: 'Error: $e',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+      );
+    }
+  }
+
+  Widget _tagChip(String text, Color bg, Color fg) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.w),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w700,
+          color: fg,
+        ),
+      ),
+    );
+  }
+
+  Widget _simSectionCard({required String title, required Widget child}) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: const Color(0xFF9E9E9E), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.w),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Color(0xFFE2E2E2), width: 1),
+              ),
+            ),
+            child: Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF5A5A5A),
+              ),
+            ),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar({required String imageUrl, required String name}) {
+    final initials =
+        name.trim().isEmpty ? 'IN' : name.trim().characters.first.toUpperCase();
 
     Widget placeholder() {
       return Container(
@@ -502,7 +440,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
         child: Text(
           initials,
           style: GoogleFonts.poppins(
-            fontSize: 10.sp,
+            fontSize: 16.sp,
             fontWeight: FontWeight.w800,
             color: const Color(0xFF4A607A),
           ),
@@ -527,6 +465,167 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     );
   }
 
+  Widget _buildInfoCell(String label, String value, {Color? valueColor}) {
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: '$label: ',
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFFA0A0A0),
+            ),
+          ),
+          TextSpan(
+            text: _displayOrDash(value),
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w700,
+              color: valueColor ?? const Color(0xFF202020),
+            ),
+          ),
+        ],
+      ),
+      maxLines: null,
+      overflow: TextOverflow.visible,
+    );
+  }
+
+  Widget _buildMetricRow({
+    required String label,
+    required String value,
+    String? percentBadge,
+    bool valueHighlighted = false,
+  }) {
+    final badgeText = _safe(percentBadge, fallback: '');
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.w),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE6E6E6), width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFFA0A0A0),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 34.w,
+            child: Center(
+              child: badgeText.isEmpty || badgeText == '-'
+                  ? const SizedBox.shrink()
+                  : _buildMiniPercentBadge(badgeText),
+            ),
+          ),
+          SizedBox(width: 10.w),
+          Expanded(
+            flex: 3,
+            child: Text(
+              _displayOrDash(value),
+              textAlign: TextAlign.right,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w700,
+                color: valueHighlighted
+                    ? const Color(0xFFFF8A00)
+                    : const Color(0xFF202020),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniPercentBadge(String badgeText) {
+    final parsed = _parsePercent(badgeText);
+    final text = parsed > 0 ? '${parsed.round()}%' : _displayOrDash(badgeText);
+
+    return Container(
+      width: 26.w,
+      height: 26.w,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF4F4F4), Color(0xFFD1D1D1)],
+        ),
+        border: Border.all(color: const Color(0xFFCBCBCB), width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.14),
+            blurRadius: 2.5,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(
+          fontSize: 8.5.sp,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF151515),
+          height: 1,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompletionDonut(double percent) {
+    final p = percent.clamp(0, 100).toDouble();
+    return SizedBox(
+      width: 74.w,
+      height: 74.w,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 64.w,
+            height: 64.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: CustomPaint(
+              painter: _PiePercentPainter(
+                percent: p,
+                fillColor: const Color(0xFFE58B47),
+                baseColor: const Color(0xFFE2E2E2),
+              ),
+            ),
+          ),
+          Text(
+            '${p.round()}%',
+            style: GoogleFonts.poppins(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF111111),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final requestNo = _pick([
@@ -537,31 +636,6 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['ref_no'],
     ], fallback: widget.requestId);
 
-    final reqDate = _pick([
-      _formData['req_date'],
-      _formData['request_date'],
-      _formData['invoice_date'],
-      _formData['date_of_invoice'],
-      _formData['date'],
-    ]);
-    final reqDateDisplay = _formatDate(reqDate);
-
-    final vendorName = _pick([
-      _formData['vendor_name'],
-      _formData['vendor'],
-      _formData['partner_name'],
-      _formData['client_name'],
-      _formData['supplier'],
-    ]);
-
-    final vendorPhotoUrl = _normalizeImageUrl(_pick([
-      _formData['client_photo_url'],
-      _formData['vendor_photo_url'],
-      _formData['partner_image_url'],
-      _formData['image_url'],
-      _formData['photo_url'],
-    ]));
-
     final projectName = _pick([
       _formData['project_name'],
       _formData['project_title'],
@@ -571,77 +645,118 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['name'],
     ]);
 
-    final lpoContract = _pick([
-      _formData['lpo_no'],
-      _formData['lpo'],
-      _formData['lpo_number'],
-      _formData['contract'],
-      _formData['contract_no'],
-    ], fallback: '');
+    final department = _pick([
+      _pick([
+        (_formData['department_id'] is Map)
+            ? (_formData['department_id'] as Map)['name']
+            : null
+      ]),
+      _formData['department'],
+      _formData['section'],
+      _formData['dept_name'],
+    ]);
+
+    final requestDate = _formatDate(_pick([
+      _formData['request_date'],
+      _formData['create_date'],
+      _formData['req_date'],
+      _formData['invoice_date'],
+      _formData['date_of_invoice'],
+      _formData['date'],
+    ]));
 
     final workOrderNo = _pick([
       _formData['work_order_no'],
       _formData['work_order_number'],
       _formData['wo_no'],
       _formData['wono'],
+      _formData['wo_no#'],
     ]);
 
-    final lpoDate = _pick([
-      _formData['lpo_date'],
-      _formData['contract_date'],
-      _formData['date_lpo'],
-      _formData['due_date'],
-    ]);
-    final lpoDateDisplay = _formatDate(lpoDate);
-
-    final lpoType = _pick([
-      _formData['lpo_type'],
-      _formData['material_type'],
-      _formData['type_name'],
-      _formData['category'],
+    final vendorName = _pick([
+      _formData['vendor_name'],
+      _formData['vendor'],
+      _formData['partner_name'],
+      _formData['client_name'],
+      _formData['supplier'],
     ]);
 
-    final totalAmount = _pick([
+    final invoiceAmount = _formatAmount(_pick([
+      _formData['invoice_amount'],
       _formData['total_amount'],
       _formData['amount_total'],
       _formData['amount'],
       _formData['total'],
-    ], fallback: '');
-    final formattedAmount = _formatAmount(totalAmount);
+    ]));
 
-    final completion = _pick([
+    final completionRaw = _pick([
       _formData['completion'],
       _formData['completion_percentage'],
-      _formData['progress'],
       _formData['completion_percent'],
-    ]);
+    ], fallback: '0');
+    final completionPercent = _parsePercent(completionRaw);
 
-    final invoiceDate = _pick([
-      _formData['invoice_date'],
-      _formData['date_of_invoice'],
-      _formData['date'],
-      _formData['req_date'],
-    ], fallback: reqDate);
-    final invoiceDateDisplay = _formatDate(invoiceDate);
-    final completionDisplay = _formatCompletion(completion);
+    final advance = _pick([_formData['advance']], fallback: '-');
+    final progress = _pick([_formData['progress']], fallback: '-');
+    final lastUpdate = _pick([_formData['last_update']], fallback: '-');
+    final retention = _pick([_formData['retention']], fallback: '-');
 
-    final vendorTags = _extractTags([
+    final advancePct = _pick([
+      _formData['advance_percentage'],
+      _formData['advance_percent'],
+    ], fallback: '-');
+    final progressPct = _pick([
+      _formData['progress_percentage'],
+      _formData['progress_percent'],
+    ], fallback: '-');
+    final lastUpdatePct = _pick([
+      _formData['last_update_percentage'],
+      _formData['last_update_percent'],
+    ], fallback: '-');
+    final retentionPct = _pick([
+      _formData['retention_percentage'],
+      _formData['retention_percent'],
+    ], fallback: '-');
+
+    final contractLpo = _pick([
+      _formData['contract_lpo'],
+      _formData['lpo_no'],
+      _formData['lpo'],
+      _formData['lpo_number'],
+      _formData['contract'],
+      _formData['contract_no'],
+    ], fallback: '-');
+
+    final vendorPhotoUrl = _normalizeImageUrl(_pick([
+      _formData['client_photo_url'],
+      _formData['vendor_photo_url'],
+      _formData['partner_image_url'],
+      _formData['image_url'],
+      _formData['photo_url'],
+    ]));
+
+    final tags = _extractTags([
       _formData['vendor_tag'],
       _formData['vendor_tags'],
       _formData['tags'],
       _formData['tag_names'],
+    ]).take(4).toList();
+
+    final comment = _pick([
+      _formData['comment'],
+      _formData['note'],
+      _formData['description'],
     ]);
 
-    final chips = vendorTags.take(4).toList();
+    final canViewReport = int.tryParse(widget.requestId) != null;
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
-
     final pillWidth =
         ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F2),
+      backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
@@ -672,340 +787,406 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                             children: [
                               SizedBox(height: 8.w),
                               Text(
-                                'INVOICE DETAILS',
+                                'Invoice',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w500,
                                   color: const Color(0xFF0E0E0E),
-                                  letterSpacing: 0.1,
                                 ),
                               ),
                               SizedBox(height: 14.w),
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
+                                  Container(
+                                    width: 92.w,
+                                    height: 92.w,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFFC92626),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: _buildAvatar(
+                                      imageUrl: vendorPhotoUrl,
+                                      name: vendorName,
+                                    ),
+                                  ),
                                   Expanded(
-                                    child: _card(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(left: 12.w),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          _sectionTitle('Req No'),
-                                          SizedBox(height: 10.w),
-                                          _value(requestNo,
-                                              size: 12.sp,
-                                              weight: FontWeight.w900),
+                                          Text(
+                                            _displayOrDash(projectName),
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 18.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF181818),
+                                            ),
+                                          ),
+                                          SizedBox(height: 2.w),
+                                          Text(
+                                            _displayOrDash(department),
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 15.sp,
+                                              fontWeight: FontWeight.w500,
+                                              color: const Color(0xFF888888),
+                                            ),
+                                          ),
+                                          SizedBox(height: 8.w),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 10.w,
+                                                vertical: 5.w),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFC9C9C9),
+                                              borderRadius:
+                                                  BorderRadius.circular(20.r),
+                                            ),
+                                            child: Text(
+                                              _displayOrDash(requestNo),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 13.sp,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF1E1E1E),
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ),
                                   ),
-                                  SizedBox(width: 12.w),
-                                  Expanded(
-                                    child: _card(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _sectionTitle('Req Date'),
-                                          SizedBox(height: 10.w),
-                                          _value(reqDateDisplay,
-                                              size: 12.sp,
-                                              weight: FontWeight.w900),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                                  _buildCompletionDonut(completionPercent),
                                 ],
                               ),
                               SizedBox(height: 12.w),
-                              _card(
+                              _simSectionCard(
+                                title: 'Invoice Info',
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _sectionTitle('Vendor Details'),
-                                    SizedBox(height: 8.w),
-                                    _value(vendorName,
-                                        size: 11.sp, weight: FontWeight.w900),
-                                    if (chips.isNotEmpty) ...[
-                                      SizedBox(height: 6.w),
-                                      _label('Vendor Tags'),
-                                      SizedBox(height: 8.w),
-                                      Wrap(
-                                        spacing: 8.w,
-                                        runSpacing: 8.w,
-                                        children: [
-                                          for (int i = 0; i < chips.length; i++)
-                                            _tagChip(
-                                              chips[i],
-                                              [
-                                                const Color(0xFFE1E4FF),
-                                                const Color(0xFFFCE6E6),
-                                                const Color(0xFFFFF1D8),
-                                                const Color(0xFFE1F5EC),
-                                              ][i % 4],
-                                              [
-                                                const Color(0xFF3F51E8),
-                                                const Color(0xFFD32F2F),
-                                                const Color(0xFFE08A00),
-                                                const Color(0xFF00A05A),
-                                              ][i % 4],
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 10.w,
+                                                vertical: 8.w),
+                                            child: _buildInfoCell(
+                                              'W.O No#',
+                                              workOrderNo,
                                             ),
+                                          ),
+                                        ),
+                                        Container(
+                                          width: 1,
+                                          height: 40.w,
+                                          color: const Color(0xFFE6E6E6),
+                                        ),
+                                        Expanded(
+                                          child: Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 10.w,
+                                                vertical: 8.w),
+                                            child: _buildInfoCell(
+                                              'Request Date',
+                                              requestDate,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const Divider(
+                                      height: 1,
+                                      color: Color(0xFFE6E6E6),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w, vertical: 8.w),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: _buildInfoCell(
+                                              'Vendor',
+                                              vendorName,
+                                              valueColor:
+                                                  const Color(0xFFFF8A00),
+                                            ),
+                                          ),
                                         ],
+                                      ),
+                                    ),
+                                    if (tags.isNotEmpty) ...[
+                                      const Divider(
+                                        height: 1,
+                                        color: Color(0xFFE6E6E6),
+                                      ),
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 10.w, vertical: 8.w),
+                                        child: Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Wrap(
+                                            spacing: 8.w,
+                                            runSpacing: 4.w,
+                                            children: [
+                                              for (int i = 0;
+                                                  i < tags.length;
+                                                  i++)
+                                                _tagChip(
+                                                  tags[i],
+                                                  [
+                                                    const Color(0xFFE1E4FF),
+                                                    const Color(0xFFFCE6E6),
+                                                    const Color(0xFFFFF1D8),
+                                                    const Color(0xFFE1F5EC),
+                                                  ][i % 4],
+                                                  [
+                                                    const Color(0xFF3F51E8),
+                                                    const Color(0xFFD32F2F),
+                                                    const Color(0xFFE08A00),
+                                                    const Color(0xFF00A05A),
+                                                  ][i % 4],
+                                                ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ],
                                 ),
                               ),
                               SizedBox(height: 12.w),
-                              _card(
-                                child: Stack(
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        _sectionTitle('Project Details'),
-                                        SizedBox(height: 8.w),
-                                        _bulletLine(
-                                          label: 'Project Name',
-                                          value: projectName,
-                                        ),
-                                        _bulletLine(
-                                          label: 'Work order no',
-                                          value: workOrderNo,
-                                          dim: true,
-                                        ),
-                                      ],
+                              Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                      color: const Color(0xFF9E9E9E), width: 1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
                                     ),
-                                    PositionedDirectional(
-                                      top: 0,
-                                      end: 0,
-                                      child: Container(
-                                        width: 26.w,
-                                        height: 26.w,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: const Color(0xFFC92626),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    _buildMetricRow(
+                                      label: 'Contract/Lpo',
+                                      value: contractLpo,
+                                      percentBadge: '-',
+                                    ),
+                                    _buildMetricRow(
+                                      label: 'Advance',
+                                      value: _formatAmount(advance),
+                                      percentBadge: advancePct,
+                                    ),
+                                    _buildMetricRow(
+                                      label: 'Progress',
+                                      value: _formatAmount(progress),
+                                      percentBadge: progressPct,
+                                    ),
+                                    _buildMetricRow(
+                                      label: 'Last update',
+                                      value: _formatDate(lastUpdate),
+                                      percentBadge: lastUpdatePct,
+                                    ),
+                                    _buildMetricRow(
+                                      label: 'Retention',
+                                      value: _displayOrDash(retention),
+                                      percentBadge: retentionPct,
+                                    ),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w, vertical: 10.w),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'Invoice Amount',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 12.sp,
+                                                fontWeight: FontWeight.w500,
+                                                color: const Color(0xFFA0A0A0),
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                        child: ClipOval(
-                                          child: _buildVendorAvatar(
-                                            imageUrl: vendorPhotoUrl,
-                                            vendorName: vendorName,
+                                          Text(
+                                            _displayOrDash(invoiceAmount),
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 30.sp / 2,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFFFF8A00),
+                                            ),
                                           ),
-                                        ),
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               SizedBox(height: 12.w),
-                              _card(
+                              Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                      color: const Color(0xFF9E9E9E), width: 1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _sectionTitle('LPO / Contract'),
-                                    SizedBox(height: 8.w),
-                                    if (lpoContract.isNotEmpty)
-                                      _bulletLine(label: lpoContract),
-                                    if (lpoDate.isNotEmpty)
-                                      _bulletLine(label: lpoDateDisplay),
-                                    if (lpoType.isNotEmpty)
-                                      _bulletLine(label: lpoType),
-                                    SizedBox(height: 2.w),
-                                    if (formattedAmount.isNotEmpty)
-                                      Align(
-                                        alignment:
-                                            AlignmentDirectional.centerEnd,
-                                        child: _value(
-                                          formattedAmount,
-                                          size: 14.sp,
-                                          weight: FontWeight.w900,
-                                          color: const Color(0xFFE58B00),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Comment',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF5A5A5A),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          '${comment.characters.length}/50',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 11.sp,
+                                            fontWeight: FontWeight.w500,
+                                            color: const Color(0xFFA8A8A8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 6.w),
+                                    Container(
+                                      width: double.infinity,
+                                      constraints:
+                                          BoxConstraints(minHeight: 38.w),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w, vertical: 8.w),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF4F4F4),
+                                        borderRadius:
+                                            BorderRadius.circular(10.r),
+                                        border: Border.all(
+                                            color: const Color(0xFFDADADA),
+                                            width: 1),
+                                      ),
+                                      child: Text(
+                                        _displayOrDash(comment),
+                                        maxLines: null,
+                                        overflow: TextOverflow.visible,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF3B3B3B),
                                         ),
                                       ),
+                                    ),
                                   ],
                                 ),
                               ),
-                              SizedBox(height: 12.w),
-                              _card(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        _sectionTitle('Invoice Details'),
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 10.w, vertical: 4.w),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFECECEC),
-                                            borderRadius:
-                                                BorderRadius.circular(8.r),
-                                            border: Border.all(
-                                                color: const Color(0xFF9F9F9F)),
-                                          ),
-                                          child: Text(
-                                            invoiceDateDisplay,
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 12.sp,
-                                              fontWeight: FontWeight.w700,
-                                              color: const Color(0xFF7C7C7C),
-                                            ),
-                                          ),
+                              if (canViewReport) ...[
+                                SizedBox(height: 16.w),
+                                SizedBox(
+                                  width: 0.88.sw,
+                                  child: InkWell(
+                                    onTap: _viewAttachment,
+                                    borderRadius: BorderRadius.circular(14.r),
+                                    child: Container(
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 13.w),
+                                      decoration: BoxDecoration(
+                                        borderRadius:
+                                            BorderRadius.circular(14.r),
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Color(0xFF777B84),
+                                            Color(0xFF63676F),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 10.w),
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: EdgeInsets.only(top: 4.w),
-                                          child: Text(
-                                            '•',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 12.sp,
-                                              fontWeight: FontWeight.w700,
-                                              color: const Color(0xFF0E0E0E),
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 8.w),
-                                        Expanded(
-                                          child: RichText(
-                                            text: TextSpan(
-                                              children: [
-                                                TextSpan(
-                                                  text: 'Amount',
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 13.sp,
-                                                    fontWeight: FontWeight.w800,
-                                                    color:
-                                                        const Color(0xFF131313),
-                                                  ),
-                                                ),
-                                                if (formattedAmount.isNotEmpty)
-                                                  TextSpan(
-                                                    text: ' $formattedAmount',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 13.sp,
-                                                      fontWeight:
-                                                          FontWeight.w900,
-                                                      color: const Color(
-                                                          0xFFE58B00),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 8.w),
-                                    if (completionDisplay.isNotEmpty)
-                                      _bulletLine(
-                                        label: 'completion',
-                                        value: completionDisplay,
                                       ),
-                                    Align(
-                                      alignment: AlignmentDirectional.centerEnd,
-                                      child: SizedBox(
-                                        height: 28.w,
-                                        child: ElevatedButton(
-                                          onPressed: _attachmentIds.isEmpty
-                                              ? null
-                                              : _viewAttachment,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                const Color(0xFF64666D),
-                                            disabledBackgroundColor:
-                                                const Color(0xFF64666D)
-                                                    .withValues(alpha: 0.45),
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 14.w),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10.r),
-                                            ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.attach_file_rounded,
+                                            color: Colors.white,
+                                            size: 20.sp,
                                           ),
-                                          child: Text(
-                                            'View',
+                                          SizedBox(width: 6.w),
+                                          Text(
+                                            'View Attachments',
                                             style: GoogleFonts.poppins(
-                                              fontSize: 12.sp,
-                                              fontWeight: FontWeight.w800,
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w700,
                                               color: Colors.white,
                                             ),
                                           ),
-                                        ),
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 14.w),
-                              SizedBox(
-                                width: double.infinity,
-                                height: 54.w,
-                                child: ElevatedButton.icon(
-                                  onPressed: _attachmentIds.isEmpty
-                                      ? null
-                                      : _viewAttachment,
-                                  icon: const Icon(Icons.attach_file,
-                                      color: Colors.white),
-                                  label: Text(
-                                    'View Attachments',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF5F626A),
-                                    disabledBackgroundColor:
-                                        const Color(0xFF5F626A)
-                                            .withValues(alpha: 0.45),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14.r),
-                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                               SizedBox(height: 20.w),
                             ],
                           ),
                         ),
                       ),
-                      const Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: Color(0xFFB7B7B7),
-                      ),
                       SafeArea(
                         top: false,
                         child: Padding(
                           padding: EdgeInsets.symmetric(
-                              horizontal: 20.w, vertical: 14.w),
-                          child: Center(
-                            child: ApprovalActionButtons(
-                              requestId: widget.requestId,
-                              type: widget.type,
-                              userIds: [userId],
-                              variant: ApprovalActionButtonsVariant.pill,
-                              showHrApproveConfirmation: true,
-                              pillWidth: pillWidth,
-                              pillHeight: 36.w,
-                              pillSpacing: 24.w,
-                              pillBorderRadius: BorderRadius.circular(20.r),
-                              pillTextStyle: GoogleFonts.poppins(
-                                fontSize: 17.sp,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
-                                height: 1,
+                              horizontal: 38.w, vertical: 10.w),
+                          child: Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10.w, vertical: 8.w),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD7D7D7),
+                              borderRadius: BorderRadius.circular(24.r),
+                            ),
+                            child: Center(
+                              child: ApprovalActionButtons(
+                                requestId: widget.requestId,
+                                type: widget.type,
+                                userIds: [userId],
+                                variant: ApprovalActionButtonsVariant.pill,
+                                showHrApproveConfirmation: true,
+                                pillWidth: pillWidth,
+                                pillHeight: 33.w,
+                                pillSpacing: 20.w,
+                                pillBorderRadius: BorderRadius.circular(20.r),
+                                pillTextStyle: GoogleFonts.poppins(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
+                                  height: 1,
+                                ),
                               ),
                             ),
                           ),
@@ -1015,5 +1196,44 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                   ),
       ),
     );
+  }
+}
+
+class _PiePercentPainter extends CustomPainter {
+  final double percent;
+  final Color fillColor;
+  final Color baseColor;
+
+  const _PiePercentPainter({
+    required this.percent,
+    required this.fillColor,
+    required this.baseColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final center = rect.center;
+    final radius = math.min(size.width, size.height) / 2;
+
+    final basePaint = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius, basePaint);
+
+    if (percent <= 0) return;
+
+    final sweep = 2 * math.pi * (percent.clamp(0, 100) / 100);
+    final arcPaint = Paint()
+      ..color = fillColor
+      ..style = PaintingStyle.fill;
+    canvas.drawArc(rect, -math.pi / 2, sweep, true, arcPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PiePercentPainter oldDelegate) {
+    return oldDelegate.percent != percent ||
+        oldDelegate.fillColor != fillColor ||
+        oldDelegate.baseColor != baseColor;
   }
 }

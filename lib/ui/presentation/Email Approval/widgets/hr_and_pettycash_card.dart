@@ -113,23 +113,25 @@ class HrAndPettycashCard extends StatelessWidget {
                 ],
               ),
             ),
-            SizedBox(height: 8.w),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    requestType.toUpperCase(),
-                    style: GoogleFonts.poppins(
-                      fontSize: 12.4.sp,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF0E0E10),
+                  Center(
+                    child: Text(
+                      requestType.toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.4.sp,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF0E0E10),
+                      ),
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
                     ),
-                    maxLines: null,
-                    overflow: TextOverflow.visible,
                   ),
-                  SizedBox(height: 1.8.w),
+                  SizedBox(height: 6.w),
                   Text(
                     employeeName,
                     style: GoogleFonts.poppins(
@@ -474,7 +476,14 @@ class HrAndPettycashCard extends StatelessWidget {
           );
 
           final pettySubtitle = _getSafeString(
-            item['client_name'] ??
+            item['emp_id']?.toString() ??
+                item['emp_code'] ??
+                item['employee_code'] ??
+                item['requester_code'] ??
+                item['employee_id']?.toString() ??
+                item['requester_id']?.toString() ??
+                item['requester_emp_id']?.toString() ??
+                item['client_name'] ??
                 item['client'] ??
                 item['vendor'] ??
                 item['partner_name'] ??
