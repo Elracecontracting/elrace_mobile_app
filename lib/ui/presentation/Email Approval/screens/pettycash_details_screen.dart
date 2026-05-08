@@ -637,12 +637,16 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
         throw Exception('Attachment URL is empty');
       }
 
+      final attachmentType =
+          (details['attachment_type'] ?? '').toString().trim();
+
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => AttachmentViewerScreen(
             publicUrl: publicUrl,
             title: fileName,
+            attachmentType: attachmentType.isNotEmpty ? attachmentType : null,
           ),
         ),
       );
