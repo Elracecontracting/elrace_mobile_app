@@ -1,90 +1,140 @@
 import 'dart:convert';
+
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
-import 'package:el_race/utils/color_utils.dart';
-import '../../widgets/custom_slider_button.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class RequestJobMissionPage extends StatefulWidget {
-  final loginResponseModel;
+  final dynamic loginResponseModel;
 
-
-  const RequestJobMissionPage({Key? key, required this.loginResponseModel}) : super(key: key);
+  const RequestJobMissionPage({super.key, required this.loginResponseModel});
 
   @override
-  _RequestJobMissionPageState createState() => _RequestJobMissionPageState();
+  State<RequestJobMissionPage> createState() => _RequestJobMissionPageState();
 }
 
 class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
-  final GlobalKey<CustomSliderButtonState> _sliderKey = GlobalKey<CustomSliderButtonState>();
+  static const Color _primary = Color(0xFF151544);
+  static const Color _bg = Color(0xFFF5F5F5);
+  static const Color _accentGrey = Color(0xFF5E5E5E);
 
   String description = '';
   String clientDetails = '';
   String projectDetails = '';
   DateTime selectedDate = DateTime.now();
-  String selectedMissionType = "Job Mission Type";
+  DateTime displayedMonth = DateTime.now();
+  String selectedMissionType = 'job mission type';
   String selectedDuration = "Morning";
   String selectedDay = 'Today'; // or 'Tomorrow'
 
+  bool isSubmitting = false;
 
-  Future<void> _selectDate(BuildContext context) async {
-    if (selectedDay == 'Tomorrow') return; // Disable manual selection
+  // Description formatting states
+  bool isBold = false;
+  bool isItalic = false;
+  bool isBulletList = false;
+  bool isNumberedList = false;
+  final TextEditingController _descController = TextEditingController();
 
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
+  final List<String> options = [
+    "Client Visit",
+    "Media",
+    "Support",
+  ];
+  bool dropdownOpen = false;
 
-    if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-      });
+  @override
+  void initState() {
+    super.initState();
+    displayedMonth = DateTime(selectedDate.year, selectedDate.month);
+    if (_shouldDisableMorning) {
+      selectedDuration = 'Afternoon';
     }
   }
 
+  bool get _isCurrentTimeAfternoonOrLater => DateTime.now().hour >= 12;
+
+  bool get _shouldDisableMorning =>
+      selectedDay == 'Today' && _isCurrentTimeAfternoonOrLater;
 
   String formatDate(DateTime date) {
     return DateFormat('dd/MM/yyyy').format(date);
   }
 
+  String _formatApiDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
+
+  void _onSelectedDateChanged(DateTime newDate) {
+    setState(() {
+      selectedDate = newDate;
+      displayedMonth = DateTime(newDate.year, newDate.month);
+    });
+  }
+
+  String _mapMissionTypeToApiValue(String label) {
+    final normalized = label.trim().toLowerCase();
+    if (normalized == 'client visit') return 'client_meeting';
+    return normalized.replaceAll(' ', '_');
+  }
+
   Future<void> _submitJobMissionRequest() async {
+    if (selectedMissionType.trim().toLowerCase() == 'job mission type' ||
+        selectedMissionType.trim().toLowerCase() == 'job mission type') {
+      _showErrorDialog('Please select job mission type.');
+      return;
+    }
+
+    if (description.trim().isEmpty) {
+      _showErrorDialog('Please enter a reason.');
+      return;
+    }
+
+    if (selectedMissionType == 'Client Visit') {
+      if (clientDetails.trim().isEmpty || projectDetails.trim().isEmpty) {
+        _showErrorDialog('Please fill client & project details.');
+        return;
+      }
+    }
+
+    if (mounted) setState(() => isSubmitting = true);
+
     try {
       final token = SharedPref.getLoginData().result?.token;
+      final selectedMissionTypeApiValue =
+          _mapMissionTypeToApiValue(selectedMissionType);
 
-      final url = Uri.parse("https://test.elrace.com/api/submit_request");
+      final url = Uri.parse("https://erp.elrace.com/api/submit_request");
 
       final body = jsonEncode({
         "jsonrpc": "2.0",
         "params": {
           "request_type": "job_mission",
-          "leave_type": null,
-          "joined_date": DateFormat('yyyy-MM-dd').format(selectedDate),
+          "leave_type": selectedMissionTypeApiValue,
+          "joined_date": _formatApiDate(selectedDate),
           "start_date": DateFormat('yyyy-MM-dd 00:00:00').format(selectedDate),
           "duration": null,
           "end_date": DateFormat('yyyy-MM-dd 00:00:00').format(selectedDate),
           "description": description,
           "note": description,
-          "job_type": selectedMissionType == "Client Visit"
-              ? "client_meeting"
-              : selectedMissionType.toLowerCase().replaceAll(' ', '_'),
+          "job_type": selectedMissionTypeApiValue,
           "job_time": selectedDuration.toLowerCase(),
           "job_date": null,
           "e_reason": null,
           "join_date": null,
           "late_days": null,
           "attachment": null,
-          "client_details": selectedMissionType.toLowerCase() == 'client visit' ? clientDetails : null,
-          "project_details": selectedMissionType.toLowerCase() == 'client visit' ? projectDetails : null,
+          "client_details":
+              selectedMissionType == 'Client Visit' ? clientDetails : null,
+          "project_details":
+              selectedMissionType == 'Client Visit' ? projectDetails : null,
           "duration_type": null,
           "hour_from": null,
           "hour_to": null,
           "jm_start": selectedDay.toLowerCase(),
-          "job_time": selectedDuration.toLowerCase(),
         }
       });
 
@@ -94,540 +144,805 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
         "Authorization": "Bearer $token"
       };
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
-
+      debugPrint('[JobMission][RequestBody] $body');
       final response = await http.post(url, body: body, headers: headers);
+      debugPrint('[JobMission][ResponseStatus] ${response.statusCode}');
+      debugPrint('[JobMission][ResponseBody] ${response.body}');
+
       final data = jsonDecode(response.body);
+      final rpcError = data is Map<String, dynamic>
+          ? data['error'] as Map<String, dynamic>?
+          : null;
+      final rpcResult = data is Map<String, dynamic>
+          ? data['result'] as Map<String, dynamic>?
+          : null;
 
-      Navigator.pop(context); // ✅ Close loading dialog
+      if (!mounted) return;
 
-      if (response.statusCode == 200 && data['result']?['status'] == 'success') {
+      if (response.statusCode == 200 && rpcResult?['status'] == 'success') {
+        debugPrint('[JobMission][Result] SUCCESS');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Job mission request submitted successfully!")),
+          SnackBar(content: Text(translate('request.job_mission_success'))),
         );
-        Navigator.pop(context, true); // ✅ Go back to MyRequestsPage with refresh flag
+        Navigator.pop(
+            context, true); // ✅ Go back to MyRequestsPage with refresh flag
       } else {
-        _sliderKey.currentState?.resetSlider(); // ✅ Reset slider on API failure
-        _showErrorDialog(data['result']?['message'] ?? "Request failed");
+        final backendErrorMessage = _extractBackendErrorMessage(data);
+        debugPrint('[JobMission][Result] FAILURE: $backendErrorMessage');
+        _showErrorDialog(backendErrorMessage);
       }
     } catch (e) {
-      Navigator.pop(context); // Close loading dialog
-      _sliderKey.currentState?.resetSlider(); // ✅ Reset slider on exception
-      _showErrorDialog("An error occurred while submitting the request.");
+      debugPrint('[JobMission][Exception] $e');
+      if (mounted) {
+        _showErrorDialog(translate('request.error_occurred'));
+      }
+    } finally {
+      if (mounted) setState(() => isSubmitting = false);
     }
   }
 
-
-
   void _showErrorDialog(String msg) {
+    if (!mounted) return;
+    final cleanedMessage = _sanitizeErrorMessage(msg);
     showDialog(
       context: context,
+      barrierColor: Colors.black.withAlpha(128),
       builder: (context) => AlertDialog(
-        title: const Text("Submission Failed"),
-        content: Text(msg),
+        title: Text(translate('request.submission_failed')),
+        content: Text(cleanedMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
+            child: Text(translate('common.ok')),
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    String dateFormatted = formatDate(selectedDate);
+  String _sanitizeErrorMessage(String message) {
+    var cleaned = message.trim();
+    cleaned = cleaned.replaceFirst(
+      RegExp(r'^validation\s*error\s*[:\-]?\s*', caseSensitive: false),
+      '',
+    );
+    return cleaned.isEmpty ? message.trim() : cleaned;
+  }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Container(
-            color: Colors.black,
-            child: Column(
-              children: [
-                const SizedBox(height: 50),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha((0.1 * 255).toInt()),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.arrow_back),
-                                    onPressed: () => Navigator.pop(context),
-                                  ),
-                                  Image.asset(
-                                    'assets/png/job_mission.png',
-                                    width: 180,
-                                    height: 60,
-                                    fit: BoxFit.contain,
-                                  ),
-                                  const SizedBox(width: 40),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Center(
-                              child: Builder(
-                                builder: (context) => PopupMenuButton<String>(
-                                  onSelected: (value) {
-                                    setState(() {
-                                      selectedMissionType = value;
-                                    });
-                                  },
-                                  position: PopupMenuPosition.under,
-                                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                                    _buildMenuItem('Client Visit'),
-                                    _buildMenuItem('Media'),
-                                    _buildMenuItem('Support'),
-                                  ],
-                                  color: Colors.white,
-                                  elevation: 6,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: SizedBox(
-                                    width: 240, // 👈 Fixed width of dropdown button
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 36),
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFF1A237E), Color(0xFF3F51B5)],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Flexible(
-                                            child: Text(
-                                              selectedMissionType,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.koulen(
-                                                color: Colors.white,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                                letterSpacing: 2.2, // Optional for extra spacing
-                                              ),
-                                            ),
+  String _extractBackendErrorMessage(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      final result = data['result'];
+      if (result is Map<String, dynamic>) {
+        final resultMessage = result['message'];
+        if (resultMessage is String && resultMessage.trim().isNotEmpty) {
+          return resultMessage;
+        }
+      }
 
-                                          ),
-                                          const Icon(Icons.arrow_drop_down, color: Colors.white),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+      final error = data['error'];
+      if (error is Map<String, dynamic>) {
+        final errorMessage = error['message'];
+        if (errorMessage is String && errorMessage.trim().isNotEmpty) {
+          final details = error['data'];
+          if (details is Map<String, dynamic>) {
+            final detailsMessage = details['message'];
+            if (detailsMessage is String && detailsMessage.trim().isNotEmpty) {
+              return '$errorMessage: $detailsMessage';
+            }
+            final name = details['name'];
+            if (name is String && name.trim().isNotEmpty) {
+              return '$errorMessage ($name)';
+            }
+          }
+          return errorMessage;
+        }
+      }
+    }
 
+    return translate('request.request_failed');
+  }
 
-                            const SizedBox(height: 20),
-
-                            Center(
-                              child: Text(
-                                'SELECT DAY',
-                                style: GoogleFonts.koulen(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: appFontColor,
-                                  letterSpacing: 1.6, // Optional for stylistic effect
-                                ),
-                              ),
-
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
-                                  children: [
-                                    Radio(
-                                      value: 'Today',
-                                      groupValue: selectedDay,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          selectedDay = value!;
-                                          selectedDate = DateTime.now();
-                                          selectedDuration = 'Afternoon'; // ✅ Morning disabled, so set Afternoon
-                                        });
-                                      },
-                                    ),
-                                    Text(
-                                      'Today',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    Radio(
-                                      value: 'Tomorrow',
-                                      groupValue: selectedDay,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          selectedDay = value!;
-                                          selectedDate = DateTime.now().add(const Duration(days: 1));
-                                          selectedDuration = 'Morning'; // ✅ default when both options allowed
-                                        });
-                                      },
-                                    ),
-                                    Text(
-                                      'Tomorrow',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-
-                            Center(
-                              child: Text(
-                                'DURATION TYPE',
-                                style: GoogleFonts.koulen(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: appFontColor,
-                                  letterSpacing: 1.9, // Optional for spacing
-                                ),
-                              ),
-
-                            ),
-                            const SizedBox(height: 0),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
-                                  children: [
-                                    Radio(
-                                      value: 'Morning',
-                                      groupValue: selectedDuration,
-                                      onChanged: selectedDay == 'Today'
-                                          ? null // ✅ Disable Morning when Today is selected
-                                          : (value) {
-                                        setState(() {
-                                          selectedDuration = value.toString();
-                                        });
-                                      },
-                                    ),
-                                    Text(
-                                      'Morning',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    Radio(
-                                      value: 'Afternoon',
-                                      groupValue: selectedDuration,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          selectedDuration = value.toString();
-                                        });
-                                      },
-                                    ),
-                                    Text(
-                                      'Afternoon',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-
-
-                            if (selectedMissionType == 'Client Visit') ...[
-                              const SizedBox(height: 10),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 26.0),
-                                child: TextField(
-                                  onChanged: (value) => setState(() => clientDetails = value),
-                                  decoration: InputDecoration(
-                                    labelText: 'Client Details',
-                                    labelStyle: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12), // reduced height
-                                    isDense: true, // makes it more compact
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 26.0),
-                                child: TextField(
-                                  onChanged: (value) => setState(() => projectDetails = value),
-                                  decoration: InputDecoration(
-                                    labelText: 'Project Details',
-                                    labelStyle: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12), // reduced height
-                                    isDense: true, // makes it more compact
-                                  ),
-                                ),
-                              ),
-                            ],
-
-                            const SizedBox(height: 20),
-                            Center(
-                              child: Text(
-                                'DATE',
-                                style: GoogleFonts.koulen(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: appFontColor,
-                                  letterSpacing: 1.9, // Optional for extra spacing
-                                ),
-                              ),
-
-                            ),
-                            const SizedBox(height: 10),
-                            Center(
-                              child: GestureDetector(
-                                onTap: () async {
-                                  // Disable manual selection when Today or Tomorrow is selected
-                                  return;
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 22),
-                                  decoration: BoxDecoration(
-                                    image: const DecorationImage(
-                                      image: AssetImage('assets/png/desc_box.png'),
-                                      fit: BoxFit.cover,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    formatDate(selectedDate),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.black, // Optional: adjust if needed
-                                    ),
-                                  ),
-
-                                ),
-                              ),
-
-                            ),
-
-                            const SizedBox(height: 30),
-                            Center(
-                              child: Text(
-                                translate('common.reason'),
-                                style: GoogleFonts.koulen(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: appFontColor,
-                                  letterSpacing: 1.9, // Optional for extra emphasis
-                                ),
-                              ),
-
-                            ),
-                            const SizedBox(height: 10),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 26.0),
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(18),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.grey.withAlpha((0.3 * 255).toInt()),
-                                          spreadRadius: 1,
-                                          blurRadius: 5,
-                                          offset: const Offset(2, 3),
-                                        ),
-                                      ],
-                                      image: const DecorationImage(
-                                        image: AssetImage('assets/png/desc_box.png'),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                    child: TextField(
-                                      maxLines: 2,
-                                      onChanged: (value) => setState(() => description = value),
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(22),
-                                          borderSide: const BorderSide(color: Colors.grey, width: 0.5),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(22),
-                                          borderSide: const BorderSide(color: Colors.grey, width: 0.5),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(22),
-                                          borderSide: const BorderSide(color: Colors.blue, width: 2),
-                                        ),
-                                        filled: true,
-                                        fillColor: Colors.transparent,
-                                        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 6,
-                                    right: 10,
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          '${description.trim().isEmpty ? 1 : description.trim().split(RegExp(r'\s+')).length}/50',
-                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        const Text('Max words', style: TextStyle(fontSize: 10, color: Colors.black)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
-                                  child: Image.asset('assets/png/notice_icon.png', width: 34, height: 34),
-                                ),
-                                const SizedBox(width: 5),
-                                Expanded(
-                                  child: Text(
-                                    translate('notification.job_mission_notice'),
-                                    style: GoogleFonts.inter(
-                                      color: Colors.black87,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            CustomSliderButton(
-                              key: _sliderKey,
-                              onSlideComplete: _submitJobMissionRequest,
-                              loginResponseModel: widget.loginResponseModel,
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+  Widget _buildDropdownHeader() {
+    return GestureDetector(
+      onTap: () => setState(() => dropdownOpen = !dropdownOpen),
+      child: Container(
+        width: 260.w,
+        padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 24.w),
+        decoration: BoxDecoration(
+          color: _accentGrey,
+          borderRadius: BorderRadius.circular(22.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(64),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
             ),
-          ),
-          Positioned(
-            top: 46,
-            right: 20,
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha((0.3 * 255).toInt()),
-                      blurRadius: 8,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(Icons.close, size: 20, color: Colors.black),
-                ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              selectedMissionType,
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 15.sp,
+                letterSpacing: 2,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  PopupMenuItem<String> _buildMenuItem(String text) {
-    return PopupMenuItem<String>(
-      value: text,
-      child: Container(
-        width: 145, // 👈 Set desired width
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.black,
-          ),
+            Icon(
+              dropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+              color: Colors.white,
+            ),
+          ],
         ),
       ),
     );
   }
 
+  Widget _buildDropdownList() {
+    return Material(
+      elevation: 4,
+      borderRadius: BorderRadius.circular(22.r),
+      child: Container(
+        width: 260.w,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(20),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(options.length, (i) {
+            return Column(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedMissionType = options[i];
+                      dropdownOpen = false;
+                    });
+                  },
+                  child: Container(
+                    padding:
+                        EdgeInsets.symmetric(vertical: 14.h, horizontal: 20.w),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      options[i],
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+                if (i != options.length - 1)
+                  Divider(height: 1, color: Colors.grey.shade300),
+              ],
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalendar() {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () {
+                  setState(() {
+                    displayedMonth =
+                        DateTime(displayedMonth.year, displayedMonth.month - 1);
+                  });
+                },
+              ),
+              Row(
+                children: [
+                  DropdownButton<int>(
+                    value: displayedMonth.month,
+                    underline: const SizedBox(),
+                    items: List.generate(12, (i) => i + 1)
+                        .map((m) => DropdownMenuItem(
+                              value: m,
+                              child: Text(
+                                  DateFormat('MMM').format(DateTime(2000, m))),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          displayedMonth = DateTime(displayedMonth.year, val);
+                        });
+                      }
+                    },
+                  ),
+                  SizedBox(width: 8.w),
+                  DropdownButton<int>(
+                    value: displayedMonth.year,
+                    underline: const SizedBox(),
+                    items: List.generate(10, (i) => DateTime.now().year - 5 + i)
+                        .map((y) =>
+                            DropdownMenuItem(value: y, child: Text('$y')))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          displayedMonth = DateTime(val, displayedMonth.month);
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () {
+                  setState(() {
+                    displayedMonth =
+                        DateTime(displayedMonth.year, displayedMonth.month + 1);
+                  });
+                },
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+                .map((day) => SizedBox(
+                      width: 32.w,
+                      child: Text(
+                        day,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                      ),
+                    ))
+                .toList(),
+          ),
+          SizedBox(height: 8.h),
+          ..._buildCalendarRows(),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildCalendarRows() {
+    final firstDay = DateTime(displayedMonth.year, displayedMonth.month, 1);
+    final lastDay = DateTime(displayedMonth.year, displayedMonth.month + 1, 0);
+    final startWeekday = firstDay.weekday % 7;
+
+    final days = <Widget>[];
+    for (int i = 0; i < startWeekday; i++) {
+      days.add(SizedBox(width: 32.w, height: 32.w));
+    }
+
+    for (int day = 1; day <= lastDay.day; day++) {
+      final date = DateTime(displayedMonth.year, displayedMonth.month, day);
+      final isSelected = _isSameDay(date, selectedDate);
+
+      days.add(
+        GestureDetector(
+          onTap: null,
+          child: Container(
+            width: 32.w,
+            height: 32.w,
+            margin: EdgeInsets.all(2.w),
+            decoration: BoxDecoration(
+              color: isSelected ? _accentGrey : Colors.transparent,
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$day',
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: isSelected ? Colors.white : Colors.black,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final rows = <Widget>[];
+    for (int i = 0; i < days.length; i += 7) {
+      rows.add(
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children:
+              days.sublist(i, (i + 7 > days.length) ? days.length : i + 7),
+        ),
+      );
+      rows.add(SizedBox(height: 4.h));
+    }
+    return rows;
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Widget _buildDescriptionField() {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            controller: _descController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Write your description...',
+              hintStyle: TextStyle(fontSize: 12),
+            ),
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+            ),
+            onChanged: (val) => setState(() => description = val),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.format_bold,
+                        size: 18.w, color: isBold ? _accentGrey : Colors.grey),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      setState(() {
+                        isBold = !isBold;
+                        _applyFormatting();
+                      });
+                    },
+                  ),
+                  SizedBox(width: 10.w),
+                  IconButton(
+                    icon: Icon(Icons.format_italic,
+                        size: 18.w,
+                        color: isItalic ? _accentGrey : Colors.grey),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      setState(() {
+                        isItalic = !isItalic;
+                        _applyFormatting();
+                      });
+                    },
+                  ),
+                  SizedBox(width: 10.w),
+                  IconButton(
+                    icon: Icon(Icons.format_list_bulleted,
+                        size: 18.w,
+                        color: isBulletList ? _accentGrey : Colors.grey),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      setState(() {
+                        isBulletList = !isBulletList;
+                        isNumberedList = false;
+                        _insertListPrefix('• ');
+                      });
+                    },
+                  ),
+                  SizedBox(width: 10.w),
+                  IconButton(
+                    icon: Icon(Icons.format_list_numbered,
+                        size: 18.w,
+                        color: isNumberedList ? _accentGrey : Colors.grey),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      setState(() {
+                        isNumberedList = !isNumberedList;
+                        isBulletList = false;
+                        _insertNumberedList();
+                      });
+                    },
+                  ),
+                ],
+              ),
+              Text(
+                '${description.trim().isEmpty ? 0 : description.trim().split(RegExp(r'\s+')).length}/50',
+                style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applyFormatting() {
+    final text = _descController.text;
+    _descController.value = _descController.value.copyWith(text: text);
+  }
+
+  void _insertListPrefix(String prefix) {
+    final text = _descController.text;
+    final selection = _descController.selection;
+
+    if (text.isEmpty || selection.start == 0) {
+      _descController.text = '$prefix$text';
+      _descController.selection =
+          TextSelection.collapsed(offset: prefix.length);
+    } else {
+      final newText =
+          '${text.substring(0, selection.start)}\n$prefix${text.substring(selection.start)}';
+      _descController.text = newText;
+      _descController.selection =
+          TextSelection.collapsed(offset: selection.start + prefix.length + 1);
+    }
+    description = _descController.text;
+  }
+
+  void _insertNumberedList() {
+    final text = _descController.text;
+    final lines = text.split('\n');
+    final newLines = <String>[];
+
+    for (int i = 0; i < lines.length; i++) {
+      if (lines[i].trim().isNotEmpty) {
+        newLines
+            .add('${i + 1}. ${lines[i].replaceAll(RegExp(r'^\d+\.\s*'), '')}');
+      } else {
+        newLines.add(lines[i]);
+      }
+    }
+
+    _descController.text = newLines.join('\n');
+    description = _descController.text;
+  }
+
+  Widget _buildNotice() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.info_outline, size: 20.w, color: Colors.grey),
+        SizedBox(width: 8.w),
+        Expanded(
+          child: Text(
+            translate('notification.job_mission_notice'),
+            style: GoogleFonts.poppins(
+              fontSize: 9.sp,
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _bg,
+      resizeToAvoidBottomInset: true,
+      appBar: const HeaderWidget(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              child: Text(
+                'JOB MISSION',
+                style: GoogleFonts.poppins(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 1.5,
+                  color: _primary,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: 20.w),
+                padding: EdgeInsets.all(20.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(13),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(child: _buildDropdownHeader()),
+                          SizedBox(height: 18.h),
+                          Center(
+                            child: Text(
+                              translate('request.select_day'),
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: 1.5,
+                                color: _primary,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Today',
+                                    groupValue: selectedDay,
+                                    activeColor: _accentGrey,
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setState(() {
+                                        selectedDay = value;
+                                        if (_shouldDisableMorning &&
+                                            selectedDuration == 'Morning') {
+                                          selectedDuration = 'Afternoon';
+                                        }
+                                        _onSelectedDateChanged(DateTime.now());
+                                      });
+                                    },
+                                  ),
+                                  Text(
+                                    translate('request.today'),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(width: 20.w),
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Tomorrow',
+                                    groupValue: selectedDay,
+                                    activeColor: _accentGrey,
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setState(() {
+                                        selectedDay = value;
+                                        selectedDuration = 'Morning';
+                                        _onSelectedDateChanged(
+                                          DateTime.now()
+                                              .add(const Duration(days: 1)),
+                                        );
+                                      });
+                                    },
+                                  ),
+                                  Text(
+                                    translate('request.tomorrow'),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 10.h),
+                          Center(
+                            child: Text(
+                              translate('request.duration_type'),
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: 1.5,
+                                color: _primary,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 6.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Morning',
+                                    groupValue: selectedDuration,
+                                    activeColor: _accentGrey,
+                                    onChanged: _shouldDisableMorning
+                                        ? null
+                                        : (value) {
+                                            if (value == null) return;
+                                            setState(
+                                                () => selectedDuration = value);
+                                          },
+                                  ),
+                                  Text(
+                                    translate('request.morning'),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: _shouldDisableMorning
+                                          ? Colors.grey
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(width: 20.w),
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Afternoon',
+                                    groupValue: selectedDuration,
+                                    activeColor: _accentGrey,
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setState(() => selectedDuration = value);
+                                    },
+                                  ),
+                                  Text(
+                                    translate('request.afternoon'),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          if (selectedMissionType == 'Client Visit') ...[
+                            SizedBox(height: 14.h),
+                            TextField(
+                              onChanged: (value) =>
+                                  setState(() => clientDetails = value),
+                              decoration: InputDecoration(
+                                labelText: translate('request.client_details'),
+                                labelStyle: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: _primary,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 10.h, horizontal: 12.w),
+                                isDense: true,
+                              ),
+                            ),
+                            SizedBox(height: 12.h),
+                            TextField(
+                              onChanged: (value) =>
+                                  setState(() => projectDetails = value),
+                              decoration: InputDecoration(
+                                labelText: translate('request.project_details'),
+                                labelStyle: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: _primary,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 10.h, horizontal: 12.w),
+                                isDense: true,
+                              ),
+                            ),
+                          ],
+                          SizedBox(height: 16.h),
+                          _buildCalendar(),
+                          SizedBox(height: 18.h),
+                          Text(
+                            translate('common.reason'),
+                            style: GoogleFonts.poppins(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          _buildDescriptionField(),
+                          SizedBox(height: 16.h),
+                          _buildNotice(),
+                          SizedBox(height: 24.h),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48.h,
+                            child: ElevatedButton(
+                              onPressed: isSubmitting
+                                  ? null
+                                  : _submitJobMissionRequest,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _accentGrey,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24.r),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation(
+                                            Colors.white),
+                                      ),
+                                    )
+                                  : Text(
+                                      'SUBMIT',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16.sp,
+                                        letterSpacing: 1.5,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (dropdownOpen)
+                        Positioned(
+                          top: 48.h,
+                          left: 0,
+                          right: 0,
+                          child: Center(child: _buildDropdownList()),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 20.h),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _descController.dispose();
+    super.dispose();
+  }
 }

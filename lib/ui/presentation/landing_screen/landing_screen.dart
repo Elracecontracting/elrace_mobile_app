@@ -20,7 +20,7 @@ class _LandingScreenState extends State<LandingScreen> {
   var _selectedIndex = 0;
   late List<Widget> _pages;
   final _userRepo = UserRepo();
-  String? _deviceId = '';
+  final String _deviceId = '';
   final _locationBloc = LocationBloc();
 
   void _onItemTapped(int index) {
@@ -76,15 +76,15 @@ class _LandingScreenState extends State<LandingScreen> {
             bottom: false,
             child: _selectedIndex == 0
                 ? const Center(
-              child: Text(
-                'This page is in progress',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            )
+                    child: Text(
+                      'This page is in progress',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
                 : _pages[_selectedIndex],
           ),
         ],

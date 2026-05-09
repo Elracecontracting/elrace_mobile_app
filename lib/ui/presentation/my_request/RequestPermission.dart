@@ -1,24 +1,28 @@
-import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:el_race/utils/color_utils.dart'; // Import global colors
-import '../../widgets/custom_slider_button.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
+import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/widgets/header_widget.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class RequestPermission extends StatefulWidget {
   final dynamic loginResponseModel;
 
-  const RequestPermission({Key? key, required this.loginResponseModel}) : super(key: key);
+  const RequestPermission({super.key, required this.loginResponseModel});
 
   @override
-  _RequestPermissionState createState() => _RequestPermissionState();
+  State<RequestPermission> createState() => _RequestPermissionState();
 }
 
-
 class _RequestPermissionState extends State<RequestPermission> {
+  static const Color _primary = Color(0xFF151544);
+  static const Color _bg = Color(0xFFF5F5F5);
+  static const Color _accentGrey = Color(0xFF5E5E5E);
+
   String selectedReason = "New hire";
   DateTime selectedStartDate = DateTime.now();
   DateTime selectedEndDate = DateTime.now();
@@ -26,11 +30,24 @@ class _RequestPermissionState extends State<RequestPermission> {
   DateTime leaveEndDate = DateTime.now();
   String description = '';
   String selectedDay = 'Today';
-  final GlobalKey<CustomSliderButtonState> _sliderKey = GlobalKey<CustomSliderButtonState>();
+
+  bool isSubmitting = false;
+
+  // Description formatting states
+  bool isBold = false;
+  bool isItalic = false;
+  bool isBulletList = false;
+  bool isNumberedList = false;
+  final TextEditingController _descController = TextEditingController();
 
   // Add missing time variables
   String startTimeFormatted = 'Select Time';
   String endTimeFormatted = 'Select Time';
+
+  // New variables for the updated design
+  int selectedHour = 8;
+  String selectedPeriod = 'AM'; // AM or PM
+  String selectedDuration = '2H'; // 1H, 2H, or 3H
 
   Future<void> _selectDate(BuildContext context, bool isJoinedDate) async {
     DateTime initialDate = isJoinedDate ? joinedDate : leaveEndDate;
@@ -75,351 +92,472 @@ class _RequestPermissionState extends State<RequestPermission> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Main content
-          Container(
-            color: Colors.black, // Dark background
-            child: Column(
-              children: [
-                const SizedBox(height: 60),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha((0.1 * 255).toInt()),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // Title Bar
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.arrow_back),
-                                    onPressed: () => Navigator.pop(context),
-                                  ),
-                                  Center(
-                                    child: Image.asset(
-                                      'assets/png/temporary.png',
-                                      width: 200,
-                                      height: 60,
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 40),
-                                ],
-                              ),
-                            ),
-
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  const SizedBox(height: 10),
-
-                                  // Date row
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    "SELECT DATE",
-                                    style: GoogleFonts.koulen(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: 1.9,
-                                      color: appFontColor,
-                                    ),
-                                  ),
-
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Radio(
-                                        value: 'Today',
-                                        groupValue: selectedDay,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            selectedDay = value.toString();
-                                            _updateDateBasedOnRadio();
-                                          });
-                                        },
-                                      ),
-                                      Text(
-                                        'Today',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      Radio(
-                                        value: 'Tomorrow',
-                                        groupValue: selectedDay,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            selectedDay = value.toString();
-                                            _updateDateBasedOnRadio();
-                                          });
-                                        },
-                                      ),
-                                      Text(
-                                        translate('request_permission.tomorrow'),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.black,
-                                        ),
-                                      ),                                    ],
-                                  ),
-
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        translate('request_permission.date'),
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w500,
-                                          letterSpacing: 1.9,
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade300,
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: Text(
-                                          DateFormat('dd/MM/yyyy').format(joinedDate),
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 25),
-
-                                  // Balance Leave
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-
-                                    children: [
-                                      Text(
-                                        translate('common.balance_leave'),
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w500,
-                                          letterSpacing: 1.9,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        "20",
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w300,
-                                          letterSpacing: 1.9,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ],
-
-                                  ),
-
-                                  const SizedBox(height: 30),
-
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 10),
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        translate('common.description'),
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w500,
-                                          color: const Color(0xFFB0B0B0),
-                                          letterSpacing: 2.2,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-
-                                  const SizedBox(height: 10),
-
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                                    child: Stack(
-                                      children: [
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(18),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.grey.withAlpha((0.3 * 255).toInt()),
-                                                spreadRadius: 1,
-                                                blurRadius: 5,
-                                                offset: const Offset(2, 3),
-                                              ),
-                                            ],
-                                            image: const DecorationImage(
-                                              image: AssetImage('assets/png/desc_box.png'),
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                          child: TextField(
-                                            maxLines: 2,
-                                            onChanged: (value) => setState(() => description = value),
-                                            decoration: InputDecoration(
-                                              border: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(22),
-                                                borderSide: const BorderSide(color: Colors.grey, width: 0.5),
-                                              ),
-                                              enabledBorder: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(22),
-                                                borderSide: const BorderSide(color: Colors.grey, width: 0.5),
-                                              ),
-                                              focusedBorder: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(22),
-                                                borderSide: const BorderSide(color: Colors.blue, width: 2),
-                                              ),
-                                              filled: true,
-                                              fillColor: Colors.transparent,
-                                              contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          bottom: 6,
-                                          right: 10,
-                                          child: Column(
-                                            children: [
-                                              Text(
-                                                '${description.trim().isEmpty ? 1 : description.trim().split(RegExp(r'\s+')).length}/50',
-                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(translate('request_permission.max_words'), style: const TextStyle(fontSize: 10, color: Colors.black)),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 10),
-
-                                  // Notice
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Image.asset('assets/png/notice_icon.png', width: 34, height: 34),
-                                      const SizedBox(width: 5),
-                                      Expanded(
-                                        child: Text(
-                                          'Please be aware that temporary permission request is deducted from your balance.',
-                                          style: GoogleFonts.inter(
-                                            color: appFontColor,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 20),
-
-                                  // Submit
-                                  CustomSliderButton(
-                                    key: _sliderKey,
-                                    onSlideComplete: _submitTempPermissionRequest,
-                                    loginResponseModel: widget.loginResponseModel,
-                                  ),
-
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ❌ Floating close button
-          Positioned(
-            top: 56,
-            right: 20,
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha((0.3 * 255).toInt()),
-                      blurRadius: 8,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(Icons.close, size: 20, color: Colors.black),
+      backgroundColor: _bg,
+      resizeToAvoidBottomInset: true,
+      appBar: const HeaderWidget(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              child: Text(
+                'TEMPORARY PERMISSION',
+                style: GoogleFonts.poppins(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 1.5,
+                  color: _primary,
                 ),
               ),
             ),
+            Expanded(
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: 20.w),
+                padding: EdgeInsets.all(20.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(13),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                      bottom:
+                          MediaQuery.of(context).viewInsets.bottom),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Text(
+                          'Select Day',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: 1.5,
+                            color: _primary,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            children: [
+                              Radio<String>(
+                                value: 'Today',
+                                groupValue: selectedDay,
+                                activeColor: _accentGrey,
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() {
+                                    selectedDay = value;
+                                    _updateDateBasedOnRadio();
+                                  });
+                                },
+                              ),
+                              Text(
+                                'Today',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(width: 20.w),
+                          Row(
+                            children: [
+                              Radio<String>(
+                                value: 'Tomorrow',
+                                groupValue: selectedDay,
+                                activeColor: _accentGrey,
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() {
+                                    selectedDay = value;
+                                    _updateDateBasedOnRadio();
+                                  });
+                                },
+                              ),
+                              Text(
+                                'Tomorrow',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 18.h),
+                      Center(
+                        child: Text(
+                          'Select Hour',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: 1.5,
+                            color: _primary,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 10.h),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24.w),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.center,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 6.w, vertical: 5.h),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(20.r),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          if (selectedHour > 1) selectedHour--;
+                                        });
+                                      },
+                                      child: Padding(
+                                        padding: EdgeInsets.all(4.w),
+                                        child: Icon(Icons.remove, size: 16.w),
+                                      ),
+                                    ),
+                                    SizedBox(width: 4.w),
+                                    Text(
+                                      '${selectedHour.toString().padLeft(2, '0')}:00',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    SizedBox(width: 4.w),
+                                    InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          if (selectedHour < 12) selectedHour++;
+                                        });
+                                      },
+                                      child: Padding(
+                                        padding: EdgeInsets.all(4.w),
+                                        child: Icon(Icons.add, size: 16.w),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 6.w),
+                              _buildPeriodChip('AM'),
+                              SizedBox(width: 5.w),
+                              _buildPeriodChip('PM'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 18.h),
+                      Center(
+                        child: Text(
+                          'Duration type',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: 1.5,
+                            color: _primary,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 10.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildDurationChoice('1H'),
+                          SizedBox(width: 14.w),
+                          _buildDurationChoice('2H'),
+                          SizedBox(width: 14.w),
+                          _buildDurationChoice('3H'),
+                        ],
+                      ),
+                      SizedBox(height: 18.h),
+                      _buildReasonCard(),
+                      SizedBox(height: 16.h),
+                      _buildNotice(),
+                      SizedBox(height: 24.h),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48.h,
+                        child: ElevatedButton(
+                          onPressed: isSubmitting
+                              ? null
+                              : _submitTempPermissionRequest,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _accentGrey,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24.r),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  'SUBMIT',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16.sp,
+                                    letterSpacing: 1.5,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 20.h),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeriodChip(String period) {
+    final bool isSelected = selectedPeriod == period;
+    return GestureDetector(
+      onTap: () => setState(() => selectedPeriod = period),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: isSelected ? _accentGrey : Colors.white,
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Text(
+          period,
+          style: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : Colors.black,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDurationChoice(String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Checkbox(
+          value: selectedDuration == value,
+          activeColor: _accentGrey,
+          checkColor: Colors.white,
+          onChanged: (_) => setState(() => selectedDuration = value),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReasonCard() {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            controller: _descController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Write your description...',
+              hintStyle: TextStyle(fontSize: 12),
+            ),
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+            ),
+            onChanged: (val) => setState(() => description = val),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.format_bold,
+                        size: 18.w, color: isBold ? _accentGrey : Colors.grey),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      setState(() {
+                        isBold = !isBold;
+                        _applyFormatting();
+                      });
+                    },
+                  ),
+                  SizedBox(width: 10.w),
+                  IconButton(
+                    icon: Icon(Icons.format_italic,
+                        size: 18.w,
+                        color: isItalic ? _accentGrey : Colors.grey),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      setState(() {
+                        isItalic = !isItalic;
+                        _applyFormatting();
+                      });
+                    },
+                  ),
+                  SizedBox(width: 10.w),
+                  IconButton(
+                    icon: Icon(Icons.format_list_bulleted,
+                        size: 18.w,
+                        color: isBulletList ? _accentGrey : Colors.grey),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      setState(() {
+                        isBulletList = !isBulletList;
+                        isNumberedList = false;
+                        _insertListPrefix('• ');
+                      });
+                    },
+                  ),
+                  SizedBox(width: 10.w),
+                  IconButton(
+                    icon: Icon(Icons.format_list_numbered,
+                        size: 18.w,
+                        color: isNumberedList ? _accentGrey : Colors.grey),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      setState(() {
+                        isNumberedList = !isNumberedList;
+                        isBulletList = false;
+                        _insertNumberedList();
+                      });
+                    },
+                  ),
+                ],
+              ),
+              Text(
+                '${description.trim().isEmpty ? 0 : description.trim().split(RegExp(r'\\s+')).length}/50',
+                style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  Widget _buildNotice() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(Icons.info_outline, size: 20.w, color: Colors.grey),
+        SizedBox(width: 8.w),
+        Expanded(
+          child: Text(
+            'Maximum Hours per month is 6 Hours',
+            style: GoogleFonts.poppins(
+              fontSize: 9.sp,
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _submitTempPermissionRequest() async {
+    if (isSubmitting) return;
     try {
       final token = SharedPref.getLoginData().result?.token;
 
-      // Extract hour in 24-hour format
-      String parseTime(String time) {
-        try {
-          final format = DateFormat.jm(); // e.g., 1:00 PM
-          final dateTime = format.parse(time);
-          return DateFormat.H().format(dateTime); // returns hour in 24-hour format as string
-        } catch (e) {
-          return ""; // fallback if time is "Select Time" or invalid
+      // Convert hour to 24-hour format
+      int get24Hour() {
+        if (selectedPeriod == 'AM') {
+          return selectedHour == 12 ? 0 : selectedHour;
+        } else {
+          return selectedHour == 12 ? 12 : selectedHour + 12;
         }
       }
 
+      // Get duration in hours
+      int getDurationHours() {
+        return int.parse(selectedDuration.replaceAll('H', ''));
+      }
+
+      int startHour = get24Hour();
+      int endHour = startHour + getDurationHours();
+
+      // Validation conditions
+      int tempHoursValue =
+          selectedHour; // from 1 to 10 (12-hour format, but API expects 1-10)
+      int tempSelectionValue = getDurationHours(); // from 1 to 3
+
+      // Validate temp_hours (1 to 10)
+      if (tempHoursValue < 1 || tempHoursValue > 10) {
+        _showErrorDialog("Start hour must be between 1 and 10.");
+        return;
+      }
+
+      // Validate temp_selection (1 to 3)
+      if (tempSelectionValue < 1 || tempSelectionValue > 3) {
+        _showErrorDialog("Duration selection must be between 1H and 3H.");
+        return;
+      }
+
+      // Validate description is not empty
+      if (description.trim().isEmpty) {
+        _showErrorDialog("Please provide a reason for your request.");
+        return;
+      }
+
+      if (mounted) setState(() => isSubmitting = true);
+
       final response = await http.post(
-        Uri.parse('https://test.elrace.com/api/submit_request'),
+        Uri.parse('https://erp.elrace.com/api/submit_request'),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
@@ -445,56 +583,108 @@ class _RequestPermissionState extends State<RequestPermission> {
             "client_details": null,
             "project_details": null,
             "duration_type": "custom_hours",
-            "hour_from": parseTime(startTimeFormatted),
-            "hour_to": parseTime(endTimeFormatted),
+            "hour_from": startHour.toString(),
+            "hour_to": endHour.toString(),
+            "jm_start": selectedDay.toLowerCase(),
+            "temp_hours": tempHoursValue.toString(),
+            "temp_selection": tempSelectionValue.toString(),
           }
         }),
       );
 
-
       final data = jsonDecode(response.body);
-      print("🔥 Submitting Body:\n${jsonEncode(data)}"); // Log the full body
 
-      if (response.statusCode == 200 && data["result"]?['status'] == 'success') {
+      if (!mounted) return;
+
+      if (response.statusCode == 200 &&
+          data["result"]?['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Request submitted successfully!")),
+          SnackBar(content: Text(translate('request.request_submitted'))),
         );
-        Navigator.pop(context, true); // ✅ Go back to MyRequestsPage with refresh flag
-
+        Navigator.pop(
+            context, true); // ✅ Go back to MyRequestsPage with refresh flag
       } else {
-        _sliderKey.currentState?.resetSlider(); // 👈 Reset the slider position
-        _showErrorDialog(data["result"]?['message'] ?? "Request failed");
+        _showErrorDialog(
+            data["result"]?['message'] ?? translate('request.request_failed'));
       }
-
     } catch (e) {
-      _sliderKey.currentState?.resetSlider(); // 👈 Reset the slider position
-      _showErrorDialog(e.toString());
+      if (mounted) {
+        _showErrorDialog(translate('request.error_occurred'));
+      }
+    } finally {
+      if (mounted) setState(() => isSubmitting = false);
     }
   }
 
   void _showErrorDialog(String message) {
+    if (!mounted) return;
     showDialog(
       context: context,
+      barrierColor: Colors.black.withAlpha(128),
       builder: (ctx) => AlertDialog(
-        title: const Text('Error'),
+        title: Text(translate('common.error')),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
+            child: Text(translate('common.ok')),
           )
         ],
       ),
     );
   }
 
-
-
-
   @override
   void initState() {
     super.initState();
     _updateDateBasedOnRadio(); // initialize selected date
+  }
+
+  void _applyFormatting() {
+    final text = _descController.text;
+    _descController.value = _descController.value.copyWith(text: text);
+  }
+
+  void _insertListPrefix(String prefix) {
+    final text = _descController.text;
+    final selection = _descController.selection;
+
+    if (text.isEmpty || selection.start == 0) {
+      _descController.text = '$prefix$text';
+      _descController.selection =
+          TextSelection.collapsed(offset: prefix.length);
+    } else {
+      final newText =
+          '${text.substring(0, selection.start)}\n$prefix${text.substring(selection.start)}';
+      _descController.text = newText;
+      _descController.selection =
+          TextSelection.collapsed(offset: selection.start + prefix.length + 1);
+    }
+    description = _descController.text;
+  }
+
+  void _insertNumberedList() {
+    final text = _descController.text;
+    final lines = text.split('\n');
+    final newLines = <String>[];
+
+    for (int i = 0; i < lines.length; i++) {
+      if (lines[i].trim().isNotEmpty) {
+        newLines
+            .add('${i + 1}. ${lines[i].replaceAll(RegExp(r'^\d+\.\s*'), '')}');
+      } else {
+        newLines.add(lines[i]);
+      }
+    }
+
+    _descController.text = newLines.join('\n');
+    description = _descController.text;
+  }
+
+  @override
+  void dispose() {
+    _descController.dispose();
+    super.dispose();
   }
 
   void _updateDateBasedOnRadio() {
@@ -504,5 +694,4 @@ class _RequestPermissionState extends State<RequestPermission> {
           : DateTime.now().add(const Duration(days: 1));
     });
   }
-
 }

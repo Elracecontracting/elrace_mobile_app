@@ -1,5 +1,33 @@
 import 'package:equatable/equatable.dart';
 
+class ProjectSupervisorEntity extends Equatable {
+  final int employeeId;
+  final String employeeName;
+  final String empCode;
+  final String jobId;
+  final String status;
+  final String? photo;
+
+  const ProjectSupervisorEntity({
+    required this.employeeId,
+    required this.employeeName,
+    required this.empCode,
+    required this.jobId,
+    required this.status,
+    this.photo,
+  });
+
+  @override
+  List<Object?> get props => [
+        employeeId,
+        employeeName,
+        empCode,
+        jobId,
+        status,
+        photo,
+      ];
+}
+
 class ProjectEntity extends Equatable {
   final int projectId;
   final String partnerId;
@@ -10,6 +38,20 @@ class ProjectEntity extends Equatable {
   final String projectStatus;
   final String date;
   final String dateStart;
+  final int? differenceDays;
+  final String? projectManagerPhoto;
+  /// When API returns coordinates, map uses them; otherwise UAE fallback placement applies.
+  final double? latitude;
+  final double? longitude;
+  final String? clientImageUrl;
+  final String? managerPhoto;
+  final String? projectManagerName;
+  final double? totalProgress;
+  final String? contractorName;
+  final String? milestoneLabel;
+  final String? budgetLabel;
+  final int? openIssuesCount;
+  final List<ProjectSupervisorEntity> supervisors;
 
   const ProjectEntity({
     required this.projectId,
@@ -21,6 +63,19 @@ class ProjectEntity extends Equatable {
     required this.projectStatus,
     required this.date,
     required this.dateStart,
+    this.differenceDays,
+    this.projectManagerPhoto,
+    this.latitude,
+    this.longitude,
+    this.clientImageUrl,
+    this.managerPhoto,
+    this.projectManagerName,
+    this.totalProgress,
+    this.contractorName,
+    this.milestoneLabel,
+    this.budgetLabel,
+    this.openIssuesCount,
+    this.supervisors = const [],
   });
 
   @override
@@ -34,5 +89,18 @@ class ProjectEntity extends Equatable {
         projectStatus,
         date,
         dateStart,
+        differenceDays,
+        projectManagerPhoto,
+        latitude,
+        longitude,
+        clientImageUrl,
+        managerPhoto,
+        projectManagerName,
+        totalProgress,
+        contractorName,
+        milestoneLabel,
+        budgetLabel,
+        openIssuesCount,
+        supervisors,
       ];
 }

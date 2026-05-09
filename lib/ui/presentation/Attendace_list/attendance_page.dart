@@ -1,737 +1,1576 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:developer';
-import 'package:el_race/ui/presentation/Attendace_list/model/attendance_model.dart'; // Import the login model
+
+import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/colleasped_card.dart';
+import 'package:el_race/ui/presentation/Attendace_list/model/attendance_model.dart';
 import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_repository.dart';
-import 'package:el_race/utils/color_utils.dart'; // Import global colors
+import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+
+import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/utils/di.dart';
 import '../../widgets/header_widget.dart';
 import 'bloc/attendance_bloc.dart';
 
 class AttendancePage extends StatefulWidget {
   const AttendancePage({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<AttendancePage> createState() => _AttendancePageState();
 }
 
 class _AttendancePageState extends State<AttendancePage> {
-  String _imageBase64 = '';
   late AttendanceBloc _attendanceBloc;
-  var _selectedIndex = 0;
-  Set<int> expandedItems = {};
-  late DateTime selectedStartDate;
-  late DateTime selectedEndDate;
+  final AttendanceRepo _attendanceRepo = sl.get<AttendanceRepo>();
+  Set<String> expandedRecords = {};
+  final Set<String> _selectedActionCards = {};
+  final Map<String, List<AttendanceRecord>> _managerEmployeeRecords = {};
+  final Set<String> _managerEmployeeLoading = {};
+  final Map<String, String> _managerEmployeeErrors = {};
+  int? selectedMonth;
+  int selectedYear = DateTime.now().year;
 
-  bool _isValidBase64(String str) {
-    try {
-      if (str.trim().isEmpty || str.length % 4 != 0) return false;
-      base64Decode(str);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
+  final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  Timer? _searchDebounce;
+  int _requestSeq = 0;
+
+  // Pagination state
+  int _displayedItemsCount = 10;
+  final int _itemsPerLoad = 10;
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
     super.initState();
 
-    // Set date range to 7 days prior to today
-    selectedEndDate = DateTime.now();
-    selectedStartDate = selectedEndDate.subtract(const Duration(days: 7));
+    _searchController.addListener(() {
+      if (!mounted) return;
+      setState(() {});
+
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+        if (mounted) {
+          _onSearch();
+        }
+      });
+    });
+
+    _scrollController.addListener(_onScroll);
+
+    selectedMonth = DateTime.now().month;
 
     _attendanceBloc = AttendanceBloc();
 
-    // Dispatch API call with proper date range
-    _attendanceBloc.add(GetAttendanceListET(
-      startDate: DateFormat('yyyy-MM-dd').format(selectedStartDate),
-      endDate: DateFormat('yyyy-MM-dd').format(selectedEndDate),
-    ));
+    // Initial load - the API response determines the user role.
+    _fetchAttendance(keyword: null);
   }
 
-  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
-    final DateTime picked = await showDatePicker(
-          context: context,
-          initialDate: isStartDate ? selectedStartDate : selectedEndDate,
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2101),
-        ) ??
-        DateTime.now();
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreItems();
+    }
+  }
+
+  void _loadMoreItems() {
+    if (_isLoadingMore) return;
 
     setState(() {
-      if (isStartDate) {
-        selectedStartDate = picked;
-      } else {
-        selectedEndDate = picked;
-      }
+      _isLoadingMore = true;
     });
 
-    // Trigger API call after selection
-    _attendanceBloc.add(GetAttendanceListET(
-      startDate: DateFormat('yyyy-MM-dd').format(selectedStartDate),
-      endDate: DateFormat('yyyy-MM-dd').format(selectedEndDate),
-    ));
-  }
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _displayedItemsCount += _itemsPerLoad;
+          _isLoadingMore = false;
+        });
+      }
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    String startDateFormatted =
-        DateFormat('MM/dd/yyyy').format(selectedStartDate);
-    String endDateFormatted = DateFormat('MM/dd/yyyy').format(selectedEndDate);
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    _scrollController.dispose();
+    _attendanceBloc.close();
+    super.dispose();
+  }
 
+  void _onSearch() {
+    final keyword = _searchController.text.trim();
+    log('AttendancePage search keyword -> $keyword');
+    setState(() {
+      _displayedItemsCount = 10;
+      expandedRecords.clear();
+      _selectedActionCards.clear();
+      _managerEmployeeLoading.clear();
+      _managerEmployeeErrors.clear();
+    });
+  }
+
+  void _fetchAttendance({String? keyword}) {
+    _requestSeq += 1;
+    final monthToUse = selectedMonth ?? DateTime.now().month;
+
+    log(
+      'AttendancePage fetch -> requestId=$_requestSeq, keyword=$keyword, month=$monthToUse, year=$selectedYear',
+    );
+
+    // Always call GetAttendanceListET — the API returns user_type so we decide
+    // which view to show from the response, not from SharedPref.
+    _attendanceBloc.add(GetAttendanceListET(
+      keyword: keyword,
+      month: monthToUse,
+      year: selectedYear,
+      requestId: _requestSeq,
+    ));
+
+    setState(() {
+      expandedRecords.clear();
+      _selectedActionCards.clear();
+      _managerEmployeeRecords.clear();
+      _managerEmployeeLoading.clear();
+      _managerEmployeeErrors.clear();
+    });
+  }
+
+  void _toggleActionCard(String cardKey) {
+    setState(() {
+      if (_selectedActionCards.contains(cardKey)) {
+        _selectedActionCards.remove(cardKey);
+      } else {
+        _selectedActionCards.add(cardKey);
+      }
+    });
+  }
+
+  String _normalizeBackendStatus(String? value) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) return '';
+    return raw.replaceAll('_', ' ').toUpperCase();
+  }
+
+  int _daysInMonth(int year, int month) {
+    if (month < 1 || month > 12) return 0;
+    return DateTime(year, month + 1, 0).day;
+  }
+
+  String _actionTitleForRecord(AttendanceRecord record) {
+    // Always show x_attendance_type if available
+    if (record.attendanceType != null &&
+        record.attendanceType!.trim().isNotEmpty) {
+      return record.attendanceType!.trim().toUpperCase().replaceAll('_', ' ');
+    }
+
+    final inStatus = _normalizeBackendStatus(record.checkInStatus);
+    final outStatus = _normalizeBackendStatus(record.checkOutStatus);
+    final overallStatus = _normalizeBackendStatus(record.status);
+
+    if (inStatus.isNotEmpty && outStatus.isNotEmpty) {
+      return '$inStatus • $outStatus';
+    }
+    if (overallStatus.isNotEmpty) {
+      return overallStatus;
+    }
+    if (inStatus.isNotEmpty) {
+      return inStatus;
+    }
+    if (outStatus.isNotEmpty) {
+      return outStatus;
+    }
+
+    final hasCheckOut = record.checkOut != null &&
+        record.checkOut != false &&
+        record.checkOut.toString().trim().isNotEmpty;
+    return hasCheckOut ? 'CHECK IN • CHECK OUT' : 'CHECK IN';
+  }
+
+  /// Returns the display color for an [AttendanceRecord] based on its
+  /// attendance type or computed check-in status.
+  Color _colorForRecord(AttendanceRecord record,
+      {required String computedStatus}) {
+    final type = (record.attendanceType?.trim() ?? '').toLowerCase();
+    const normalTypes = {'normal', 'attendance', ''};
+    if (normalTypes.contains(type)) {
+      // Server marked as normal — respect late/absent only when NO type is set
+      if (type.isEmpty) {
+        if (computedStatus == 'ABSENT' || computedStatus.contains('LATE')) {
+          return const Color(0xFFBA1719); // red
+        }
+      }
+      return Colors.transparent;
+    }
+    return const Color(0xFF660FF2); // leave / special type — purple
+    if (computedStatus == 'ABSENT' || computedStatus.contains('LATE')) {
+      return const Color(0xFFBA1719); // red
+    }
+    return Colors.transparent; // on time – no accent bar
+  }
+
+  Widget _buildActionCard({required String title, required Color color}) {
+    return Container(
+      key: ValueKey('action_$title'),
+      height: 54,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF04031A), Color(0xFF0B0A2E)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(23),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        title,
+        style: GoogleFonts.koulen(
+          fontSize: 19,
+          color: color == Colors.transparent ? Colors.white : color,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInteractiveAttendanceRecordCard({
+    required String cardKey,
+    required String status,
+    required Color textColor,
+    required DateTime checkInTime,
+    required DateTime? checkOutTime,
+    required String actionTitle,
+  }) {
+    final isSelected = _selectedActionCards.contains(cardKey);
+    return InkWell(
+      borderRadius: BorderRadius.circular(23),
+      onTap: () => _toggleActionCard(cardKey),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        transitionBuilder: (child, animation) =>
+            FadeTransition(opacity: animation, child: child),
+        child: isSelected
+            ? _buildActionCard(title: actionTitle, color: textColor)
+            : ColleaspedCard(
+                key: ValueKey('normal_$cardKey'),
+                status: status,
+                textColor: textColor,
+                bgColorStart: const Color(0xFF0F0C29),
+                bgColorEnd: const Color(0xFF302B63),
+                isExpanded: false,
+                checkInTime: checkInTime,
+                checkOutTime: checkOutTime,
+              ),
+      ),
+    );
+  }
+
+  Future<void> _toggleManagerEmployee(FlatAttendanceData employee) async {
+    final empKey = employee.empId.trim();
+    if (empKey.isEmpty) return;
+
+    final wasExpanded = expandedRecords.contains(empKey);
+    setState(() {
+      if (wasExpanded) {
+        expandedRecords.remove(empKey);
+      } else {
+        expandedRecords.add(empKey);
+      }
+    });
+
+    if (wasExpanded) return;
+    if (_managerEmployeeRecords.containsKey(empKey) ||
+        _managerEmployeeLoading.contains(empKey)) {
+      return;
+    }
+
+    setState(() {
+      _managerEmployeeLoading.add(empKey);
+      _managerEmployeeErrors.remove(empKey);
+    });
+
+    try {
+      final response = await _attendanceRepo.getAttendanceDetail(
+        empId: int.tryParse(empKey) ?? 0,
+        month: selectedMonth ?? DateTime.now().month,
+        year: selectedYear,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load records (${response.statusCode})');
+      }
+
+      final parsed = attendanceModelFromJson(response.body);
+      final result = parsed.result;
+
+      if (result.status.toLowerCase() != 'success') {
+        throw Exception('Failed to load employee records');
+      }
+
+      final records = result.records ?? <AttendanceRecord>[];
+      final Map<String, AttendanceRecord> uniqueRecords = {};
+      for (final record in records) {
+        final key = '${record.date}_${record.checkIn}';
+        if (!uniqueRecords.containsKey(key)) {
+          uniqueRecords[key] = record;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _managerEmployeeRecords[empKey] = uniqueRecords.values.toList();
+        _managerEmployeeLoading.remove(empKey);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _managerEmployeeLoading.remove(empKey);
+        _managerEmployeeErrors[empKey] = e.toString();
+      });
+    }
+  }
+
+  Future<void> _selectMonth(BuildContext context) async {
+    final int? picked = await showDialog<int>(
+      context: context,
+      builder: (context) => _MonthPickerDialog(
+        selectedMonth: selectedMonth,
+        currentYear: selectedYear,
+      ),
+    );
+
+    if (picked != null) {
+      setState(() {
+        selectedMonth = picked;
+        _displayedItemsCount = 10; // Reset to initial count on month change
+      });
+      _fetchAttendance(keyword: null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      // bottomNavigationBar: CustomBottomNavbar(
-      //   currentIndex: _selectedIndex,
-      //   onItemTapped: _onItemTapped,
-      // ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Widget
-          const SizedBox(height: 10),
-          // Title
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                Text(
-                  'MY ATTENDANCE',
-                  style: GoogleFonts.koulen(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w400,
-                    color: appFontColor,
-                    letterSpacing: 1.9, // ⬅️ adjust value as needed
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => _showAttendancePopup(context),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 3,
-                      horizontal: 8,
-                    ), // Add padding to the button
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300], // Background color of the button
-                      borderRadius:
-                          BorderRadius.circular(21), // Rounded corners
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black
-                              .withAlpha((0.2 * 255).toInt()), // Shadow color
-                          blurRadius: 6, // Spread of the shadow
-                          offset: const Offset(0, 4), // Shadow offset
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      'Report',
-                      style: GoogleFonts.koulen(
-                        fontSize: 14,
-                        color: appFontColor,
-                        letterSpacing: .10, // Adjust as needed
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Date Range Selectors
-          Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () async => await _selectDate(context, true),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(
-                              (0.2 * 255).toInt()), // Shadow color with opacity
-                          blurRadius: 3, // Softness of the shadow
-                          spreadRadius: 2, // Spread of the shadow
-                          offset:
-                              const Offset(0, 4), // Vertical shadow direction
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      startDateFormatted,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                const Text(
-                  'to',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(width: 15),
-                GestureDetector(
-                  onTap: () async => await _selectDate(context, false),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(
-                              (0.2 * 255).toInt()), // Shadow color with opacity
-                          blurRadius: 3, // Softness of the shadow
-                          spreadRadius: 2, // Spread of the shadow
-                          offset:
-                              const Offset(0, 4), // Vertical shadow direction
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      endDateFormatted,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Attendance List
-          const SizedBox(height: 10),
-          Expanded(
-            child: BlocBuilder<AttendanceBloc, AttendanceState>(
-              bloc: _attendanceBloc,
-              builder: (context, state) {
-                if (state is AttendanceLoadingState && state.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (state is AttendanceListLoaded) {
-                  return ListView.separated(
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: state.attendanceList.length,
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 15.w, vertical: 30.h),
-                    itemBuilder: (context, index) {
-                      final AttendanceData item = state.attendanceList[index];
-                      final bool isExpanded = expandedItems.contains(index);
+      body: BlocBuilder<AttendanceBloc, AttendanceState>(
+        bloc: _attendanceBloc,
+        builder: (context, state) {
+          // Determine role from the API response user_type field.
+          // "manager" and "management" → manager view; "user" → employee view.
+          // Fall back to SharedPref while state is loading.
+          bool isManagerRole =
+              SharedPref.getLoginDataOrNull()?.result?.data?.isAttendanceManager ==
+                  true;
+          if (state is AttendanceDataLoaded) {
+            isManagerRole = state.attendanceData.isManagerRole;
+          }
 
-                      final checkInTime = DateTime.parse(item.checkIn);
-                      DateTime? checkOutTime;
-                      if (item.checkOut != null && item.checkOut != false) {
-                        checkOutTime = DateTime.parse(item.checkOut!);
+          if (isManagerRole) {
+            return _buildManagerView(context, state);
+          } else {
+            return _buildEmployeeView(context, state);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildManagerView(BuildContext context, AttendanceState state) {
+    final isLoading = state is AttendanceLoadingState && state.isLoading;
+    final errorMessage = state is AttendanceErrorState ? state.message : null;
+    Result? attendanceData;
+    if (state is AttendanceDataLoaded) {
+      attendanceData = state.attendanceData;
+    }
+
+    final hasFlatData = attendanceData?.data?.isNotEmpty ?? false;
+    final hasMonthlyData = attendanceData?.monthlyEmployees?.isNotEmpty ?? false;
+    final hasGroupedData = attendanceData?.mode == "grouped" &&
+        (attendanceData?.records?.isNotEmpty ?? false);
+
+    final monthName = selectedMonth != null
+        ? DateFormat('MMMM').format(DateTime(2020, selectedMonth!))
+        : 'Select Month';
+    final year = DateTime.now().year.toString();
+
+    return ListView(
+      controller: _scrollController,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      children: [
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const SizedBox(width: 48),
+            Text(
+              'ATTENDANCE',
+              style: GoogleFonts.koulen(
+                fontSize: 20,
+                fontWeight: FontWeight.w400,
+                color: appFontColor,
+                letterSpacing: 1.9,
+              ),
+            ),
+            _MonthChip(
+              label: monthName,
+              onTap: () => _selectMonth(context),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _SearchBox(
+          controller: _searchController,
+          hintText: 'Search employee name or ID',
+          onSearch: _onSearch,
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: Text(
+            '$monthName, $year',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF9AA0A6),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (isLoading)
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text(
+                errorMessage,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF5A5A5A),
+                ),
+              ),
+            ),
+          )
+        else if (attendanceData == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text(
+                'Loading attendance data...',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF5A5A5A),
+                ),
+              ),
+            ),
+          )
+        else if (attendanceData.status == "error" &&
+            !hasFlatData &&
+            !hasMonthlyData &&
+            !hasGroupedData)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text(
+                'No data found.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF5A5A5A),
+                ),
+              ),
+            ),
+          )
+        else if (hasMonthlyData)
+          _buildMonthlyEmployeeList(_filterMonthlyEmployeesLocally(attendanceData.monthlyEmployees!))
+        else if (hasFlatData)
+          _buildFlatEmployeeList(_filterEmployeesLocally(attendanceData.data!))
+        else if (attendanceData.mode == "grouped" &&
+            attendanceData.records != null)
+          _buildEmployeeAttendanceWithCount(attendanceData)
+        else
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text(
+                'No data found.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF5A5A5A),
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildFlatEmployeeList(List<FlatAttendanceData> employees) {
+    if (employees.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 24),
+        child: Center(
+          child: Text(
+            'No employees found.',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF5A5A5A),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Calculate how many items to display
+    final displayCount = _displayedItemsCount.clamp(0, employees.length);
+    final displayedEmployees = employees.sublist(0, displayCount);
+    final hasMore = displayCount < employees.length;
+
+    return Column(
+      children: [
+        // Employee list
+        ...displayedEmployees.map((employee) {
+          final empKey = employee.empId.trim();
+          final isExpanded = expandedRecords.contains(empKey);
+          final isLoadingRecords = _managerEmployeeLoading.contains(empKey);
+          final recordsError = _managerEmployeeErrors[empKey];
+          final records =
+              _managerEmployeeRecords[empKey] ?? const <AttendanceRecord>[];
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Column(
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(28),
+                  onTap: () => _toggleManagerEmployee(employee),
+                  child: Container(
+                    height: 56,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6E6E6),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Row(
+                      children: [
+                        _EmployeeAvatar(
+                          size: 38,
+                          imageUrl: employee.employeeImageUrl,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                employee.employeeName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          isExpanded
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (isExpanded) ...[
+                  const SizedBox(height: 8),
+                  if (isLoadingRecords)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (recordsError != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        recordsError,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ),
+                    )
+                  else if (records.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        'No attendance records found.',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ),
+                    )
+                  else
+                    ...records.map((record) {
+                      // Weekend/holiday records — render special card
+                      final recordStatus =
+                          record.status?.toLowerCase().trim() ?? '';
+                      final recordAttendanceType =
+                          record.attendanceType?.toLowerCase().trim() ?? '';
+                      if (recordStatus == 'weekend' ||
+                          recordAttendanceType == 'weekend') {
+                        final DateTime? recordDate =
+                            DateTime.tryParse(record.date);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _buildWeekendCard(recordDate),
+                        );
                       }
 
-                      // Attendance Status Calculation
-                      String status = "ONTIME";
-                      String backgroundImage =
-                          'assets/png/item_bg_green.png'; // Default
-                      Color textColor = Colors.green;
+                      DateTime? checkInTime;
+                      try {
+                        checkInTime = DateTime.parse(record.checkIn);
+                      } catch (_) {}
+
+                      DateTime? checkOutTime;
+                      if (record.checkOut != null && record.checkOut != false) {
+                        try {
+                          checkOutTime =
+                              DateTime.parse(record.checkOut.toString());
+                        } catch (_) {}
+                      }
+
+                      if (checkInTime == null) {
+                        return const SizedBox.shrink();
+                      }
+
+                      String status = 'ONTIME';
 
                       if (checkOutTime == null) {
-                        status = "ABSENT";
-                        backgroundImage = '';
-                        textColor = const Color(0xff535353);
-                      } else if (item == "SICK") {
-                        status = "SICK LEAVE";
-                        backgroundImage = 'assets/png/item_bg_yellow.png';
-                        textColor = const Color(0xffF9FF46);
-                      } else if (item == "ANNUAL") {
-                        // الشرط الجديد
-                        status = "ANNUAL LEAVE";
-                        backgroundImage = '';
-                        textColor = const Color(0xff007AFF);
+                        status = 'ABSENT';
                       } else if (checkInTime.isAfter(DateTime(checkInTime.year,
                           checkInTime.month, checkInTime.day, 8, 15))) {
                         final lateMinutes = checkInTime
                             .difference(DateTime(checkInTime.year,
                                 checkInTime.month, checkInTime.day, 8, 15))
                             .inMinutes;
-                        status = "$lateMinutes MINS LATE";
-                        backgroundImage = 'assets/png/item_bg_red.png';
-                        textColor = red;
+                        status = '$lateMinutes MINS LATE';
                       }
 
-                      // ⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇
-                      // else if () {
-                      //   status = "SICK LEAVE";
-                      //   backgroundImage = 'assets/png/item_bg_yellow.png';
-                      //   textColor = const Color(0xffF9FF46);
-                      // } else if (){
-                      // status = "ANNUAL LEAVE";
-                      //   backgroundImage = '';
-                      //   textColor = const Color(0xff007AFF);
-                      //  }
-                      // ⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆
+                      final textColor =
+                          _colorForRecord(record, computedStatus: status);
+                      final cardKey =
+                          'mgr_${empKey}_${record.date}_${record.checkIn}';
 
-                      Color bgColorStart = const Color(0xFF0F0C29);
-                      Color bgColorEnd = const Color(0xFF302B63);
-
-                      return GestureDetector(
-                        onTap: () {
-                          // setState(() {
-                          //   isExpanded
-                          //       ? expandedItems.remove(index)
-                          //       : expandedItems.add(index);
-                          // });
-
-                          setState(() {
-                            if (!isExpanded) {
-                              Future.delayed(const Duration(milliseconds: 200),
-                                  () {
-                                expandedItems.add(index);
-                                setState(() {});
-                              });
-                            } else {
-                              expandedItems.remove(index);
-                            }
-                          });
-                        },
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            isExpanded
-                                ? Container(
-                                    key: const ValueKey("expanded"),
-                                    height: 70.w,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                          colors: [bgColorStart, bgColorEnd]),
-                                      borderRadius: BorderRadius.circular(30),
-                                      // boxShadow: [
-                                      //   BoxShadow(
-                                      //     color: bgColorEnd
-                                      //         .withAlpha((0.3 * 255).toInt()),
-                                      //     blurRadius: 6,
-                                      //     spreadRadius: 1,
-                                      //     offset: const Offset(0, 4),
-                                      //   )
-                                      // ],
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const SizedBox(
-                                          width: 11,
-                                        ),
-                                      
-                                        const Spacer(),
-                                        Text(
-                                          status,
-                                          style: TextStyle(
-                                            color: textColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            letterSpacing: 1,
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                      ],
-                                    ),
-                                  )
-                                : Stack(
-                                    alignment: Alignment.centerLeft,
-                                    children: [
-                                      if (backgroundImage != '' && !isExpanded)
-                                        Container(
-                                          width: 70.w,
-                                          height: 71.w,
-                                          margin: const EdgeInsets.only(top: 3,),
-                                          decoration: BoxDecoration(
-                                            color: textColor,
-                                            borderRadius: BorderRadius.circular(30),
-                                          ),
-                                        ),
-                                      Container(
-                                        height: 70.w,
-                                        key: const ValueKey("collapsed"),
-                                        padding:EdgeInsets.symmetric(horizontal: 10.w),
-                                        margin: EdgeInsets.only(left: 4.w, top: 3),
-                                        decoration: backgroundImage == ''
-                                            ? BoxDecoration(
-                                                color: Colors.grey[300],
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                              )
-                                            : BoxDecoration(
-                                                gradient: const LinearGradient(
-                                                  colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
-                                                  begin: Alignment.bottomRight,
-                                                  end: Alignment.topLeft,
-                                                ),
-                                                borderRadius: BorderRadius.circular(30),
-                                              ),
-                                        child: Row(
-                                          children: [
-                                            // Date
-                                            SizedBox(
-                                              width: 80,
-                                              child: Text(
-                                                DateFormat('dd MMM yy')
-                                                    .format(checkInTime),
-                                                textAlign: TextAlign.center,
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 16.sp,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: appFontColor,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                              height: 39.5,
-                                              child: VerticalDivider(
-                                                  color: Colors.grey, thickness: 1),
-                                            ),
-                            
-                                            // Check-in
-                                            SizedBox(
-                                              width: 90.w,
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    'Check-in',
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: appFontColor,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    DateFormat('HH:mm:ss')
-                                                        .format(checkInTime),
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w500,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(width: 5),
-                                           
-                            
-                                            // Check-out
-                                            Expanded(
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    'Check-out',
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: appFontColor,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    checkOutTime != null
-                                                        ? DateFormat('HH:mm:ss')
-                                                            .format(checkOutTime)
-                                                        : '--:--:--',
-                                                    textAlign: TextAlign.center,
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w500,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            SizedBox(width: 40.w), 
-
-                                           
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                 
-                            AnimatedAlign(
-                              alignment:
-                                  isExpanded ? Alignment.centerLeft : Alignment.centerRight,
-                              duration: const Duration(milliseconds: 900),
-                              curve: Curves.easeInOut,
-                              child: Container(
-                                  margin: EdgeInsets.symmetric(horizontal: 10.w),
-                                  key: ValueKey( isExpanded), // triggers rebuild on expand/collapse
-                                  width: 50.w,
-                                  height: 50.w,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.white,
-                                        width: 2),
-                                  ),
-                                  child: ClipOval(
-                                    child: _isValidBase64(
-                                            _imageBase64)
-                                        ? Image.memory(
-                                            base64Decode(
-                                                _imageBase64),
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          )
-                                        : Image.asset(
-                                            'assets/png/profile_1.png',
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          ),
-                                  ),
-                                ),
-                            ),      
-                          ],
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _buildInteractiveAttendanceRecordCard(
+                          cardKey: cardKey,
+                          status: status,
+                          textColor: textColor,
+                          checkInTime: checkInTime,
+                          checkOutTime: checkOutTime,
+                          actionTitle: _actionTitleForRecord(record),
                         ),
                       );
-                    },
-                    separatorBuilder: (BuildContext context, int index) =>
-                        const SizedBox(height: 13),
-                  );
-                } else if (state is AttendanceErrorState) {
-                  return Center(child: Text(state.message));
-                }
-                return const Center(
-                    child: Text("No attendance data available."));
-              },
+                    }),
+                ],
+              ],
+            ),
+          );
+        }),
+
+        // Loading indicator when loading more
+        if (_isLoadingMore && hasMore)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: CircularProgressIndicator(),
             ),
           ),
-        ],
-      ),
+
+        // Total count
+        Padding(
+          padding: const EdgeInsets.only(top: 12, bottom: 8),
+          child: Text(
+            'Showing $displayCount of ${employees.length} employees',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF9AA0A6),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  void _showAttendancePopup(BuildContext context) async {
-    final startDateStr = DateFormat('yyyy-MM-dd').format(selectedStartDate);
-    final endDateStr = DateFormat('yyyy-MM-dd').format(selectedEndDate);
+  List<FlatAttendanceData> _filterEmployeesLocally(
+      List<FlatAttendanceData> employees) {
+    final keyword = _searchController.text.trim().toLowerCase();
+    if (keyword.isEmpty) return employees;
+
+    return employees.where((employee) {
+      final name = employee.employeeName.toLowerCase();
+      final empId = employee.empId.toLowerCase();
+      return name.contains(keyword) || empId.contains(keyword);
+    }).toList();
+  }
+
+  List<EmployeeMonthlyAttendance> _filterMonthlyEmployeesLocally(
+      List<EmployeeMonthlyAttendance> employees) {
+    final keyword = _searchController.text.trim().toLowerCase();
+    if (keyword.isEmpty) return employees;
+
+    return employees.where((e) {
+      return e.employeeName.toLowerCase().contains(keyword) ||
+          e.employeeId.toString().contains(keyword);
+    }).toList();
+  }
+
+  Future<void> _toggleMonthlyEmployee(EmployeeMonthlyAttendance employee) async {
+    final empKey = employee.employeeId.toString();
+    final wasExpanded = expandedRecords.contains(empKey);
+    setState(() {
+      if (wasExpanded) {
+        expandedRecords.remove(empKey);
+      } else {
+        expandedRecords.add(empKey);
+      }
+    });
+
+    if (wasExpanded) return;
+    if (_managerEmployeeRecords.containsKey(empKey) ||
+        _managerEmployeeLoading.contains(empKey)) return;
+
+    setState(() {
+      _managerEmployeeLoading.add(empKey);
+      _managerEmployeeErrors.remove(empKey);
+    });
 
     try {
-      final summaryData = await AttendanceRepo().getAttendanceSummary(
-        startDate: startDateStr,
-        endDate: endDateStr,
+      final response = await _attendanceRepo.getAttendanceDetail(
+        empId: employee.employeeId,
+        month: selectedMonth ?? DateTime.now().month,
+        year: selectedYear,
       );
 
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return Dialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            backgroundColor: const Color(0xFFD9D9D9),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 26, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "ATTENDANCE REPORT",
-                    style: GoogleFonts.koulen(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 1.5, // Adjust as needed
-                      color: appFontColor,
-                    ),
-                  ),
-                  Text(
-                    DateFormat('MMM yyyy').format(selectedEndDate),
-                    style: GoogleFonts.koulen(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w300,
-                      color: appFontColor,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildReportItem("Working Days",
-                      "${summaryData['working_days']} Days", Colors.green),
-                  const Divider(color: Colors.grey, thickness: 0.5),
-                  _buildReportItem("Late Hours",
-                      "${summaryData['late_hours']} min", Colors.red),
-                  const Divider(color: Colors.grey, thickness: 0.5),
-                  _buildReportItem("Absent",
-                      "${summaryData['absent_days']} Days", Colors.black),
-                  const Divider(color: Colors.grey, thickness: 0.5),
-                  _buildReportItem("Sick Leave",
-                      "${summaryData['sick_leaves']} Days", Colors.orange),
-                  const Divider(color: Colors.grey, thickness: 0.5),
-                  _buildReportItem("Annual Leave",
-                      "${summaryData['annual_leaves']} Days", Colors.blue),
-                  const Divider(color: Colors.grey, thickness: 0.5),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Close",
-                          style: TextStyle(color: appFontColor, fontSize: 12)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load records (${response.statusCode})');
+      }
+
+      final parsed = attendanceModelFromJson(response.body);
+      final result = parsed.result;
+
+      if (result.status.toLowerCase() != 'success') {
+        throw Exception('Failed to load employee records');
+      }
+
+      final records = result.records ?? <AttendanceRecord>[];
+      final Map<String, AttendanceRecord> uniqueRecords = {};
+      for (final record in records) {
+        final key = '${record.date}_${record.checkIn}';
+        if (!uniqueRecords.containsKey(key)) {
+          uniqueRecords[key] = record;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _managerEmployeeRecords[empKey] = uniqueRecords.values.toList();
+        _managerEmployeeLoading.remove(empKey);
+      });
     } catch (e) {
-      log("Failed to fetch summary: $e");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Failed to load report")));
+      if (!mounted) return;
+      setState(() {
+        _managerEmployeeErrors[empKey] = e.toString();
+        _managerEmployeeLoading.remove(empKey);
+      });
     }
   }
 
-  Widget _buildReportItem(String title, String value, Color dotColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
+  Widget _buildMonthlyEmployeeList(List<EmployeeMonthlyAttendance> employees) {
+    if (employees.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Text(
+            'No employees found.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF5A5A5A),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final displayCount = _displayedItemsCount.clamp(0, employees.length);
+    final displayed = employees.sublist(0, displayCount);
+    final hasMore = displayCount < employees.length;
+
+    return Column(
+      children: [
+        ...displayed.map((employee) {
+          final empKey = employee.employeeId.toString();
+          final isExpanded = expandedRecords.contains(empKey);
+          final isLoadingRecords = _managerEmployeeLoading.contains(empKey);
+          final recordsError = _managerEmployeeErrors[empKey];
+          final records =
+              _managerEmployeeRecords[empKey] ?? const <AttendanceRecord>[];
+
+            final monthDays = _daysInMonth(
+            employee.year > 0 ? employee.year : selectedYear,
+            employee.month > 0
+              ? employee.month
+              : selectedMonth ?? DateTime.now().month,
+            );
+            final absentDays =
+              (monthDays - employee.totalPresentDays).clamp(0, monthDays);
+            final attendanceRatio = monthDays > 0
+              ? employee.totalPresentDays / monthDays
+              : 0.0;
+          final ratioColor = attendanceRatio >= 0.8
+              ? const Color(0xFF009859)
+              : attendanceRatio >= 0.6
+                  ? const Color(0xFFF5A623)
+                  : const Color(0xFFE74C3C);
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Column(
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(28),
+                  onTap: () => _toggleMonthlyEmployee(employee),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6E6E6),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Row(
+                      children: [
+                        _EmployeeAvatar(
+                          size: 38,
+                          imageUrl: employee.employeeImageUrl ?? '',
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            employee.employeeName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${employee.totalPresentDays}/$monthDays',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: ratioColor,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(
+                          isExpanded
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (isExpanded) ...[
+                  const SizedBox(height: 8),
+                  if (isLoadingRecords)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (recordsError != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        recordsError,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ),
+                    )
+                  else if (records.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        'No attendance records found.',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ),
+                    )
+                  else
+                    ...records.map((record) {
+                      final recordStatus =
+                          record.status?.toLowerCase().trim() ?? '';
+                      final recordAttendanceType =
+                          record.attendanceType?.toLowerCase().trim() ?? '';
+                      if (recordStatus == 'weekend' ||
+                          recordAttendanceType == 'weekend') {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _buildWeekendCard(
+                              DateTime.tryParse(record.date)),
+                        );
+                      }
+
+                      DateTime? checkInTime;
+                      try {
+                        checkInTime = DateTime.parse(record.checkIn);
+                      } catch (_) {}
+
+                      DateTime? checkOutTime;
+                      if (record.checkOut != null &&
+                          record.checkOut != false) {
+                        try {
+                          checkOutTime =
+                              DateTime.parse(record.checkOut.toString());
+                        } catch (_) {}
+                      }
+
+                      if (checkInTime == null) return const SizedBox.shrink();
+
+                      String status = 'ONTIME';
+                      if (checkOutTime == null) {
+                        status = 'ABSENT';
+                      } else if (checkInTime.isAfter(DateTime(
+                          checkInTime.year,
+                          checkInTime.month,
+                          checkInTime.day,
+                          8,
+                          15))) {
+                        final lateMinutes = checkInTime
+                            .difference(DateTime(checkInTime.year,
+                                checkInTime.month, checkInTime.day, 8, 15))
+                            .inMinutes;
+                        status = '$lateMinutes MINS LATE';
+                      }
+
+                      final textColor =
+                          _colorForRecord(record, computedStatus: status);
+                      final cardKey =
+                          'monthly_${empKey}_${record.date}_${record.checkIn}';
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _buildInteractiveAttendanceRecordCard(
+                          cardKey: cardKey,
+                          status: status,
+                          textColor: textColor,
+                          checkInTime: checkInTime,
+                          checkOutTime: checkOutTime,
+                          actionTitle: _actionTitleForRecord(record),
+                        ),
+                      );
+                    }),
+                ],
+              ],
+            ),
+          );
+        }),
+
+        if (_isLoadingMore && hasMore)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+
+        Padding(
+          padding: const EdgeInsets.only(top: 12, bottom: 8),
+          child: Text(
+            'Showing $displayCount of ${employees.length} employees',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF9AA0A6),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmployeeView(BuildContext context, AttendanceState state) {
+    final isLoading = state is AttendanceLoadingState && state.isLoading;
+    final errorMessage = state is AttendanceErrorState ? state.message : null;
+    Result? attendanceData;
+    if (state is AttendanceDataLoaded) {
+      attendanceData = state.attendanceData;
+    }
+
+    final monthName = selectedMonth != null
+        ? DateFormat('MMMM').format(DateTime(2020, selectedMonth!))
+        : 'Select Month';
+    final year = DateTime.now().year.toString();
+
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      children: [
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const SizedBox(width: 48),
+            Text(
+              'ATTENDANCE',
+              style: GoogleFonts.koulen(
+                fontSize: 20,
+                fontWeight: FontWeight.w400,
+                color: appFontColor,
+                letterSpacing: 1.9,
+              ),
+            ),
+            _MonthChip(
+              label: monthName,
+              onTap: () => _selectMonth(context),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Center(
+          child: Text(
+            '$monthName, $year',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF9AA0A6),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (isLoading)
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text(
+                errorMessage,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF5A5A5A),
+                ),
+              ),
+            ),
+          )
+        else if (attendanceData == null)
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text('No data available'),
+            ),
+          )
+        else if (attendanceData.mode == "grouped" &&
+            attendanceData.records != null)
+          _buildEmployeeAttendanceWithCount(attendanceData)
+        else
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text('No data available'),
+            ),
+          ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildEmployeeAttendanceWithCount(Result data) {
+    final records = data.records ?? [];
+
+    // Remove duplicate records
+    final Map<String, AttendanceRecord> uniqueRecords = {};
+    for (var record in records) {
+      final key = '${record.date}_${record.checkIn}';
+      if (!uniqueRecords.containsKey(key)) {
+        uniqueRecords[key] = record;
+      }
+    }
+
+    final uniqueRecordsList = uniqueRecords.values.toList();
+
+    return Column(
+      children: [
+        // Employee header with count
+        Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE6E6E6),
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Row(
             children: [
-              Container(
-                  width: 8,
-                  height: 8,
-                  decoration:
-                      BoxDecoration(color: dotColor, shape: BoxShape.circle)),
-              const SizedBox(width: 8),
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 11, fontWeight: FontWeight.bold)),
+              _EmployeeAvatar(
+                size: 38,
+                imageUrl: data.employeeImageUrl ?? "",
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  data.employeeName ?? "",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+              Text(
+                '${data.totalPresentDays ?? 0}/${data.totalWorkingDays ?? 0}',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
             ],
           ),
-          Text(value,
-              style:
-                  const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-        ],
-      ),
+        ),
+        const SizedBox(height: 10),
+
+        // Attendance records
+        ...uniqueRecordsList.map((record) {
+          // Weekend records — render special card
+          if (record.status?.toLowerCase() == 'weekend') {
+            final DateTime? recordDate = DateTime.tryParse(record.date);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildWeekendCard(recordDate),
+            );
+          }
+
+          final DateTime? checkInTime = DateTime.tryParse(record.checkIn);
+          if (checkInTime == null) return const SizedBox.shrink();
+          DateTime? checkOutTime;
+          if (record.checkOut != null && record.checkOut != false) {
+            checkOutTime = DateTime.tryParse(record.checkOut!);
+          }
+
+          String status = 'ONTIME';
+
+          if (checkOutTime == null) {
+            status = 'ABSENT';
+          } else if (checkInTime.isAfter(DateTime(
+              checkInTime.year, checkInTime.month, checkInTime.day, 8, 15))) {
+            final lateMinutes = checkInTime
+                .difference(DateTime(checkInTime.year, checkInTime.month,
+                    checkInTime.day, 8, 15))
+                .inMinutes;
+            status = '$lateMinutes MINS LATE';
+          }
+
+          final textColor = _colorForRecord(record, computedStatus: status);
+          final cardKey = 'emp_${record.date}_${record.checkIn}';
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _buildInteractiveAttendanceRecordCard(
+              cardKey: cardKey,
+              status: status,
+              textColor: textColor,
+              checkInTime: checkInTime,
+              checkOutTime: checkOutTime,
+              actionTitle: _actionTitleForRecord(record),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildWeekendCard(DateTime? date) {
+    return Stack(
+      alignment: Alignment.centerLeft,
+      children: [
+        // Green left accent bar
+        Container(
+          width: 50,
+          height: 55,
+          margin: const EdgeInsets.only(top: 2, left: 3),
+          decoration: BoxDecoration(
+            color: const Color(0xFF009859),
+            borderRadius: BorderRadius.circular(23),
+          ),
+        ),
+        // Main card
+        Container(
+          height: 54,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          margin: const EdgeInsets.only(left: 7, top: 2),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(23),
+          ),
+          child: Row(
+            children: [
+              // Date
+              SizedBox(
+                width: 80,
+                child: Text(
+                  date != null
+                      ? DateFormat('dd MMM yy').format(date).toUpperCase()
+                      : '--',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: appFontColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const SizedBox(
+                height: 40,
+                child: VerticalDivider(color: Colors.grey, thickness: 1),
+              ),
+              // Weekend label
+              Expanded(
+                child: Center(
+                  child: Text(
+                    'W e e k e n d',
+                    style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w600,
+                      color: appFontColor,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
 
+class _MonthPickerDialog extends StatefulWidget {
+  final int? selectedMonth;
+  final int currentYear;
 
-
-class BouncingIconToggle extends StatefulWidget {
-  final IconData icon;
-  final bool isExpanded;
-  final ValueChanged<bool> onToggle;
-
-  const BouncingIconToggle({
-    Key? key,
-    required this.icon,
-    required this.isExpanded,
-    required this.onToggle,
-  }) : super(key: key);
+  const _MonthPickerDialog({
+    required this.selectedMonth,
+    required this.currentYear,
+  });
 
   @override
-  State<BouncingIconToggle> createState() => _BouncingIconToggleState();
+  State<_MonthPickerDialog> createState() => _MonthPickerDialogState();
 }
 
-class _BouncingIconToggleState extends State<BouncingIconToggle>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _offsetAnimation;
+class _MonthPickerDialogState extends State<_MonthPickerDialog> {
+  late int? _selectedMonth;
 
   @override
   void initState() {
     super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-
-    _setAnimation();
-  }
-
-  void _setAnimation() {
-    final double bounceAmount = 10; // how far it bounces
-    final double start = widget.isExpanded ? 0.0 : 0.0;
-    final double peak =
-        widget.isExpanded ? -bounceAmount : bounceAmount; // direction
-    final double end = widget.isExpanded ? bounceAmount : -bounceAmount;
-
-    _offsetAnimation = TweenSequence([
-      TweenSequenceItem(
-        tween: Tween(begin: start, end: peak)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 40,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: peak, end: end)
-            .chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 60,
-      ),
-    ]).animate(_controller);
-  }
-
-  void _handleTap() {
-    _setAnimation();
-    _controller.forward(from: 0).whenComplete(() {
-      widget.onToggle(!widget.isExpanded);
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant BouncingIconToggle oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _setAnimation();
+    _selectedMonth = widget.selectedMonth;
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      child: AnimatedBuilder(
-        animation: _offsetAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(_offsetAnimation.value, 0),
-            child: Icon(widget.icon, size: 28),
-          );
-        },
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sept',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      backgroundColor: Colors.white,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Yearly Calendar ${widget.currentYear}',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF9AA0A6),
+              ),
+            ),
+            const SizedBox(height: 20),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.5,
+              ),
+              itemCount: 12,
+              itemBuilder: (context, index) {
+                final monthNumber = index + 1;
+                final isSelected = _selectedMonth == monthNumber;
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedMonth = monthNumber;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? const Color(0xFF757575) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFE0E0E0),
+                        width: 1,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      months[index],
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(_selectedMonth);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF757575),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                child: Text(
+                  'Done',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+class _MonthChip extends StatelessWidget {
+  final String label;
+  final VoidCallback? onTap;
+
+  const _MonthChip({required this.label, this.onTap});
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha((0.15 * 255).toInt()),
+              blurRadius: 6,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: appFontColor,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.keyboard_arrow_down, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchBox extends StatelessWidget {
+  final TextEditingController controller;
+  final String hintText;
+  final VoidCallback? onSearch;
+
+  const _SearchBox({
+    required this.controller,
+    required this.hintText,
+    this.onSearch,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onSubmitted: (_) => onSearch?.call(),
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search, size: 20),
+        hintText: hintText,
+        hintStyle: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF5A5A5A),
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF3F3F3),
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmployeeAvatar extends StatelessWidget {
+  final double size;
+  final String imageUrl;
+  final bool withShadow;
+
+  const _EmployeeAvatar({
+    required this.size,
+    required this.imageUrl,
+    this.withShadow = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final decoration = BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.all(color: const Color(0xFFBDBDBD), width: 1),
+      boxShadow: withShadow
+          ? [
+              BoxShadow(
+                color: Colors.black.withAlpha((0.12 * 255).toInt()),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ]
+          : null,
+    );
+
+    Widget image;
+    if (imageUrl.trim().isNotEmpty) {
+      image = Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset('assets/png/profile_1.png', fit: BoxFit.cover);
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(color: const Color(0xFFE6E6E6));
+        },
+      );
+    } else {
+      image = Image.asset('assets/png/profile_1.png', fit: BoxFit.cover);
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(2),
+      decoration: decoration,
+      child: ClipOval(child: image),
+    );
   }
 }

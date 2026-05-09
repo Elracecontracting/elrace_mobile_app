@@ -1,9 +1,11 @@
 import 'package:camera/camera.dart';
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../widgets/square_button.dart';
 
@@ -16,7 +18,7 @@ class CustomCameraScreen extends StatefulWidget {
 }
 
 class _CustomCameraScreenState extends State<CustomCameraScreen> {
-  late CameraController controller;
+  CameraController? controller;
   List<CameraDescription> _cameras = [];
   bool _cameraInitilaized = false;
   bool _showCameraAccessDeniedView = false;
@@ -26,18 +28,38 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
   double _maxZoomLevel = 1.0;
 
   _init() async {
-    _cameras = await availableCameras();
-    controller = CameraController(_cameras[0], ResolutionPreset.max);
-    controller.initialize().then((_) async {
+    final permission = await Permission.camera.request();
+    if (!permission.isGranted && !permission.isLimited) {
+      if (mounted) {
+        setState(() => _showCameraAccessDeniedView = true);
+      }
+      return;
+    }
+
+    try {
+      _cameras = await availableCameras();
+      if (_cameras.isEmpty) {
+        if (mounted) {
+          setState(() => _showCameraAccessDeniedView = true);
+        }
+        return;
+      }
+      final cameraController = CameraController(
+        _cameras.first,
+        ResolutionPreset.max,
+        enableAudio: false,
+      );
+      controller = cameraController;
+      await cameraController.initialize();
       if (!mounted) {
         return;
       }
-      _minZoomLevel = await controller.getMinZoomLevel();
-      _maxZoomLevel = await controller.getMaxZoomLevel();
+      _minZoomLevel = await cameraController.getMinZoomLevel();
+      _maxZoomLevel = await cameraController.getMaxZoomLevel();
       _currentZoomLevel = _minZoomLevel;
       _cameraInitilaized = true;
       setState(() {});
-    }).catchError((Object e) {
+    } catch (e) {
       if (e is CameraException) {
         switch (e.code) {
           case 'CameraAccessDenied':
@@ -49,7 +71,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
             break;
         }
       }
-    });
+    }
   }
 
   @override
@@ -60,20 +82,24 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
 
   @override
   void dispose() {
-    controller.dispose();
+    controller?.dispose();
     super.dispose();
   }
 
   final List<XFile> _images = [];
   Future<void> takePhoto() async {
     if (widget.onePicture && _images.length == 1) return;
-    if (!_cameraInitilaized || !controller.value.isInitialized) {
+    final cameraController = controller;
+    if (!_cameraInitilaized ||
+        cameraController == null ||
+        !cameraController.value.isInitialized) {
       debugPrint("Camera not initialized");
       return;
     }
     try {
-      final XFile file = await controller.takePicture();
+      final XFile file = await cameraController.takePicture();
       _images.add(file);
+      if (!mounted) return;
       setState(() {});
       if (widget.onePicture) {
         Navigator.pop(context, _images);
@@ -109,7 +135,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
           CompanyRepository.company!.logo,
           height: 60,
         ),
-        actions: [
+        actions: const [
           // SquareButton(
           //   icon: Icons.check,
           //   color: CustomColors.blue,
@@ -139,7 +165,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                         SizedBox(
                             height: constraint.maxHeight,
                             width: constraint.maxWidth,
-                            child: CameraPreview(controller)),
+                            child: CameraPreview(controller!)),
                         Positioned(
                           top: 80,
                           bottom: 100,
@@ -153,9 +179,10 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                                   data: SliderTheme.of(context).copyWith(
                                     thumbColor: Colors.white, // knob color
                                     activeTrackColor: CustomColors.blue,
-                                    inactiveTrackColor:
-                                        Colors.white.withOpacity(0.3),
-                                    overlayColor: Colors.white.withOpacity(0.1),
+                                    inactiveTrackColor: Colors.white
+                                      ..withValues(alpha: 0.3),
+                                    overlayColor: Colors.white
+                                      ..withValues(alpha: 0.1),
                                     thumbShape: const RoundSliderThumbShape(
                                         enabledThumbRadius: 10),
                                     trackHeight: 4,
@@ -166,7 +193,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                                     value: _currentZoomLevel,
                                     onChanged: (value) async {
                                       _currentZoomLevel = value;
-                                      await controller
+                                      await controller!
                                           .setZoomLevel(_currentZoomLevel);
                                       setState(() {});
                                     },
@@ -214,7 +241,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                           ),
                         ),
                         Positioned(
-                          bottom: MediaQuery.paddingOf(context).bottom + 5,
+                          bottom: context.systemBottomInset + 5,
                           right: 0,
                           left: 0,
                           child: Center(

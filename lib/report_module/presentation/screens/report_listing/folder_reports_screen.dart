@@ -78,7 +78,7 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
                 bool status = await showAddNewReport(context,
                     type: 1, folderID: widget.folder.id.toString());
 
-                if (status)
+                if (status) {
                   Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -86,6 +86,7 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
                                 report: reportProviderListener.reports.first,
                                 folderName: widget.folder.name,
                               )));
+                }
 
                 setState(() {});
                 return;
@@ -98,7 +99,7 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
       body: Column(
         children: [
           Expanded(
-            child: !_loading && reportProviderListener.reports.length == 0
+            child: !_loading && reportProviderListener.reports.isEmpty
                 ? Center(
                     child: CupertinoButton(
                       padding: EdgeInsets.zero,
@@ -132,24 +133,37 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
                         return ReportTile(
                           folderName: widget.folder.name,
                           report: reportProviderListener.reports[index],
-                          onMoreClicked: () async {
-                            int selectedOptionStatus = await showEditOptions(
-                                context,
-                                options: ['rename', 'delete']);
-
-                            if (selectedOptionStatus == 0) {
+                          onMenuSelected: (value) async {
+                            if (value == 'rename') {
                               if (!context.mounted) return;
                               await showRenameReport(context,
                                   report:
                                       reportProviderListener.reports[index]);
                               return;
                             }
-                            if (selectedOptionStatus == 1) {
+                            if (value == 'delete') {
                               if (!context.mounted) return;
-                              int deleteCodeStatus = await showEditOptions(
-                                  context,
-                                  options: ['Confirm Delete', 'Cancel']);
-                              if (deleteCodeStatus == 0) {
+                              final shouldDelete = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Delete Report'),
+                                  content: const Text(
+                                    'Are you sure you want to delete this report?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: const Text('Delete'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (shouldDelete == true) {
                                 reportProvider.deleteReport(
                                     reportId: reportProviderListener
                                         .reports[index].id);

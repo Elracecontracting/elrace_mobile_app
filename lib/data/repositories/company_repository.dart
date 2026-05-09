@@ -31,24 +31,35 @@ class CompanyRepository implements ICompanyRepository {
     int id = SharedPref.getSelectedCompany();
     final box = await _getCompanyBox();
     selectedCompany = id;
-    company = box.get(id) ??
-        ((id == 1)
-            ? CompanyModel(
-                companyName: "El Race Cons. & Gen. Cont. Co. L.C.C",
-                logo: "assets/newapp/logo.png",
-                employeeName: "",
-                personEmail: "",
-                contactPhone: "",
-                employeeID: "",
-                endText: "")
-            : CompanyModel(
-                companyName: "Al Hewar Contracting & Irrigation Est.",
-                logo: "assets/newapp/logo2.png",
-                employeeName: "",
-                personEmail: "",
-                contactPhone: "",
-                employeeID: "",
-                endText: ""));
+    print('🏢 data/CompanyRepository.getCompany() → selectedCompany=$id');
+
+    // Determine the correct logo based on company ID
+    final String correctLogo =
+        (id == 1) ? 'assets/newapp/logo.png' : 'assets/newapp/logo2.png';
+
+    final stored = box.get(id);
+    if (stored != null) {
+      // Always override logo to ensure correctness
+      company = stored.copyWith(logo: correctLogo);
+    } else {
+      company = (id == 1)
+          ? CompanyModel(
+              companyName: "El Race Cons. & Gen. Cont. Co. L.C.C",
+              logo: correctLogo,
+              employeeName: "",
+              personEmail: "",
+              contactPhone: "",
+              employeeID: "",
+              endText: "")
+          : CompanyModel(
+              companyName: "Al Hewar Contracting & Irrigation Est.",
+              logo: correctLogo,
+              employeeName: "",
+              personEmail: "",
+              contactPhone: "",
+              employeeID: "",
+              endText: "");
+    }
 
     return company!;
   }

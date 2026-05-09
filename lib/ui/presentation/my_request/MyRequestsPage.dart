@@ -1,18 +1,27 @@
+import 'dart:async';
 import 'dart:convert';
+
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-import '../../widgets/header_widget.dart';
+import 'package:el_race/ui/presentation/my_request/RequestEffectiveDate.dart';
+import 'package:el_race/ui/presentation/my_request/RequestJobMissionPage.dart';
+import 'package:el_race/ui/presentation/my_request/RequestLeavePage.dart';
+import 'package:el_race/ui/presentation/my_request/RequestPermission.dart';
+import 'package:el_race/ui/presentation/my_request/HrRequestsMenuPage.dart';
+import 'package:el_race/utils/api_logger.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:el_race/ui/presentation/my_request/RequestLeavePage.dart';
-import 'package:el_race/ui/presentation/my_request/RequestJobMissionPage.dart';
-import 'package:el_race/ui/presentation/my_request/RequestEffectiveDate.dart';
-import 'package:el_race/ui/presentation/my_request/RequestPermission.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
+import '../../widgets/header_widget.dart';
 
 class MyRequestsPage extends StatefulWidget {
-  const MyRequestsPage({Key? key,}) : super(key: key);
+  const MyRequestsPage({
+    super.key,
+  });
 
   @override
   _MyRequestsPageState createState() => _MyRequestsPageState();
@@ -25,6 +34,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   Set<int> expandedItems = {};
   String error = '';
   List<dynamic> requests = [];
+  List<dynamic> _allRequests = [];
 
   final List<String> requestOptions = [
     'Leave',
@@ -33,16 +43,34 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     'Temporary Permission',
   ];
   TextEditingController searchController = TextEditingController();
+  Timer? _searchDebounce;
 
-
- 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-     _fetchRequests();
+    _fetchRequests();
     searchController.addListener(() {
-      _fetchRequests(keyword: searchController.text.trim());
+      final text = searchController.text.trim();
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+        if (!mounted) return;
+        if (text.isEmpty) {
+          setState(() {
+            requests = List<dynamic>.from(_allRequests);
+          });
+        } else {
+          // Prefer server-side search if available
+          _fetchRequests(keyword: text);
+        }
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchRequests({String keyword = ""}) async {
@@ -67,27 +95,62 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         "params": {"keyword": keyword},
       });
 
-      final url = Uri.parse("https://test.elrace.com/api/my_requests");
+      final url = Uri.parse("https://erp.elrace.com/api/my_requests");
+
+      // 📤 Log Request
+      ApiLogger.logRequest(
+        endpoint: url.toString(),
+        method: 'GET',
+        headers: headers,
+        body: body,
+      );
+
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
         ..body = body;
 
+      final startTime = DateTime.now();
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
+      final duration = DateTime.now().difference(startTime);
+
       debugPrint("response: ${response.body}");
+
+      final responseData = jsonDecode(response.body);
+
+      // 📥 Log Response
+      ApiLogger.logResponse(
+        endpoint: url.toString(),
+        statusCode: response.statusCode,
+        responseBody: responseData,
+        duration: duration,
+      );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = responseData;
         final List<dynamic> items = data['result']['data'];
 
         if (!mounted) return; // ✅ Check again after async call
         setState(() {
-          requests = items;
+          if (keyword.isEmpty) {
+            _allRequests = List<dynamic>.from(items);
+            requests = List<dynamic>.from(items);
+          } else {
+            // If backend supports keyword, it already filtered; still guard locally
+            requests = items;
+          }
           isLoading = false;
         });
       } else {
-        throw Exception("Failed to load requests: ${response.statusCode}\n${response.body}");
+        throw Exception(
+            "Failed to load requests: ${response.statusCode}\n${response.body}");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // ❌ Log Error
+      ApiLogger.logError(
+        endpoint: 'https://erp.elrace.com/api/my_requests',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (!mounted) return;
       setState(() {
         isLoading = false;
@@ -96,19 +159,22 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     }
   }
 
-
-
   void _showRequestTypeDialog() {
     String dialogSelectedRequest = selectedRequestType;
     bool isDropdownOpen = true;
 
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Stack(
                 children: [
                   Container(
@@ -128,147 +194,166 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                             });
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                            decoration: const BoxDecoration(
-                              image: DecorationImage(
-                                image: AssetImage('assets/png/dropdown_bg.png'),
-                                fit: BoxFit.cover,
-                                alignment: Alignment.topCenter,
+                            height: 44.h,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFF0F0C29),
+                                  Color(0xFF302B63),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(12),
-                                topRight: Radius.circular(12),
-                              ),
+                              borderRadius: BorderRadius.circular(25.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.22),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  dialogSelectedRequest,
-                                  style: GoogleFonts.koulen(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w300,
+                                  selectedRequestType.toUpperCase(),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15.sp,
                                     color: Colors.white,
-                                    letterSpacing: 1.2, // Adjust this value as needed
+                                    letterSpacing: 1.5,
                                   ),
                                 ),
-
+                                SizedBox(width: 6.w),
                                 Icon(
-                                  isDropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                                  isDropdownOpen
+                                      ? Icons.arrow_drop_up
+                                      : Icons.arrow_drop_down,
                                   color: Colors.white,
+                                  size: 20.sp,
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        if (isDropdownOpen)
-                          Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: const BorderRadius.only(
-                                bottomLeft: Radius.circular(18),
-                                bottomRight: Radius.circular(18),
+                        SizedBox(height: 12.h),
+                        AnimatedOpacity(
+                          duration: const Duration(milliseconds: 250),
+                          opacity: isDropdownOpen ? 1.0 : 0.0,
+                          child: IgnorePointer(
+                            ignoring: !isDropdownOpen,
+                            child: Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20.r),
+                                border: Border.all(
+                                    color: Colors.grey.shade300, width: 1),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 12,
+                                    spreadRadius: 1,
+                                    offset: const Offset(0, 5),
+                                  )
+                                ],
                               ),
-                              border: Border.all(color: Colors.grey, width: 0.3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha((0.1 * 255).toInt()),
-                                  blurRadius: 4,
-                                  spreadRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: List.generate(requestOptions.length * 2 - 1, (index) {
-                                if (index.isEven) {
-                                  final option = requestOptions[index ~/ 2];
-                                  return GestureDetector(
-                                      onTap: () async {
-                                        setState(() => selectedRequestType = option);
-                                        Navigator.of(context).pop();
+                              child: Column(
+                                children: List.generate(
+                                  requestOptions.length,
+                                  (index) => GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () async {
+                                      setDialogState(() {
+                                        isDropdownOpen = false;
+                                        selectedRequestType =
+                                            requestOptions[index];
+                                      });
+                                      Navigator.pop(context);
 
-                                        bool? shouldRefresh;
+                                      // Show as dialog instead of navigation
+                                      Widget? pageWidget;
+                                      if (requestOptions[index] == 'Leave') {
+                                        pageWidget = RequestDetailsPage(
+                                            loginResponseModel:
+                                                SharedPref.getLoginData());
+                                      } else if (requestOptions[index] ==
+                                          'Temporary Permission') {
+                                        pageWidget = RequestPermission(
+                                            loginResponseModel:
+                                                SharedPref.getLoginData());
+                                      } else if (requestOptions[index] ==
+                                          'Effective Date') {
+                                        pageWidget = EffectiveDatePage(
+                                            loginResponseModel:
+                                                SharedPref.getLoginData());
+                                      } else if (requestOptions[index] ==
+                                          'Job Mission') {
+                                        pageWidget = RequestJobMissionPage(
+                                            loginResponseModel:
+                                                SharedPref.getLoginData());
+                                      }
 
-                                        if (option == 'Leave') {
-                                          shouldRefresh = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => RequestDetailsPage(loginResponseModel: SharedPref.getLoginData()),
+                                      if (pageWidget != null) {
+                                        showDialog(
+                                          context: context,
+                                          barrierColor:
+                                              Colors.black.withOpacity(0.5),
+                                          builder: (context) => Dialog(
+                                            backgroundColor: Colors.transparent,
+                                            insetPadding: EdgeInsets.zero,
+                                            child: pageWidget,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: double.infinity,
+                                          padding: EdgeInsets.symmetric(
+                                              vertical: 14.h, horizontal: 18.w),
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            requestOptions[index],
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black,
                                             ),
-                                          );
-                                        } else if (option == 'Job Mission') {
-                                          shouldRefresh = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => RequestJobMissionPage(loginResponseModel: SharedPref.getLoginData()),
-                                            ),
-                                          );
-                                        } else if (option == 'Effective Date') {
-                                          shouldRefresh = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => EffectiveDatePage(loginResponseModel: SharedPref.getLoginData()),
-                                            ),
-                                          );
-                                        } else if (option == 'Temporary Permission') {
-                                          shouldRefresh = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => RequestPermission(loginResponseModel: SharedPref.getLoginData()),
-                                            ),
-                                          );
-                                        }
-
-                                        if (shouldRefresh == true) {
-                                          _fetchRequests(); // 🔁 Refresh the list
-                                        }
-                                      },
-
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                                      child: Text(
-                                        option,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: dialogSelectedRequest == option
-                                              ? Colors.blue
-                                              : appFontColor,
+                                          ),
                                         ),
-                                      ),
-
+                                        if (index != requestOptions.length - 1)
+                                          Divider(
+                                            height: 1,
+                                            thickness: 0.7,
+                                            color: Colors.grey.shade300,
+                                          ),
+                                      ],
                                     ),
-                                  );
-                                } else {
-                                  return const Divider(
-                                    height: 1,
-                                    color: Colors.grey,
-                                    thickness: 0.4,
-                                    indent: 16,
-                                    endIndent: 16,
-                                  );
-                                }
-                              }),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
+                        ),
+                        SizedBox(height: 16.h),
                         const SizedBox(height: 16),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.info, size: 14, color: appFontColor),
+                            const Icon(Icons.info,
+                                size: 14, color: appFontColor),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 translate('notification.pending_approval'),
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 9,
                                   color: appFontColor,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-
                             ),
                           ],
                         ),
@@ -289,7 +374,8 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha((0.2 * 255).toInt()),
+                              color:
+                                  Colors.black.withAlpha((0.2 * 255).toInt()),
                               blurRadius: 6,
                               spreadRadius: 1,
                               offset: const Offset(0, 2),
@@ -297,7 +383,8 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                           ],
                         ),
                         child: const Center(
-                          child: Icon(Icons.close, size: 18, color: Colors.grey),
+                          child:
+                              Icon(Icons.close, size: 18, color: Colors.grey),
                         ),
                       ),
                     ),
@@ -309,6 +396,35 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         );
       },
     );
+  }
+
+  String _formatRequestDate(dynamic raw) {
+    final input = (raw ?? '').toString().trim();
+    if (input.isEmpty) return input;
+
+    try {
+      return DateFormat('dd/MM/yyyy').format(DateTime.parse(input));
+    } catch (_) {
+      // Try common API date formats before falling back to raw value.
+      const patterns = <String>[
+        'yyyy-MM-dd HH:mm:ss',
+        'yyyy-MM-dd HH:mm',
+        'yyyy-MM-dd',
+        'MM/dd/yyyy',
+        'MM/dd/yyyy HH:mm:ss',
+        'dd-MM-yyyy',
+        'dd-MM-yyyy HH:mm:ss',
+      ];
+
+      for (final pattern in patterns) {
+        try {
+          final parsed = DateFormat(pattern).parseStrict(input);
+          return DateFormat('dd/MM/yyyy').format(parsed);
+        } catch (_) {}
+      }
+    }
+
+    return input;
   }
 
   Widget _buildRequestItem(Map item, int index) {
@@ -342,6 +458,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         textColor = Colors.white;
     }
 
+    // ألوان التدرّج
     Color bgStart = const Color(0xFF0F0C29);
     Color bgEnd = const Color(0xFF302B63);
 
@@ -352,147 +469,141 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         });
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 100),
-          switchInCurve: Curves.easeOutExpo,
-          transitionBuilder: (child, animation) {
-            final offsetAnimation = Tween<Offset>(
-              begin: const Offset(1, 0),
-              end: Offset.zero,
-            ).animate(animation);
-            return SlideTransition(position: offsetAnimation, child: child);
-          },
-          child: isExpanded
-              ? Container(
-            key: const ValueKey("expanded"),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [bgStart, bgEnd]),
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: bgEnd.withAlpha((0.3 * 255).toInt()),
-                  blurRadius: 6,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                statusLabel,
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-          )
-              : Container(
-            key: const ValueKey("collapsed"),
-            padding: const EdgeInsets.fromLTRB(15, 8, 8, 11),
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage(backgroundImage),
-                fit: BoxFit.cover,
-              ),
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha((0.08 * 255).toInt()),
-                  blurRadius: 4,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Date
-                SizedBox(
-                  width: 80,
-                  child: Text(
-                    item['create_date'] ?? '',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
-                    ),
-
+        padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 8.0),
+        child: SizedBox(
+          height: 60.w,
+          child: Stack(
+            children: [
+              // 🔹 الطبقة الأساسية (Collapsed) - دائماً موجودة
+              Container(
+                height: 60.w,
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(horizontal: 20.w) +
+                    EdgeInsets.only(bottom: 10.w),
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage(backgroundImage),
+                    fit: BoxFit.cover,
                   ),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha((0.08 * 255).toInt()),
+                      blurRadius: 4,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 0),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 0),
-                const SizedBox(
-                  height: 30,
-                  child: VerticalDivider(color: Colors.grey, thickness: 2),
-                ),
-                const SizedBox(width: 5),
-
-                // REQ NO
-                SizedBox(
-                  width: 100,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'REQ NO',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SizedBox(
+                      width: 80.w,
+                      child: Text(
+                        _formatRequestDate(item['create_date']),
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
                           fontWeight: FontWeight.bold,
                           color: appFontColor,
                         ),
                       ),
-                      Text(
-                        item['name'] ?? '',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 5),
-                const SizedBox(
-                  height: 30,
-                  child: VerticalDivider(color: Colors.grey, thickness: 2),
-                ),
-                const SizedBox(width: 0),
-
-                // Request Type
-                Expanded(
-                  child: Text(
-                    item['request_type_name']?.trim() ?? '',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
+                    const SizedBox(
+                      height: 30,
+                      child: VerticalDivider(
+                        color: Colors.grey,
+                        thickness: 2,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 150.w,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'REQ NO',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: appFontColor,
+                            ),
+                          ),
+                          Text(
+                            item['name'] ?? '',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black,
+                            ),
+                            overflow: TextOverflow.visible,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 30,
+                      child: VerticalDivider(
+                        color: Colors.grey,
+                        thickness: 2,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        item['request_type_name']?.trim() ?? '',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                          color: appFontColor,
+                        ),
+                        overflow: TextOverflow.visible,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+
+              // 🔥 الطبقة العلوية (Expanded) - تظهر فوق الcollapsed بالضبط
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: isExpanded ? 1.0 : 0.0,
+                child: IgnorePointer(
+                  ignoring: !isExpanded,
+                  child: Container(
+                    height: 55.w,
+                    alignment: Alignment.center,
+                    padding: EdgeInsets.symmetric(horizontal: 20.w),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [bgStart, bgEnd],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Center(
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-
-
-
-
 
   void _showStatusDialog(Map item) {
     showModalBottomSheet(
@@ -510,16 +621,19 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
               buildStatusPill(item['status'] ?? 'unknown'),
               const SizedBox(height: 20),
               Text(
-                "Date: ${item['create_date']}",
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                "Date: ${_formatRequestDate(item['create_date'])}",
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               Text(
                 "Request No: ${item['name']}",
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               Text(
                 "Type: ${item['request_type_name']}",
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -527,7 +641,6 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       },
     );
   }
-
 
   Widget buildStatusPill(String status) {
     Color bgColor;
@@ -550,7 +663,8 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [bgColor.withOpacity(0.8), bgColor]),
+        gradient:
+            LinearGradient(colors: [bgColor.withValues(alpha: 0.8), bgColor]),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
@@ -567,112 +681,136 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     );
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    return  RefreshIndicator(
-        onRefresh: () async {
-          await _fetchRequests();
-        },
-        child: Scaffold(
-          backgroundColor: Colors.white,
-          appBar: const HeaderWidget(),
-        body: Column(
-          children: [
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                children: [
-                  // Header Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () => Navigator.pop(context,true),
-                      ),
-                      Text(
-                        'MY REQUESTS',
-                        style: GoogleFonts.koulen(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w400,
-                          color: appFontColor,
-                          letterSpacing: 1.9, // ⬅️ adjust value as needed
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _fetchRequests();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: const HeaderWidget(),
+        body: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 5),
+                    // Header Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const SizedBox(width: 40),
+                        // Centered title
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              translate('home.my_request')
+                                  .toString()
+                                  .toUpperCase(),
+                              style: GoogleFonts.poppins(
+                                fontSize: 22.sp,
+                                fontWeight: FontWeight.w400,
+                                color: appFontColor,
+                                letterSpacing: 2.0,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         ),
-                      ),
-                      Container(
-                        width: 25,
-                        height: 25,
-                        decoration: const BoxDecoration(color: appFontColor, shape: BoxShape.circle),
-                        child: IconButton(
-                          icon: const Icon(Icons.add, size: 20, color: Colors.white),
-                          onPressed: _showRequestTypeDialog,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    decoration: BoxDecoration(
-                      image: const DecorationImage(
-                        image: AssetImage('assets/png/bg_atten.png'),
-                        fit: BoxFit.none,
-                      ),
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(29),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withAlpha((0.2 * 255).toInt()),
-                          blurRadius: 4,
-                          spreadRadius: 2,
+                        // Plus icon (right)
+                        SizedBox(
+                          width: 40.w,
+                          height: 40.w,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon: Icon(Icons.add,
+                                size: 28.sp, color: appFontColor),
+                            onPressed: () async {
+                              final result = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const HrRequestsMenuPage(),
+                                ),
+                              );
+                              if (result == true) {
+                                await _fetchRequests();
+                              }
+                            },
+                          ),
                         ),
                       ],
                     ),
-                    child: TextField(
-                      controller: searchController,
-                      decoration: const InputDecoration(
-                        hintText: "Find your request",
-                        hintStyle: TextStyle(fontSize: 12, color: appFontColor), // Reduced font size
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.all(8.0), // Adjust padding to control icon size
-                          child: Icon(Icons.menu, size: 18, color: appFontColor), // Reduced icon size
+                    const SizedBox(height: 8),
+                    // Centered rounded search field
+                    Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: MediaQuery.of(context).size.width * 0.66,
+                        height: 50.h,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30.r),
+                          border: Border.all(
+                              color: const Color(0xFFD9D9D9), width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  Colors.grey.withAlpha((0.06 * 255).toInt()),
+                              blurRadius: 6,
+                              spreadRadius: 0,
+                            ),
+                          ],
                         ),
-                        suffixIcon: Padding(
-                          padding: EdgeInsets.all(8.0), // Adjust padding for consistency
-                          child: Icon(Icons.search, size: 18, color: appFontColor), // Search icon at the end
+                        child: TextField(
+                          controller: searchController,
+                          decoration: InputDecoration(
+                            hintText: translate('home.Find_your_request'),
+                            hintStyle:
+                                TextStyle(fontSize: 14.sp, color: appFontColor),
+                            prefixIcon: Padding(
+                              padding: EdgeInsets.all(12.w),
+                              child: Icon(Icons.menu,
+                                  size: 20.sp, color: appFontColor),
+                            ),
+                            suffixIcon: Padding(
+                              padding: EdgeInsets.only(right: 12.w),
+                              child: Icon(Icons.search,
+                                  size: 20.sp, color: appFontColor),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding:
+                                EdgeInsets.symmetric(vertical: 14.h),
+                          ),
+                          onChanged: (query) {},
                         ),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10), // Adjust padding
                       ),
-                      onChanged: (query) {
-                        setState(() {
-                          // Implement filtering logic here if needed
-                        });
-                      },
                     ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
+            ),
+            if (isLoading)
+              const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()))
+            else if (error.isNotEmpty)
+              SliverFillRemaining(child: Center(child: Text(error)))
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) =>
+                        _buildRequestItem(requests[index], index),
+                    childCount: requests.length,
                   ),
-        
-                ],
+                ),
               ),
-            ),
-        
-        
-            Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : error.isNotEmpty
-                  ? Center(child: Text(error))
-                  : ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    itemCount: requests.length,
-                    itemBuilder: (context, index) => _buildRequestItem(requests[index], index),
-              ),
-            ),
           ],
         ),
       ),

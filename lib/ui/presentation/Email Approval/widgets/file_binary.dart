@@ -5,7 +5,7 @@ import 'package:flutter_pdfview/flutter_pdfview.dart';
 class AttachmentPdfViewer extends StatelessWidget {
   final Uint8List pdfBytes;
   final String attchmentName;
-  const AttachmentPdfViewer({Key? key, required this.pdfBytes,required this.attchmentName}) : super(key: key);
+  const AttachmentPdfViewer({super.key, required this.pdfBytes,required this.attchmentName});
 
   @override
   Widget build(BuildContext context) {

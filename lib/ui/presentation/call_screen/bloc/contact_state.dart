@@ -9,7 +9,10 @@ sealed class ContactState extends Equatable {
 final class ContactInitial extends ContactState {}
 
 final class EmployeeListLoaded extends ContactState {
-  const EmployeeListLoaded();
+  final List<Employee> employees;
+  const EmployeeListLoaded(this.employees);
+  @override
+  List<Object> get props => [employees];
 }
 
 final class ContactLoadingState extends ContactState {

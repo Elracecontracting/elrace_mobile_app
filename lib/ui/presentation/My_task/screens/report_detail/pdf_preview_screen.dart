@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../../core/constants/colors.dart';
@@ -35,6 +35,19 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
     super.initState();
   }
 
+  void _goBack() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    if (rootNavigator.canPop()) {
+      rootNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,9 +64,7 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
             icon: Icons.keyboard_backspace,
             color: CustomColors.white,
             borderColor: CustomColors.black,
-            onPressed: () async {
-              Navigator.pop(context);
-            },
+            onPressed: _goBack,
           ),
         ),
         title: Image.asset(
@@ -82,23 +93,13 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
                   height: 1,
                 ),
                 Expanded(
-                  child: PDFView(
-                    pdfData: bytes,
-                    enableSwipe: true,
-                    swipeHorizontal: false,
-                    autoSpacing: false,
-                    pageFling: false,
-                    backgroundColor: CustomColors.white,
-                    onRender: (pages) {},
-                    onError: (error) {
-                      debugPrint(error.toString());
-                    },
-                    onPageError: (page, error) {
-                      debugPrint('$page: ${error.toString()}');
-                    },
-                    onViewCreated: (PDFViewController pdfViewController) {
-                      setState(() {});
-                    },
+                  child: SfPdfViewer.memory(
+                    bytes,
+                    canShowScrollHead: true,
+                    canShowScrollStatus: true,
+                    enableDoubleTapZooming: true,
+                    enableTextSelection: true,
+                    pageSpacing: 4,
                   ),
                 ),
               ],

@@ -19,26 +19,35 @@ class CompanyRepository {
     int id = await getSelectedCompany();
     final box = await _getCompanyBox();
     selectedCompany = id;
-    print(id);
-    print(box);
-    company = box.get(id) ??
-        ((id == 1)
-            ? CompanyModel(
-                companyName: "El Race Cons. & Gen. Cont. Co. L.C.C",
-                logo: "assets/logo/logo.png",
-                employeeName: "",
-                personEmail: "",
-                contactPhone: "",
-                employeeID: "",
-                endText: "")
-            : CompanyModel(
-                companyName: "Al Hewar Contracting & Irrigation Est.",
-                logo: "assets/logo/logo2.png",
-                employeeName: "",
-                personEmail: "",
-                contactPhone: "",
-                employeeID: "",
-                endText: ""));
+    print('🏢 CompanyRepository.getCompany() → selectedCompany=$id');
+
+    // Determine the correct logo based on company ID
+    final String correctLogo =
+        (id == 1) ? 'assets/logo/logo.png' : 'assets/logo/logo2.png';
+
+    final stored = box.get(id);
+    if (stored != null) {
+      // Always override logo from Hive to ensure correctness
+      company = stored.copyWith(logo: correctLogo);
+    } else {
+      company = (id == 1)
+          ? CompanyModel(
+              companyName: "El Race Cons. & Gen. Cont. Co. L.C.C",
+              logo: correctLogo,
+              employeeName: "",
+              personEmail: "",
+              contactPhone: "",
+              employeeID: "",
+              endText: "")
+          : CompanyModel(
+              companyName: "Al Hewar Contracting & Irrigation Est.",
+              logo: correctLogo,
+              employeeName: "",
+              personEmail: "",
+              contactPhone: "",
+              employeeID: "",
+              endText: "");
+    }
 
     return company!;
   }

@@ -2,7 +2,6 @@ import 'package:el_race/core/utils/directory_operation.dart';
 import 'package:el_race/data/models/report_model.dart';
 import 'package:el_race/data/repositories/i_report_repository.dart';
 import 'package:el_race/data/repositories/report_repository.dart';
-import 'package:el_race/ui/presentation/My_task/bottom_sheets/show_option_sheet.dart';
 import 'package:el_race/ui/presentation/My_task/dialogs/add_report.dart';
 import 'package:el_race/ui/presentation/My_task/dialogs/rename_report_dialog.dart';
 import 'package:el_race/ui/widgets/report_tile.dart';
@@ -108,10 +107,8 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
               itemBuilder: (context, index) {
                 return ReportTile(
                   report: reports[index],
-                  onMoreClicked: () async {
-                    int selectedOptionStatus = await showEditOptions(context,
-                        options: ['rename', 'delete']);
-                    if (selectedOptionStatus == 0) {
+                  onMenuSelected: (value) async {
+                    if (value == 'rename') {
                       if (!context.mounted) return;
                       ReportModel updatedReport = await showRenameDialog(
                           context,
@@ -125,17 +122,35 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
                       await reportRepository.updateReport(updatedReport);
                       return;
                     }
-                    if (selectedOptionStatus == 1) {
+                    if (value == 'delete') {
                       if (!context.mounted) return;
-                      int deleteCodeStatus = await showEditOptions(context,
-                          options: ['Confirm Delete', 'Cancel']);
-                      if (deleteCodeStatus == 0) {
+                      final shouldDelete = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Delete Report'),
+                          content: const Text(
+                            'Are you sure you want to delete this report?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (shouldDelete == true) {
+                        final reportToDelete = reports[index];
                         await reportRepository.deleteReport(reports[index]);
                         reports.removeWhere((r) {
-                          return r.id == reports[index].id;
+                          return r.id == reportToDelete.id;
                         });
                         setState(() {});
-                        await deleteImageForWholeReport(reports[index].id);
+                        await deleteImageForWholeReport(reportToDelete.id);
                         return;
                       }
                     }

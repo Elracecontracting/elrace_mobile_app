@@ -8,9 +8,9 @@ import '../../data/models/report_model.dart';
 
 class ReportTile extends StatelessWidget {
   final ReportModel report;
-  final VoidCallback onMoreClicked;
+  final ValueChanged<String> onMenuSelected;
   const ReportTile(
-      {super.key, required this.report, required this.onMoreClicked});
+      {super.key, required this.report, required this.onMenuSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -76,9 +76,10 @@ class ReportTile extends StatelessWidget {
                     color: CustomColors.blue,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
                   child: Text(
-                    report.report == 1 ? "Report" : "Folder",
+                    report.report == 1 ? "Report" : "Project",
                     style: CustomTextStyle.smallWhite,
                   ),
                 )
@@ -87,8 +88,21 @@ class ReportTile extends StatelessWidget {
             Positioned(
                 right: 0,
                 top: 0,
-                child: InkWell(
-                    onTap: onMoreClicked, child: const Icon(Icons.more_vert_rounded)))
+                child: PopupMenuButton<String>(
+                  tooltip: 'More options',
+                  icon: const Icon(Icons.more_vert_rounded),
+                  onSelected: onMenuSelected,
+                  itemBuilder: (context) => const [
+                    PopupMenuItem<String>(
+                      value: 'rename',
+                      child: Text('Rename'),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
+                  ],
+                ))
           ],
         ),
       ),

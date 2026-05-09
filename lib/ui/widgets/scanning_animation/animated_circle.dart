@@ -29,7 +29,7 @@ class AnimatedCircle extends CustomPainter {
     var radius = min(centerX, centerY);
 
     var fillBrush = Paint();
-    fillBrush.color = const Color(0xff55bd94).withOpacity(opacity);
+    fillBrush.color = const Color(0xff55bd94)..withValues(alpha: opacity);
 
     var largeCircle = Paint();
     largeCircle.style = PaintingStyle.stroke;

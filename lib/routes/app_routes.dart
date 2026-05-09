@@ -8,8 +8,6 @@ abstract class Routes {
   static const INSTRUCTION = _Paths.INSTRUCTION;
   static const HOME = _Paths.HOME;
   static const USER_DETAIL = _Paths.USER_DETAIL;
-  static const REGISTER_FACE = _Paths.REGISTER_FACE;
-  static const AUTHENTICATE_FACE = _Paths.AUTHENTICATE_FACE;
 }
 
 abstract class _Paths {
@@ -19,6 +17,4 @@ abstract class _Paths {
   static const INSTRUCTION = '/instruction_view';
   static const HOME = '/home_view';
   static const USER_DETAIL = '/user_detail_view';
-  static const REGISTER_FACE = '/register_face_view';
-  static const AUTHENTICATE_FACE = '/authenticate_face_view';
 }

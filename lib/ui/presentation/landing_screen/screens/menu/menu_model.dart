@@ -24,5 +24,5 @@ List<MenuModel> menuListItems = [
   MenuModel(icon: '$imagePrefixIcons/menu14.png', title: 'TO DO'),
   MenuModel(icon: '$imagePrefixIcons/menu15.png', title: 'COMPANY REQUESTS'),
   MenuModel(icon: '$imagePrefixIcons/menu16.png', title: 'ANNOUNCEMENT'),
-  MenuModel(icon: '$imagePrefixIcons/menu17.png', title: 'TIME SHEET'),
+  // MenuModel(icon: '$imagePrefixIcons/menu17.png', title: 'TIME SHEET'), // Hidden
 ];

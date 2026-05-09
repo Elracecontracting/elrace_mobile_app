@@ -1,17 +1,36 @@
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_event.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_state.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/widgets/project_card_widget.dart';
+import 'package:el_race/ui/presentation/my_projects/domain/entities/project_entity.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/widgets/project_documents_dialog.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'package:intl/intl.dart';
 
 class ProjectListScreen extends StatefulWidget {
-  const ProjectListScreen({super.key});
+  final ProjectListBloc bloc;
+  final int? agreementId;
+  final int? partnerId;
+  final int? projectManagerId;
+  final int? cityId;
+  final String? partnerName;
+  final String? partnerPhoto;
+
+  const ProjectListScreen({
+    super.key,
+    required this.bloc,
+    this.agreementId,
+    this.partnerId,
+    this.projectManagerId,
+    this.cityId,
+    this.partnerName,
+    this.partnerPhoto,
+  });
 
   @override
   State<ProjectListScreen> createState() => _ProjectListScreenState();
@@ -21,17 +40,96 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
   final _scrollController = ScrollController();
   late ProjectListBloc bloc;
 
+  _ProjectFilterTab _activeTab = _ProjectFilterTab.all;
+  final GlobalKey _allTabKey = GlobalKey();
+  final GlobalKey _inProgressTabKey = GlobalKey();
+  final GlobalKey _completedTabKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    bloc = widget.bloc;
+
+    // Load projects based on selected drill-down filter.
+    if (widget.agreementId != null) {
+      bloc.add(LoadProjectsByFiltersEvent(
+        agreementId: widget.agreementId,
+        partnerId: widget.partnerId,
+        projectManagerId: widget.projectManagerId,
+        cityId: widget.cityId,
+      ));
+    } else if (widget.projectManagerId != null) {
+      bloc.add(LoadProjectsByFiltersEvent(
+        projectManagerId: widget.projectManagerId,
+      ));
+    } else if (widget.cityId != null) {
+      bloc.add(LoadProjectsByFiltersEvent(
+        cityId: widget.cityId,
+      ));
+    } else if (widget.partnerId != null) {
+      bloc.add(LoadProjectsByPartnerEvent(partnerId: widget.partnerId!));
+    } else {
+      bloc.add(LoadProjectsEvent());
+    }
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    bloc = ProjectListBloc.get(context);
-    bloc.add(LoadProjectsEvent());
+  void _setActiveTab(_ProjectFilterTab tab) {
+    if (_activeTab == tab) return;
+    setState(() => _activeTab = tab);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final BuildContext? ctx;
+      switch (tab) {
+        case _ProjectFilterTab.all:
+          ctx = _allTabKey.currentContext;
+          break;
+        case _ProjectFilterTab.inProgress:
+          ctx = _inProgressTabKey.currentContext;
+          break;
+        case _ProjectFilterTab.completed:
+          ctx = _completedTabKey.currentContext;
+          break;
+      }
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  String _normalizedProjectStatus(dynamic raw) {
+    final s = (raw ?? '').toString().trim().toLowerCase();
+    return s.replaceAll('_', ' ');
+  }
+
+  bool _isCompletedStatus(String status) {
+    return status.contains('completed') ||
+        status.contains('complete') ||
+        status.contains('done') ||
+        status.contains('closed') ||
+        status.contains('finish') ||
+        status.contains('finished');
+  }
+
+  bool _matchesTab(ProjectEntity project) {
+    final status = _normalizedProjectStatus(project.projectStatus);
+    switch (_activeTab) {
+      case _ProjectFilterTab.all:
+        return true;
+      case _ProjectFilterTab.completed:
+        return _isCompletedStatus(status);
+      case _ProjectFilterTab.inProgress:
+        // Treat anything that is not explicitly completed as "in progress".
+        return !_isCompletedStatus(status);
+    }
+  }
+
+  List<ProjectEntity> _filteredProjects(List<ProjectEntity> projects) {
+    if (_activeTab == _ProjectFilterTab.all) return projects;
+    return projects.where(_matchesTab).toList();
   }
 
   void _onScroll() {
@@ -47,83 +145,529 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     super.dispose();
   }
 
+  Widget _digitsInKoulen(
+    String text, {
+    required TextStyle baseStyle,
+    TextAlign? textAlign,
+    int? maxLines,
+    TextOverflow? overflow,
+  }) {
+    final matches = RegExp(r'[0-9]+').allMatches(text);
+    if (matches.isEmpty) {
+      return Text(
+        text,
+        textAlign: textAlign,
+        style: baseStyle,
+        maxLines: maxLines,
+        overflow: overflow,
+      );
+    }
+
+    final numberStyle = GoogleFonts.poppins(
+      fontSize: baseStyle.fontSize,
+      fontWeight: baseStyle.fontWeight,
+      color: baseStyle.color,
+      letterSpacing: baseStyle.letterSpacing,
+      height: baseStyle.height,
+    );
+
+    final spans = <TextSpan>[];
+    var cursor = 0;
+    for (final m in matches) {
+      if (m.start > cursor) {
+        spans.add(TextSpan(text: text.substring(cursor, m.start)));
+      }
+      spans.add(
+        TextSpan(
+          text: text.substring(m.start, m.end),
+          style: numberStyle,
+        ),
+      );
+      cursor = m.end;
+    }
+    if (cursor < text.length) {
+      spans.add(TextSpan(text: text.substring(cursor)));
+    }
+
+    return Text.rich(
+      TextSpan(style: baseStyle, children: spans),
+      textAlign: textAlign,
+      maxLines: maxLines,
+      overflow: overflow,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      body: Column(
-        children: [
-          // 🔹 Always-visible header
-          const SizedBox(height: 10), 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
-              ),
-              Row(
-                children: [
-                  Image.asset(
-                    "assets/newapp/my_projects.png",
-                    height: 30.w,
-                    width: 30.w,
-                  ),
-                  Text(
-                    ' My Projects',
-                    style: GoogleFonts.koulen(
-                      fontSize: 26.sp,
-                      fontWeight: FontWeight.w500,
-                      color: appFontColor,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 40),
-            ],
-          ),
+      body: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // 🔹 Partner Header Section (Scrollable)
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Builder(
+                        builder: (context) {
+                          // Fix malformed photo URL from API (erp.elrace.compublic -> erp.elrace.com/public)
+                          String? photoUrl = widget.partnerPhoto;
+                          if (photoUrl != null &&
+                              photoUrl.contains('erp.elrace.compublic')) {
+                            photoUrl = photoUrl.replaceAll(
+                                'erp.elrace.compublic',
+                                'erp.elrace.com/public');
+                          }
 
-          // 🔹 Expanded so list or loading takes remaining space
-          Expanded(
-            child: BlocBuilder<ProjectListBloc, ProjectListState>(
-              builder: (ctx, state) {
-                if (state is ProjectListLoading && bloc.visibleProjects.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (!(state is ProjectListLoading) && bloc.visibleProjects.isEmpty) {
-                  return const Center(child: Text('No data available'));
-                } else if (state is ProjectListLoaded || bloc.visibleProjects.isNotEmpty) {
-                  var list = bloc.visibleProjects;
-                  return RefreshIndicator(
-                    onRefresh: () async => bloc.add(LoadProjectsEvent(refresh: true)),
-                    child: ListView.separated(
-                      padding: const EdgeInsets.only(top: 10),
-                      controller: _scrollController,
-                      itemCount: list.length + 1, // ✅ Removed header from list
-                      itemBuilder: (context, index) {
-                        if (index < list.length) {
-                          final item = list[index];
-                          return ProjectCardWidget(item: item);
-                        } else {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
-                      },
-                      separatorBuilder: (context, index) => const SizedBox(height: 10),
-                    ),
-                  );
-                } else if (state is ProjectListError) {
-                  return Center(child: Text(state.message));
-                } else {
-                  return const SizedBox();
-                }
-              },
+                          print('🖼️ Partner Photo URL: $photoUrl');
+                          print('📝 Partner Name: ${widget.partnerName}');
+
+                          if (photoUrl != null && photoUrl.isNotEmpty) {
+                            return ClipOval(
+                              child: Image.network(
+                                photoUrl,
+                                height: 50.w,
+                                width: 50.w,
+                                fit: BoxFit.contain,
+                                headers: {
+                                  'Accept': 'image/*',
+                                  'Authorization':
+                                      'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) {
+                                    print(
+                                        '✅ Partner photo loaded successfully');
+                                    return child;
+                                  }
+                                  print('⏳ Loading partner photo...');
+                                  return SizedBox(
+                                    width: 24.w,
+                                    height: 24.w,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  print(
+                                      '❌ Error loading partner photo: $error');
+                                  print('❌ Stack trace: $stackTrace');
+                                  return Icon(
+                                    Icons.business,
+                                    size: 24.w,
+                                    color: appFontColor,
+                                  );
+                                },
+                              ),
+                            );
+                          } else {
+                            print('⚠️ No partner photo provided');
+                            return Icon(
+                              Icons.business,
+                              size: 24.w,
+                              color: appFontColor,
+                            );
+                          }
+                        },
+                      ),
+                      SizedBox(width: 4.w),
+                      Flexible(
+                        child: Text(
+                          widget.partnerName != null
+                              ? widget.partnerName!.toUpperCase()
+                              : 'ABU DHABI POLICE',
+                          style: GoogleFonts.poppins(
+                            fontSize: 22.sp,
+                            fontWeight: FontWeight.w500,
+                            color: appFontColor,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.visible,
+                          maxLines: 2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w),
+                  child: _buildProjectFilterTabs(),
+                ),
+                SizedBox(height: 10.h),
+              ],
             ),
           ),
+
+          // 🔹 Projects List
+          BlocBuilder<ProjectListBloc, ProjectListState>(
+            builder: (ctx, state) {
+              if (state is ProjectListLoading && bloc.visibleProjects.isEmpty) {
+                return const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              } else if (state is! ProjectListLoading &&
+                  bloc.visibleProjects.isEmpty) {
+                return const SliverFillRemaining(
+                  child: Center(child: Text('No data available')),
+                );
+              } else if (state is ProjectListLoaded ||
+                  bloc.visibleProjects.isNotEmpty) {
+                final list = _filteredProjects(bloc.visibleProjects);
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index < list.length) {
+                        final item = list[index];
+                        return _buildProjectCard(item);
+                      } else {
+                        return const SizedBox();
+                      }
+                    },
+                    childCount: list.length,
+                  ),
+                );
+              } else if (state is ProjectListError) {
+                return SliverFillRemaining(
+                  child: Center(child: Text(state.message)),
+                );
+              } else {
+                return const SliverToBoxAdapter(child: SizedBox());
+              }
+            },
+          ),
+          // Bottom padding
+          SliverPadding(padding: EdgeInsets.only(bottom: 100.h)),
         ],
       ),
     );
   }
+
+  Widget _buildProjectFilterTabs() {
+    const unfocusedStart = Color(0xFFD6D6D6);
+    const unfocusedEnd = Color(0xFFADB2BD);
+    // Provided as #1B1F26B8 (RRGGBBAA) -> Flutter uses AARRGGBB.
+    const focusedStart = Color(0xB81B1F26);
+    const focusedEnd = Color(0xFF717171);
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final contentWidth = screenWidth - 24.w;
+    final tabWidth = contentWidth * 0.40;
+    final effectiveTabWidth = tabWidth < 120.w ? 120.w : tabWidth;
+
+    Widget buildTab({
+      required _ProjectFilterTab tab,
+      required Key tabKey,
+      required String text,
+    }) {
+      final isActive = _activeTab == tab;
+      return InkWell(
+        borderRadius: BorderRadius.circular(22.r),
+        onTap: () => _setActiveTab(tab),
+        child: Container(
+          key: tabKey,
+          width: effectiveTabWidth,
+          height: 44.h,
+          padding: EdgeInsets.symmetric(horizontal: 18.w),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22.r),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isActive
+                  ? const [focusedStart, focusedEnd]
+                  : const [unfocusedStart, unfocusedEnd],
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+              letterSpacing: 1.2,
+            ),
+            maxLines: null,
+            overflow: TextOverflow.visible,
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          buildTab(tab: _ProjectFilterTab.all, tabKey: _allTabKey, text: 'ALL'),
+          SizedBox(width: 10.w),
+          buildTab(
+              tab: _ProjectFilterTab.inProgress,
+              tabKey: _inProgressTabKey,
+              text: 'IN PROGRESS'),
+          SizedBox(width: 10.w),
+          buildTab(
+              tab: _ProjectFilterTab.completed,
+              tabKey: _completedTabKey,
+              text: 'COMPLETED'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProjectCard(ProjectEntity project) {
+    final woNo = project.woRefNo.trim();
+    final woName = project.name.trim();
+    final formattedAmount = _formatAmount(project.woAmount);
+    final formattedDate = _formatDate(project.date);
+
+    final differenceDays = project.differenceDays ?? 0;
+    final statusCount = _formatDifferenceDays(differenceDays);
+
+    return GestureDetector(
+      onTap: () {
+        ProjectDocumentsDialog.show(
+          context,
+          projectId: project.projectId,
+          bloc: bloc,
+        );
+      },
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18.r),
+          border: Border.all(
+            color: const Color(0xFF1B1F26),
+            width: 1.3,
+          ),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              right: 0,
+              child: _digitsInKoulen(
+                statusCount,
+                baseStyle: GoogleFonts.poppins(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w500,
+                  color: _getStatusColor(statusCount),
+                ),
+                maxLines: null,
+                overflow: TextOverflow.visible,
+              ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(height: 2.h),
+                _digitsInKoulen(
+                  woNo,
+                  textAlign: TextAlign.center,
+                  baseStyle: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF6B6B6B),
+                  ),
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
+                ),
+                SizedBox(height: 4.h),
+                _digitsInKoulen(
+                  woName,
+                  textAlign: TextAlign.center,
+                  baseStyle: GoogleFonts.poppins(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF1B1F26),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.visible,
+                ),
+                SizedBox(height: 12.h),
+                Container(
+                  height: 38.h,
+                  padding: EdgeInsets.symmetric(horizontal: 14.w),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14.r),
+                    color: const Color(0xFFE6E6E6),
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: _digitsInKoulen(
+                                formattedAmount,
+                                baseStyle: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF1B1F26),
+                                ),
+                                maxLines: null,
+                                overflow: TextOverflow.visible,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Image.asset(
+                              'assets/png/icons/UAE_Dirham_Symbol 1.png',
+                              width: 18.w,
+                              height: 18.w,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const SizedBox(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 28.w,
+                        height: 28.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: const Color(0xFF1B1F26), width: 1),
+                          color: Colors.white,
+                        ),
+                        alignment: Alignment.center,
+                        child: project.projectManagerPhoto != null &&
+                                project.projectManagerPhoto!.isNotEmpty
+                            ? ClipOval(
+                                child: Image.network(
+                                  project.projectManagerPhoto!,
+                                  width: 28.w,
+                                  height: 28.w,
+                                  fit: BoxFit.cover,
+                                  headers: {
+                                    'Accept': 'image/*',
+                                    'Authorization':
+                                        'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                                  },
+                                  errorBuilder: (_, __, ___) => Text(
+                                    _getInitials(project.agreementId),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF1B1F26),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                _getInitials(project.agreementId),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF1B1F26),
+                                ),
+                              ),
+                      ),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: _digitsInKoulen(
+                            formattedDate,
+                            baseStyle: GoogleFonts.poppins(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF1B1F26),
+                            ),
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatAmount(double amount) {
+    final formatter = NumberFormat('#,##0', 'en');
+    return formatter.format(amount);
+  }
+
+  String _formatDate(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    try {
+      final normalized = raw.contains(' ') && !raw.contains('T')
+          ? raw.replaceFirst(' ', 'T')
+          : raw;
+      final parsed = DateTime.tryParse(normalized);
+      if (parsed == null) return raw;
+      return DateFormat('dd/MM/yyyy').format(parsed);
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  String _getInitials(String text) {
+    if (text.isEmpty) return 'P';
+    final words = text.split(' ');
+    if (words.length >= 2) {
+      return '${words[0][0]}${words[1][0]}'.toUpperCase();
+    }
+    return text.characters.take(2).toString().toUpperCase();
+  }
+
+  Color _getStatusColor(String status) {
+    // Green for positive, Red for negative
+    if (status.startsWith('+')) {
+      return const Color(0xFF009859); // Green for positive
+    }
+    return const Color(0xFFBA1719); // Red for negative
+  }
+
+  String _formatDifferenceDays(int days) {
+    if (days > 0) {
+      return '+$days';
+    } else if (days < 0) {
+      return '$days';
+    }
+    return '0';
+  }
+}
+
+enum _ProjectFilterTab {
+  all,
+  inProgress,
+  completed,
 }

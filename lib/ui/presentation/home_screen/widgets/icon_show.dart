@@ -42,7 +42,8 @@ class IconShow extends StatelessWidget {
                   ),
                   Text(
                     title,
-                    style: TextStyle(color: blue, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                        color: blue, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -65,7 +66,8 @@ class IconShow extends StatelessWidget {
                                 color: show ? white : Colors.transparent,
                                 boxShadow: [
                                   BoxShadow(
-                                      color: show ? darkGrey : Colors.transparent,
+                                      color:
+                                          show ? darkGrey : Colors.transparent,
                                       offset: const Offset(2, 4),
                                       blurRadius: 12)
                                 ]),

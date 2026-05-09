@@ -16,6 +16,51 @@ class ApprovalCardTypeTwo extends StatelessWidget {
     required this.onTap,
   });
 
+  // Helper method to check if image_emp is a URL or base64 data
+  bool _isImageUrl(String imageData) {
+    return imageData.startsWith('http://') || imageData.startsWith('https://');
+  }
+
+  // Helper widget to display employee image (URL or base64)
+  Widget _buildEmployeeImage(dynamic imageEmp) {
+    if (imageEmp != null &&
+        imageEmp is String &&
+        imageEmp.isNotEmpty &&
+        imageEmp.toLowerCase() != "false") {
+      if (_isImageUrl(imageEmp)) {
+        // It's a URL, use Image.network
+        return Image.network(
+          imageEmp,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Image.asset(
+              'assets/png/profile_1.png',
+              fit: BoxFit.cover,
+            );
+          },
+        );
+      } else {
+        // It's base64 data, decode it
+        try {
+          return Image.memory(
+            base64Decode(imageEmp),
+            fit: BoxFit.cover,
+          );
+        } catch (e) {
+          return Image.asset(
+            'assets/png/profile_1.png',
+            fit: BoxFit.cover,
+          );
+        }
+      }
+    }
+    // Fallback to default image
+    return Image.asset(
+      'assets/png/profile_1.png',
+      fit: BoxFit.cover,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     String name = item["name"] ?? '';
@@ -24,7 +69,7 @@ class ApprovalCardTypeTwo extends StatelessWidget {
     String location = item["location"] ?? 'N/A';
     String status = item["status"] ?? 'pending';
     String date = item["date"] ?? '';
-    
+
     List<String> nameParts = name.split(' ');
     List<String> requesterParts = empName.split(" - ");
     String requesterName = requesterParts.isNotEmpty ? requesterParts[0] : '';
@@ -67,18 +112,7 @@ class ApprovalCardTypeTwo extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: ClipOval(
-                  child: (item["image_emp"] != null &&
-                          item["image_emp"] is String &&
-                          (item["image_emp"] as String).isNotEmpty &&
-                          (item["image_emp"] as String).toLowerCase() != "false")
-                      ? Image.memory(
-                          base64Decode(item["image_emp"] as String),
-                          fit: BoxFit.cover,
-                        )
-                      : Image.asset(
-                          'assets/png/profile_1.png',
-                          fit: BoxFit.cover,
-                        ),
+                  child: _buildEmployeeImage(item["image_emp"]),
                 ),
               ),
               const SizedBox(width: 5),
@@ -93,16 +127,16 @@ class ApprovalCardTypeTwo extends StatelessWidget {
                       child: Text(
                         requesterName,
                         style: const TextStyle(fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                        overflow: TextOverflow.visible,
+                        maxLines: null,
                       ),
                     ),
                     SizedBox(height: 5.w),
                     Text(
                       name,
-                      style: TextStyle(color: greyText,fontSize: 13.sp),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                      style: TextStyle(color: greyText, fontSize: 13.sp),
+                      overflow: TextOverflow.visible,
+                      maxLines: null,
                     ),
                   ],
                 ),
@@ -120,7 +154,8 @@ class ApprovalCardTypeTwo extends StatelessWidget {
                       SizedBox(height: 6.w),
                       InfoContainer(
                         text: date,
-                        icon: Icon(Icons.date_range, size: 14.w, color: const Color(0xFF1A1A53)),
+                        icon: Image.asset('assets/newapp/calendar.png',
+                            width: 14.w, height: 14.w),
                       ),
                     ],
                   ),
@@ -132,8 +167,7 @@ class ApprovalCardTypeTwo extends StatelessWidget {
       ),
     );
   }
-} 
-
+}
 
 class InfoContainer extends StatelessWidget {
   final String text;
@@ -157,7 +191,7 @@ class InfoContainer extends StatelessWidget {
       width: width ?? 120.w,
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFF1A1A53), width: 1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(13.r),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -169,13 +203,13 @@ class InfoContainer extends StatelessWidget {
           ],
           Text(
             text,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: fontSize ?? 11.sp,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF1A1A53),
             ),
             textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
+            overflow: TextOverflow.visible,
           ),
         ],
       ),

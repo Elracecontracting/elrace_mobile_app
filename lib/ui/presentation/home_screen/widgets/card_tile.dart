@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../../utils/color_utils.dart';
+import '../../../../../../utils/dimens.dart';
 import '../../../../../../utils/orientation_helper.dart';
 
 class CardTile extends StatelessWidget {
@@ -13,10 +14,10 @@ class CardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 160,
-      width: 345,
+      height: 160.h,
+      width: 345.w,
       decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
           gradient: LinearGradient(
             colors: itemIndex.isOdd
                 ? [buttonLight, Colors.white, buttonDark]
@@ -30,9 +31,9 @@ class CardTile extends StatelessWidget {
               Container(
                 width: SizeConfig().getWidth(40),
                 decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        bottomLeft: Radius.circular(20)),
+                    borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20.r),
+                        bottomLeft: Radius.circular(20.r)),
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -43,8 +44,8 @@ class CardTile extends StatelessWidget {
                             ]
                           : [lightGrey, darkGrey],
                     )),
-                child: const SizedBox(
-                  height: 160,
+                child: SizedBox(
+                  height: 160.h,
                 ),
               ),
               /*  SizedBox(
@@ -59,9 +60,9 @@ class CardTile extends StatelessWidget {
               Container(
                 width: SizeConfig().getWidth(40),
                 decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(20),
-                        bottomRight: Radius.circular(20)),
+                    borderRadius: BorderRadius.only(
+                        topRight: Radius.circular(20.r),
+                        bottomRight: Radius.circular(20.r)),
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       colors: itemIndex.isOdd
@@ -71,8 +72,8 @@ class CardTile extends StatelessWidget {
                             ]
                           : [lightGrey, darkGrey],
                     )),
-                child: const SizedBox(
-                  height: 160,
+                child: SizedBox(
+                  height: 160.h,
                 ),
               ),
             ],
@@ -88,10 +89,10 @@ class CardTile extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      height: 23,
-                      width: 45,
+                      height: 23.h,
+                      width: 45.w,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(5),
+                        borderRadius: BorderRadius.circular(5.r),
                         color: white,
                         gradient: RadialGradient(
                           colors: [
@@ -103,7 +104,7 @@ class CardTile extends StatelessWidget {
                           radius: 3,
                         ),
                       ),
-                      child: Center(
+                      child: const Center(
                         child: Icon(
                           CupertinoIcons.arrow_right,
                           color: shadowBlueDark,
@@ -115,8 +116,8 @@ class CardTile extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      height: 40,
-                      width: 40,
+                      height: 40.h,
+                      width: 40.w,
                       color: shadowBlueDark,
                       child: Icon(
                         size: SizeConfig().getTextSize(24),
@@ -124,8 +125,8 @@ class CardTile extends StatelessWidget {
                         color: white,
                       ),
                     ),
-                    const SizedBox(
-                      width: 10,
+                    SizedBox(
+                      width: 10.w,
                     ),
                     Text(
                       'My Title',
@@ -152,86 +153,122 @@ class GrayCardComponent extends StatelessWidget {
     this.mainIcon,
     this.onClick,
     required this.cardTitle,
-    required this.backgroundImagePath,
+    this.backgroundImagePath,
+    this.backgroundFit = BoxFit.cover,
+    this.gradient,
     required this.childWidget,
+    this.upperCaseTitle = true,
+    this.childAlignment = Alignment.topLeft,
+    this.childPadding,
     this.topPadding = false,
     this.topPaddingValue = 60,
-
+    this.titleColor,
   });
   final double? topPaddingValue;
   final bool topPadding;
   final String? mainIcon;
-  final String backgroundImagePath;
+  final String? backgroundImagePath;
+  final BoxFit backgroundFit;
+  final Gradient? gradient;
   final VoidCallback? onClick;
   final String cardTitle;
   final Widget childWidget;
+  final Color? titleColor;
+  final bool upperCaseTitle;
+  final Alignment childAlignment;
+  final EdgeInsets? childPadding;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onClick,
-      child: Column(
-        children: [
-          SizedBox(
-            width: MediaQuery.of(context).size.width,
-            height: 180.w,
-            child: Stack(
-              children: [
-                SizedBox(
-                  width: MediaQuery.of(context).size.width - 20,
-                  height: 190.w,
-                  child: Image.asset(
-                    backgroundImagePath,
-                    fit: BoxFit.fill,
-                  ),
-                ),
-                Positioned(
-                  left: 36,
-                  top: 16,
-                  child: SizedBox(
-                    height: SizeConfig().getHeight(43),
-                    child: Row(
-                      children: [
-                        // SizedBox(
-                        //   width: SizeConfig().getWidth(40.26),
-                        //   height: SizeConfig().getHeight(40.31),
-                        //   child: Image.asset(
-                        //     mainIcon,
-                        //     width: SizeConfig().getWidth(40),
-                        //     height: SizeConfig().getHeight(40),
-                        //   ),
-                        // ),
-                        // const SizedBox(width: 10),
-                        Text(
-                          cardTitle.toUpperCase(),
-                          style: GoogleFonts.koulen(
-                            color: const Color(0xFF151544),
-                            fontSize: 26.w,
-                            fontWeight: FontWeight.w400,
-                          ),
+    final borderRadius = BorderRadius.circular(23.r);
+
+    return SizedBox(
+      width: double.infinity,
+      height: AppDimen.homeWidgetCardHeight.w,
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: Material(
+          color: Colors.white,
+          child: InkWell(
+            onTap: onClick,
+            child: gradient != null
+                ? Ink(
+                    decoration: BoxDecoration(
+                      gradient: gradient,
+                    ),
+                    child: _buildContent(),
+                  )
+                : backgroundImagePath != null
+                    ? Ink.image(
+                        image: AssetImage(backgroundImagePath!),
+                        fit: backgroundFit,
+                        child: _buildContent(),
+                      )
+                    : Ink(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: topPadding? topPaddingValue:0,
-                  left: 36,
-                  child: DefaultTextStyle(
-                    style: GoogleFonts.nunito(
-                      fontSize: 12.w, // ✅ Use a realistic size instead of 1
-                      color: Colors.black,
-                    ),
-                    child: Column(
-                      children: [childWidget],
-                    ),
+                        child: _buildContent(),
+                      ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return Stack(
+      children: [
+        Positioned(
+          left: 36.w,
+          top: 16,
+          child: SizedBox(
+            height: SizeConfig().getHeight(43),
+            child: Row(
+              children: [
+                // SizedBox(
+                //   width: SizeConfig().getWidth(40.26),
+                //   height: SizeConfig().getHeight(40.31),
+                //   child: Image.asset(
+                //     mainIcon,
+                //     width: SizeConfig().getWidth(40),
+                //     height: SizeConfig().getHeight(40),
+                //   ),
+                // ),
+                // const SizedBox(width: 10),
+                Text(
+                  upperCaseTitle ? cardTitle.toUpperCase() : cardTitle,
+                  style: GoogleFonts.poppins(
+                    color: titleColor ?? const Color(0xFF151544),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.9,
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        Positioned.fill(
+          child: Padding(
+            padding: childPadding ??
+                EdgeInsets.only(
+                  left: 37.w,
+                  top: topPadding ? (topPaddingValue ?? 60) : 30.h,
+                ),
+            child: Align(
+              alignment: childAlignment,
+              child: DefaultTextStyle(
+                style: GoogleFonts.poppins(
+                  fontSize: 12.w,
+                  color: Colors.black,
+                ),
+                child: childWidget,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

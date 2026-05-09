@@ -1,16 +1,19 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:el_race/report_module/presentation/widgets/square_button.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
 
 class PdfDisplayScreen extends StatefulWidget {
   final String link;
-  const PdfDisplayScreen({super.key, required this.link});
+  final String? fileName;
+  const PdfDisplayScreen({super.key, required this.link, this.fileName});
 
   @override
   State<PdfDisplayScreen> createState() => _PdfDisplayScreenState();
@@ -18,18 +21,57 @@ class PdfDisplayScreen extends StatefulWidget {
 
 class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
   bool loading = true;
-  late Uint8List bytes;
+  Uint8List? bytes;
+  String? _companyLogo;
 
   loadFile() async {
     var data = await http.get(Uri.parse(widget.link));
-    bytes = data.bodyBytes;
-    loading = false;
-    setState(() {});
+    if (!mounted) return;
+    setState(() {
+      bytes = data.bodyBytes;
+      loading = false;
+    });
+  }
+
+  _loadCompany() async {
+    final company = await CompanyRepository().getCompany();
+    if (mounted) setState(() => _companyLogo = company.logo);
+  }
+
+  void _goBack() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    if (rootNavigator.canPop()) {
+      rootNavigator.pop();
+    }
+  }
+
+  Future<void> _shareReport() async {
+    final rawName = widget.fileName?.trim() ?? '';
+    final name = rawName.isNotEmpty ? rawName : widget.link.split('/').last;
+    final fileName = name.endsWith('.pdf') ? name : '$name.pdf';
+    // Write to temp file so iOS uses the correct filename
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsBytes(bytes!);
+    final box = context.findRenderObject() as RenderBox?;
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'application/pdf')],
+      sharePositionOrigin: box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : const Rect.fromLTWH(0, 0, 100, 100),
+    );
   }
 
   @override
   void initState() {
     loadFile();
+    _loadCompany();
     super.initState();
   }
 
@@ -49,26 +91,21 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
             icon: Icons.keyboard_backspace,
             color: CustomColors.white,
             borderColor: CustomColors.black,
-            onPressed: () async {
-              Navigator.pop(context);
-            },
+            onPressed: _goBack,
           ),
         ),
         title: Image.asset(
-          CompanyRepository.company!.logo,
+          _companyLogo ?? CompanyRepository.company?.logo ?? 'assets/logo/logo.png',
           height: 60,
         ),
         actions: [
           SquareButton(
             icon: Icons.share_outlined,
-            color: CustomColors.maroon,
+            color: loading ? CustomColors.black : CustomColors.maroon,
             borderColor: CustomColors.white,
-            onPressed: () async {
-              await Share.shareXFiles([
-                XFile.fromData(bytes,
-                    name: "report.pdf", mimeType: "application/pdf")
-              ]);
-            },
+            onPressed: loading
+                ? null
+                : () => _shareReport(),
           ),
           const SizedBox(width: 10),
         ],
@@ -83,23 +120,13 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
                   height: 1,
                 ),
                 Expanded(
-                  child: PDFView(
-                    pdfData: bytes,
-                    enableSwipe: true,
-                    swipeHorizontal: false,
-                    autoSpacing: false,
-                    pageFling: false,
-                    backgroundColor: CustomColors.white,
-                    onRender: (pages) {},
-                    onError: (error) {
-                      debugPrint(error.toString());
-                    },
-                    onPageError: (page, error) {
-                      debugPrint('$page: ${error.toString()}');
-                    },
-                    onViewCreated: (PDFViewController pdfViewController) {
-                      setState(() {});
-                    },
+                  child: SfPdfViewer.memory(
+                    bytes!,
+                    canShowScrollHead: true,
+                    canShowScrollStatus: true,
+                    enableDoubleTapZooming: true,
+                    enableTextSelection: true,
+                    pageSpacing: 4,
                   ),
                 ),
               ],

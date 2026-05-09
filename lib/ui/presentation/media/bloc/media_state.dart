@@ -19,6 +19,14 @@ final class MediaLoaded extends MediaState {
   List<Object> get props => [mediaList];
 }
 
+final class ContentsLoaded extends MediaState {
+  final ContentsResponse contents;
+  const ContentsLoaded(this.contents);
+
+  @override
+  List<Object> get props => [contents];
+}
+
 final class MediaError extends MediaState {
   final String message;
   const MediaError(this.message);

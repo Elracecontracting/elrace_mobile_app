@@ -11,6 +11,12 @@ import 'package:path_provider/path_provider.dart';
 class ApiQuery {
   var dio = Dio();
 
+  String _joinUrl(String base, String path) {
+    final normalizedBase = base.endsWith('/') ? base : '$base/';
+    final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
+    return '$normalizedBase$normalizedPath';
+  }
+
   //post query
   Future<Response?> postQuery(String url, Map<String, String> headers,
       dynamic data, String apiName, bool isBaseUrlAdded) async {
@@ -39,17 +45,18 @@ class ApiQuery {
         },
       ));
 
-      response = await dio.post(isBaseUrlAdded ? UrlUtil.baseUrl + url : url,
-          data: jsonEncode(data), options: options);
+      final primaryUrl = isBaseUrlAdded ? _joinUrl(UrlUtil.baseUrl, url) : url;
+      response =
+          await dio.post(primaryUrl, data: jsonEncode(data), options: options);
 
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
   }
@@ -73,16 +80,16 @@ class ApiQuery {
           return handler.next(e); //continue
         },
       ));
-      response =
-          await dio.put(UrlUtil.baseUrl + url, data: data, options: options);
-      return response;
+      response = await dio.put(_joinUrl(UrlUtil.baseUrl, url),
+          data: data, options: options);
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
   }
@@ -102,7 +109,7 @@ class ApiQuery {
     // Options _cacheOptions = buildCacheOptions(const Duration(days: 1),
     //     forceRefresh: forceRefresh, primaryKey: apiName);
     var cookieJar = PersistCookieJar(
-        ignoreExpires: true, storage: FileStorage(appDocPath + "/.cookies/"));
+        ignoreExpires: true, storage: FileStorage("$appDocPath/.cookies/"));
     Response? response;
 
     try {
@@ -126,12 +133,13 @@ class ApiQuery {
         },
       ));
       if (isBaseUrlToBeAdded) {
-        log(UrlUtil.baseUrl + url);
+        final primaryUrl = _joinUrl(UrlUtil.baseUrl, url);
+        log(primaryUrl);
         if (isCached) {
-          response = await dio.get(UrlUtil.baseUrl + url,
+          response = await dio.get(primaryUrl,
               options: options, queryParameters: query);
         } else {
-          response = await dio.get(UrlUtil.baseUrl + url,
+          response = await dio.get(primaryUrl,
               options: options,
               queryParameters: (query != null) ? query : null);
         }
@@ -146,14 +154,14 @@ class ApiQuery {
               queryParameters: (query != null) ? query : null);
         }
       }
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
   }
@@ -164,7 +172,7 @@ class ApiQuery {
     Directory appDocDir = await getApplicationDocumentsDirectory();
     String appDocPath = appDocDir.path;
     var cookieJar = PersistCookieJar(
-        ignoreExpires: true, storage: FileStorage(appDocPath + "/.cookies/"));
+        ignoreExpires: true, storage: FileStorage("$appDocPath/.cookies/"));
     Response response;
     try {
       dio.interceptors.add(CookieManager(cookieJar));
@@ -180,18 +188,18 @@ class ApiQuery {
         },
       ));
       if (isBaseUrlToBeAdded) {
-        response = await dio.patch(UrlUtil.baseUrl + url, data: data);
+        response = await dio.patch(_joinUrl(UrlUtil.baseUrl, url), data: data);
       } else {
         response = await dio.patch(url, data: data);
       }
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
   }
@@ -201,7 +209,7 @@ class ApiQuery {
     Directory appDocDir = await getApplicationDocumentsDirectory();
     String appDocPath = appDocDir.path;
     var cookieJar = PersistCookieJar(
-        ignoreExpires: true, storage: FileStorage(appDocPath + "/.cookies/"));
+        ignoreExpires: true, storage: FileStorage("$appDocPath/.cookies/"));
     cookieJar.deleteAll();
     Response response;
     try {
@@ -218,16 +226,16 @@ class ApiQuery {
           return handler.next(e); //continue
         },
       ));
-      response = await dio.post(UrlUtil.baseUrl + url, data: data);
+      response = await dio.post(_joinUrl(UrlUtil.baseUrl, url), data: data);
 
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
   }
@@ -253,21 +261,43 @@ class ApiQuery {
         },
       ));
       if (isBaseUrlToBeAdded) {
-        response = await dio.delete(UrlUtil.baseUrl + url,
+        response = await dio.delete(_joinUrl(UrlUtil.baseUrl, url),
             queryParameters: data, options: options);
       } else {
         response =
             await dio.delete(url, queryParameters: data, options: options);
       }
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
+  }
+
+  dynamic _decodeIfJsonString(dynamic data) {
+    if (data is String) {
+      try {
+        return jsonDecode(data);
+      } catch (e) {
+        log('Response decode failed: $e');
+      }
+    }
+    return data;
+  }
+
+  Response? _normalizeResponse(Response? response) {
+    if (response == null) return null;
+    final decoded = _decodeIfJsonString(response.data);
+    if (decoded is Map) {
+      response.data = Map<String, dynamic>.from(decoded);
+    } else {
+      response.data = decoded;
+    }
+    return response;
   }
 }

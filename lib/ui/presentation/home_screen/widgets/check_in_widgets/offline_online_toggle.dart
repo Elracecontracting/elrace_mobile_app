@@ -2,7 +2,6 @@ import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_translate/flutter_translate.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 
 class UserModeStatusWidget extends StatefulWidget {
@@ -23,7 +22,7 @@ class _UserModeStatusWidgetState extends State<UserModeStatusWidget> {
 
   void _loadOnlineState() {
     setState(() {
-      isOnline = SharedPref().getPreferenceBoolean('isOnline') ?? false;
+      isOnline = SharedPref().getPreferenceBoolean('isOnline');
     });
   }
 
@@ -36,7 +35,7 @@ class _UserModeStatusWidgetState extends State<UserModeStatusWidget> {
         // Status Text
         Text(
           isOnline ? 'you are now online' : 'you are now offline',
-          style: GoogleFonts.adventPro(
+          style: GoogleFonts.poppins(
             fontSize: 17.sp,
             fontWeight: FontWeight.bold,
             fontStyle: FontStyle.italic,
@@ -75,7 +74,7 @@ class _UserModeStatusWidgetState extends State<UserModeStatusWidget> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 2,
                           offset: const Offset(0, 1),
                         ),

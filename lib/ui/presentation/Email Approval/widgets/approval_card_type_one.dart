@@ -1,9 +1,10 @@
 import 'package:el_race/resources/app_colors.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ApprovalCardTypeOne extends StatelessWidget {
   final Map<dynamic, dynamic> item;
@@ -24,7 +25,7 @@ class ApprovalCardTypeOne extends StatelessWidget {
     String type = item["type"] ?? 'ALL';
     String empName = item["requester"] ?? '';
     String date = item["date"] ?? '2024-08-09';
-    String reqNo = item["req_no"] ?? 'REQ-${id.substring(0, 6)}'; 
+    String reqNo = item["req_no"] ?? 'REQ-${id.substring(0, 6)}';
     String title = item["title"] ?? name;
     String status = item["status"] ?? 'pending';
 
@@ -32,7 +33,7 @@ class ApprovalCardTypeOne extends StatelessWidget {
     String requesterName = requesterParts.isNotEmpty ? requesterParts[0] : '';
 
     DateTime parsedDate = DateTime.tryParse(date) ?? DateTime.now();
-    
+
     Color bgColorStart = Colors.blue.shade100;
     Color bgColorEnd = Colors.blue.shade300;
     Color textColor = Colors.blue.shade800;
@@ -113,7 +114,7 @@ class ApprovalCardTypeOne extends StatelessWidget {
                           Text(
                             DateFormat('dd MMM yy').format(parsedDate),
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
                               color: appFontColor,
@@ -121,15 +122,16 @@ class ApprovalCardTypeOne extends StatelessWidget {
                           ),
                           const SizedBox(
                             height: 39.5,
-                            child: VerticalDivider(color: Colors.grey, thickness: 1),
+                            child: VerticalDivider(
+                                color: Colors.grey, thickness: 1),
                           ),
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                'REQ NO',
-                                style: GoogleFonts.inter(
+                                translate('home.REQ_NO'),
+                                style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.bold,
                                   color: appFontColor,
@@ -137,7 +139,7 @@ class ApprovalCardTypeOne extends StatelessWidget {
                               ),
                               Text(
                                 reqNo,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 15.sp,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black,
@@ -145,25 +147,26 @@ class ApprovalCardTypeOne extends StatelessWidget {
                               ),
                             ],
                           ),
-                           const SizedBox(
+                          const SizedBox(
                             height: 39.5,
-                            child: VerticalDivider(color: Colors.grey, thickness: 1),
+                            child: VerticalDivider(
+                                color: Colors.grey, thickness: 1),
                           ),
                           SizedBox(
-                             width: 90.w,
-                             child: Text(
-                               title,
-                               textAlign: TextAlign.center,
-                               style: GoogleFonts.inter(
-                                 fontSize: 17.sp,
-                                 fontWeight: FontWeight.w500,
-                                 color: Colors.black,
-                               ),
-                               maxLines: 1,
-                               overflow: TextOverflow.ellipsis,
-                             ),
-                           ),
-                          ],
+                            width: 90.w,
+                            child: Text(
+                              title,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.poppins(
+                                fontSize: 17.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black,
+                              ),
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -205,4 +208,4 @@ class ApprovalCardTypeOne extends StatelessWidget {
       ),
     );
   }
-} 
+}

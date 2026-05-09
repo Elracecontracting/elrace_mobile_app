@@ -2,22 +2,14 @@ import 'package:el_race/ui/presentation/my_projects/domain/entities/attachment_e
 
 class AttachmentModel extends AttachmentEntity {
   const AttachmentModel({
-    required int id,
-    required String name,
-    required String type,
-    required String url,
-    required String source,
-    required bool isFile,
-    required String folder,
-  }) : super(
-          id: id,
-          name: name,
-          type: type,
-          url: url,
-          source: source, 
-          isFile: isFile,
-          folder: folder,
-        );
+    required super.id,
+    required super.name,
+    required super.type,
+    required super.url,
+    required super.source,
+    required super.isFile,
+    required super.folder,
+  });
 
   factory AttachmentModel.fromJson(Map<String, dynamic> json) {
     return AttachmentModel(

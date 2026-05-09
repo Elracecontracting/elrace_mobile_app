@@ -25,8 +25,8 @@ class SharedPref {
   }
 
   ///Below method is to set the string value in the SharedPreferences.
-  setPreferencesString(String key, String stringValue) {
-    sharedPreferences.setString(key, stringValue);
+  Future<bool> setPreferencesString(String key, String stringValue) async {
+    return await sharedPreferences.setString(key, stringValue);
   }
 
   ///Below method is to get the string value from the SharedPreferences.
@@ -35,8 +35,8 @@ class SharedPref {
   }
 
   ///Below method is to set the boolean value in the SharedPreferences.
-  setPreferencesBoolean(String key, bool booleanValue) {
-    sharedPreferences.setBool(key, booleanValue);
+  Future<bool> setPreferencesBoolean(String key, bool booleanValue) async {
+    return await sharedPreferences.setBool(key, booleanValue);
   }
 
   ///Below method is to get the boolean value from the SharedPreferences.
@@ -45,8 +45,8 @@ class SharedPref {
   }
 
   ///Below method is to set the double value in the SharedPreferences.
-  setPreferenceDouble(String key, double doubleValue) {
-    sharedPreferences.setDouble(key, doubleValue);
+  Future<bool> setPreferenceDouble(String key, double doubleValue) async {
+    return await sharedPreferences.setDouble(key, doubleValue);
   }
 
   ///Below method is to set the double value from the SharedPreferences.
@@ -55,8 +55,8 @@ class SharedPref {
   }
 
   ///Below method is to set the int value in the SharedPreferences.
-  setPreferenceInt(String key, int intValue) {
-    sharedPreferences.setInt(key, intValue);
+  Future<bool> setPreferenceInt(String key, int intValue) async {
+    return await sharedPreferences.setInt(key, intValue);
   }
 
   ///Below method is to get the int value from the SharedPreferences.
@@ -65,8 +65,8 @@ class SharedPref {
   }
 
   ///Below method is to remove the received preference.
-  removePreference(String key) {
-    sharedPreferences.remove(key);
+  Future<bool> removePreference(String key) async {
+    return await sharedPreferences.remove(key);
   }
 
   ///Below method is to check the availability of the received preference .
@@ -98,7 +98,7 @@ class SharedPref {
   }
 
   ////[helper_functions]
-  static bool isUserAuthenticated(){
+  static bool isUserAuthenticated() {
     final data = checkLoginAndRegistration();
     final isRegistered = data['isRegistered'] as bool;
     final loginData = data['loginResponse'] as LoginResponseModel?;
@@ -106,16 +106,80 @@ class SharedPref {
     return isRegistered && loginData != null;
   }
 
-  static LoginResponseModel getLoginData(){
+  static LoginResponseModel getLoginData() {
     final data = checkLoginAndRegistration();
-    final loginData = data['loginResponse'] as LoginResponseModel;
-    return loginData;
+    final loginData = data['loginResponse'] as LoginResponseModel?;
+
+    // Debug: Print all user data fields (silenced to reduce noise)
+    // if (loginData?.result?.data != null) {
+    //   print('\n🔐 ===== LOGIN DATA DEBUG =====');
+    //   print('uid: ${loginData!.result!.data!.uid}');
+    //   print('emp_id: ${loginData.result!.data!.emp_id}');
+    //   print('emp_profile_id: ${loginData.result!.data!.emp_profile_id}');
+    //   print('username: ${loginData.result!.data!.username}');
+    //   print('name: ${loginData.result!.data!.name}');
+    //   print('emp_name: ${loginData.result!.data!.emp_name}');
+    //   print('===============================\n');
+    // }
+
+    // Return empty model if not authenticated (for guest mode)
+    return loginData ?? LoginResponseModel();
+  }
+
+  static String getCachedLeaveBalance({String fallback = '0'}) {
+    final modeled = getLoginData().result?.data?.leaveBalance?.toString().trim();
+    if (modeled != null &&
+        modeled.isNotEmpty &&
+        modeled.toLowerCase() != 'null' &&
+        modeled.toLowerCase() != 'false') {
+      return modeled;
+    }
+
+    final loginJson = sharedPreferences.getString('loginResponse') ??
+        sharedPreferences.getString('LOGIN_RESPONSE');
+    if (loginJson == null || loginJson.isEmpty) {
+      return fallback;
+    }
+
+    try {
+      final decoded = jsonDecode(loginJson) as Map<String, dynamic>;
+      final data = decoded['result']?['data'];
+      if (data is! Map<String, dynamic>) return fallback;
+
+      final raw = data['leave_balance'] ?? data['leaveBalance'];
+      final value = raw?.toString().trim();
+      if (value == null ||
+          value.isEmpty ||
+          value.toLowerCase() == 'null' ||
+          value.toLowerCase() == 'false') {
+        return fallback;
+      }
+      return value;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  static LoginResponseModel? getLoginDataOrNull() {
+    final data = checkLoginAndRegistration();
+    return data['loginResponse'] as LoginResponseModel?;
   }
 
   static Map<String, dynamic> checkLoginAndRegistration() {
     final isRegistered = sharedPreferences.getBool('isRegistered') ?? false;
 
-    final loginJson = sharedPreferences.getString('loginResponse');
+    // Try 'loginResponse' key first (new/correct key)
+    String? loginJson = sharedPreferences.getString('loginResponse');
+
+    // Fallback to 'LOGIN_RESPONSE' key if not found (old key for migration)
+    if (loginJson == null || loginJson.isEmpty) {
+      loginJson = sharedPreferences.getString('LOGIN_RESPONSE');
+      // If found in old key, migrate it to new key
+      if (loginJson != null && loginJson.isNotEmpty) {
+        sharedPreferences.setString('loginResponse', loginJson);
+      }
+    }
+
     LoginResponseModel? loginResponse;
     if (loginJson != null) {
       loginResponse = LoginResponseModel.fromJson(jsonDecode(loginJson));
@@ -128,14 +192,17 @@ class SharedPref {
   }
 
   static int getSelectedCompany() {
-    return sharedPreferences.getInt("selectedCompany") ?? 1;
+    final id = sharedPreferences.getInt("selectedCompany") ?? 1;
+    print('🏢 SharedPref.getSelectedCompany() → $id');
+    return id;
   }
 
-  static saveSelectedCompany(int id) {
-    return sharedPreferences.setInt("selectedCompany", id);
+  static Future<void> saveSelectedCompany(int id) async {
+    print('🏢 SharedPref.saveSelectedCompany($id)');
+    await sharedPreferences.setInt("selectedCompany", id);
   }
 
-  getUserBase64Image()  {
+  getUserBase64Image() {
     final userJson = sharedPreferences.getString('loginResponse');
     if (userJson != null) {
       final parsed = json.decode(userJson);
@@ -144,7 +211,4 @@ class SharedPref {
     }
     return '';
   }
-
-  
-
 }

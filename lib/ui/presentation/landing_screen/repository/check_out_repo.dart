@@ -9,15 +9,22 @@ import '../../../../utils/urll_utils.dart';
 
 UserRepo _userRepo = UserRepo();
 
-DateTime now = DateTime.now();
-
-// Format it as 'YYYY-MM-DD HH:mm:ss'
-String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
-
 ApiQuery _apiQuery = ApiQuery();
 
+/// Check-Out Repository
+///
+/// Time Tracking Rules:
+/// • Check-out is global and unified across all projects
+/// • Uses check_in_record_id to match with corresponding check-in
+/// • Does not send project-specific information in the API call
+/// • Total working time is calculated server-side based on check-in/out times
+/// • Project-specific time allocation handled through job missions
+///
+/// NOTE: The 8 working hours are global and shared across all projects.
+///       Switching projects does NOT reset or create a new timer.
 class CheckOutRepo {
-  Future<Response?> checkOutUser(String lat, String long, int checkInRecordId) async {
+  Future<Response?> checkOutUser(
+      String lat, String long, int checkInRecordId) async {
     final loginResponse = await _userRepo.getLoginResponse();
 
     var token = loginResponse!.result!.token!;
@@ -31,14 +38,20 @@ class CheckOutRepo {
         'Accept': 'application/json',
         "Authorization": "Bearer $token"
       };
+
+      // Compute fresh timestamp at call time (NOT at import time)
+      final String formattedDate =
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+      final parsedDeviceId = int.tryParse(deviceInfo ?? '');
+
       Map<String, dynamic> data = {
         "jsonrpc": "2.0",
         "params": {
           "user_id": int.tryParse(userID.toString()) ?? 0,
-          "device_id": deviceInfo,
+          "device_id": parsedDeviceId ?? deviceInfo,
           "checkout_date_time": formattedDate,
-          "check_out_long": long,
-          "check_out_lat": lat,
+          "check_out_long": double.tryParse(long) ?? long,
+          "check_out_lat": double.tryParse(lat) ?? lat,
           "check_in_record_id": checkInRecordId,
         }
       };

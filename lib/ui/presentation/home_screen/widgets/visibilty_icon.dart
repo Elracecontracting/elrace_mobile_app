@@ -4,28 +4,34 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ArraowVisibalityBottomNav extends StatelessWidget {
-  const ArraowVisibalityBottomNav({super.key});
+  final double bottomMargin;
+  const ArraowVisibalityBottomNav({super.key, this.bottomMargin = 125});
 
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: Alignment.bottomCenter,
-      child:  BlocBuilder<HomeBloc, HomeState>(
-        builder: (ctx,state) {
-          var bloc = HomeBloc.get(ctx);
-          return InkWell(
-            onTap: ()=> bloc.add(const ChangeVisiablityIcon()),
-            child: Container(
-              height: 50.w,
-              margin: EdgeInsets.only(bottom: 120.w),
-              child: 
-              !bloc.enableBottomNav?
-              Image.asset("assets/newapp/arrow_appear.png",width: 50.w,):
-              Image.asset("assets/newapp/arrow.png",width: 50.w,),
-            ),
-          );
-        }
-      ),
+      alignment: Alignment.bottomRight,
+      child: BlocBuilder<HomeBloc, HomeState>(builder: (ctx, state) {
+        var bloc = HomeBloc.get(ctx);
+        return GestureDetector(
+          onTap: () => bloc.add(const ChangeVisiablityIcon()),
+          child: Container(
+            alignment: Alignment.bottomRight,
+            height: 55.w,
+            width: 50.w,
+            margin: EdgeInsets.only(bottom: bottomMargin.w - 20.w, right: 20.w,left: 20.w),
+            child: !bloc.enableBottomNav
+                ? Image.asset(
+                    "assets/newapp/arrow_appear.png",
+                    width: 45.w,
+                  )
+                : Image.asset(
+                  "assets/newapp/arrow.png",
+                  width: 45.w,
+                ),
+          ),
+        );
+      }),
     );
   }
 }

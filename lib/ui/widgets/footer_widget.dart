@@ -16,41 +16,7 @@ class FooterWidget extends StatelessWidget {
           transform: Matrix4.identity()..scale(-1.0, 1.0), // Flip horizontally
           child: Image.asset('assets/png/bottom.png'),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          child: GestureDetector(
-            onTap: () {},
-            child: Container(
-              width: 120,
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: white,
-                  boxShadow: [
-                    BoxShadow(
-                        color: lightGrey,
-                        offset: const Offset(1, 4),
-                        blurRadius: 10)
-                  ]),
-              child: Center(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Image.asset('assets/png/icons/signout.png'),
-                      Text(
-                        'SIGN OUT',
-                        style:
-                            TextStyle(fontWeight: FontWeight.bold, color: blue),
-                      )
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        const SizedBox.shrink(),
       ],
     );
   }

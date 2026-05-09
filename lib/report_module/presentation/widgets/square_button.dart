@@ -4,7 +4,7 @@ class SquareButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final Color borderColor;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   const SquareButton(
       {super.key,
       required this.icon,

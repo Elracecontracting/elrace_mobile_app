@@ -44,14 +44,14 @@ class ReportItemModel extends HiveObject {
   factory ReportItemModel.fromJson(
       Map<String, dynamic> json, dynamic reportID) {
     return ReportItemModel(
-      id: (json['item_id'] ?? json['id']).toString(),
+      id: (json['item_id'] ?? json['id'] ?? '').toString(),
       reportId: reportID.toString(),
-      type: json['type'],
-      image: json['image'],
-      location: json['location'],
-      description: json['description'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      type: (json['type'] ?? 'image').toString(),
+      image: (json['item_data'] ?? json['image'] ?? '').toString(),
+      location: (json['location'] ?? '').toString(),
+      description: (json['description'] ?? '').toString(),
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
     );
   }
 

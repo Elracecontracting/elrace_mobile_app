@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -7,8 +6,53 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ApproveCard extends StatelessWidget {
-  final Map<dynamic,dynamic> item;
-  const ApproveCard({super.key,required this.item});
+  final Map<dynamic, dynamic> item;
+  const ApproveCard({super.key, required this.item});
+
+  // Helper method to check if image_emp is a URL or base64 data
+  bool _isImageUrl(String imageData) {
+    return imageData.startsWith('http://') || imageData.startsWith('https://');
+  }
+
+  // Helper widget to display employee image (URL or base64)
+  Widget _buildEmployeeImage(dynamic imageEmp) {
+    if (imageEmp != null &&
+        imageEmp is String &&
+        imageEmp.isNotEmpty &&
+        imageEmp.toLowerCase() != "false") {
+      if (_isImageUrl(imageEmp)) {
+        // It's a URL, use Image.network
+        return Image.network(
+          imageEmp,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Image(
+              image: AssetImage("assets/png/profile_1.png"),
+              fit: BoxFit.cover,
+            );
+          },
+        );
+      } else {
+        // It's base64 data, decode it
+        try {
+          return Image.memory(
+            base64Decode(imageEmp),
+            fit: BoxFit.cover,
+          );
+        } catch (e) {
+          return const Image(
+            image: AssetImage("assets/png/profile_1.png"),
+            fit: BoxFit.cover,
+          );
+        }
+      }
+    }
+    // Fallback to default image
+    return const Image(
+      image: AssetImage("assets/png/profile_1.png"),
+      fit: BoxFit.cover,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +74,8 @@ class ApproveCard extends StatelessWidget {
     String year = parsedDate.year.toString();
 
     // Get icon dynamically based on category type
-    String iconPath = categoryIcons[type.toUpperCase()] ?? "assets/icons/default.png";
+    String iconPath =
+        categoryIcons[type.toUpperCase()] ?? "assets/icons/default.png";
     return GestureDetector(
       onTap: () {
         print('Navigating with ID: $id'); // 👈 print before navigation
@@ -68,7 +113,7 @@ class ApproveCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             type,
-                            style: GoogleFonts.koulen(
+                            style: GoogleFonts.poppins(
                               fontSize: 20,
                               fontWeight: FontWeight.w500,
                               color: appFontColor,
@@ -89,7 +134,7 @@ class ApproveCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     name,
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: Colors.red,
@@ -101,11 +146,12 @@ class ApproveCard extends StatelessWidget {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  const Icon(Icons.person_outline, size: 16, color: Colors.black54),
+                  const Icon(Icons.person_outline,
+                      size: 16, color: Colors.black54),
                   const SizedBox(width: 8),
                   Text(
                     requesterName,
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
@@ -115,7 +161,7 @@ class ApproveCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     "- $requesterRole",
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: Colors.orange,
@@ -127,11 +173,12 @@ class ApproveCard extends StatelessWidget {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  const Icon(Icons.location_on_outlined, size: 16, color: Colors.black54),
+                  const Icon(Icons.location_on_outlined,
+                      size: 16, color: Colors.black54),
                   const SizedBox(width: 8),
                   Text(
                     location,
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: appFontColor,
                       letterSpacing: 1.0,
@@ -149,18 +196,7 @@ class ApproveCard extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(2),
                         child: ClipOval(
-                          child: (item["image_emp"] != null &&
-                              item["image_emp"] is String &&
-                              (item["image_emp"] as String).isNotEmpty &&
-                              (item["image_emp"] as String).toLowerCase() != "false")
-                              ? Image.memory(
-                            base64Decode(item["image_emp"] as String),
-                            fit: BoxFit.cover,
-                          )
-                              : const Image(
-                            image: AssetImage("assets/png/profile_1.png"),
-                            fit: BoxFit.cover,
-                          ),
+                          child: _buildEmployeeImage(item["image_emp"]),
                         ),
                       ),
                     ),
@@ -168,13 +204,13 @@ class ApproveCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         approver,
-                        style: GoogleFonts.koulen(
+                        style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: appFontColor,
                           letterSpacing: 1.0,
                         ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                        overflow: TextOverflow.visible,
+                        maxLines: null,
                         softWrap: false,
                       ),
                     ),
@@ -194,7 +230,8 @@ class ApproveCard extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 6),
                               decoration: const BoxDecoration(
                                 image: DecorationImage(
                                   image: AssetImage("assets/png/date-bg.png"),
@@ -203,7 +240,7 @@ class ApproveCard extends StatelessWidget {
                               ),
                               child: Text(
                                 day,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -212,7 +249,7 @@ class ApproveCard extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               month,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.red,
@@ -220,7 +257,7 @@ class ApproveCard extends StatelessWidget {
                             ),
                             Text(
                               year,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.red,

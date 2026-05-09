@@ -23,13 +23,14 @@ class ReportModelAdapter extends TypeAdapter<ReportModel> {
       folderId: fields[4] as String,
       createdAt: fields[3] as DateTime,
       updatedAt: fields[5] as DateTime,
+      reportType: fields[6] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ReportModel obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class ReportModelAdapter extends TypeAdapter<ReportModel> {
       ..writeByte(4)
       ..write(obj.folderId)
       ..writeByte(5)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(6)
+      ..write(obj.reportType);
   }
 
   @override

@@ -110,6 +110,15 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
             child: MaterialButton(
               onPressed: () async {
                 if (_generating) return;
+
+                // Enforce maximum 3 generated files per report
+                if (_pdfs.length >= 3) {
+                  showFlushBar(context,
+                      message:
+                          'Maximum 3 generated reports allowed. Please delete one before generating a new one.');
+                  return;
+                }
+
                 _generating = true;
                 setState(() {});
                 if (_pdfs

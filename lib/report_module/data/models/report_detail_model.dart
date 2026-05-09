@@ -23,14 +23,18 @@ class ReportDetailModel extends HiveObject {
   });
 
   factory ReportDetailModel.fromJson(Map<String, dynamic> json) {
+    final reportItems = json['report_items'];
+    final reportId = json['report'] != null ? json['report']['id'] : '';
     return ReportDetailModel(
       report: ReportModel.fromJson(json['report']),
       coverPage: json['cover_page'] != null
           ? CoverPageModel.fromJson(json['cover_page'])
           : null,
-      reportItems: (json['report_items'] as List<dynamic>)
-          .map((item) => ReportItemModel.fromJson(item, json['report']['id']))
-          .toList(),
+      reportItems: reportItems != null && reportItems is List
+          ? reportItems
+              .map((item) => ReportItemModel.fromJson(item as Map<String, dynamic>, reportId))
+              .toList()
+          : <ReportItemModel>[],
     );
   }
 

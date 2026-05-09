@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 class HomCheckIn extends StatelessWidget {
   final Function(double val) value;
-  const HomCheckIn({super.key,required this.value});
+  const HomCheckIn({super.key, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,7 @@ class HomCheckIn extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12,
             color: Color(0xFF1A1A53),
-            fontFamily: 'Koulen',
+            fontFamily: 'Poppins',
             letterSpacing: 0,
             fontWeight: FontWeight.w700,
           ),

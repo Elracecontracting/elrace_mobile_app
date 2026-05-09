@@ -4,6 +4,7 @@ import 'package:el_race/data/models/report_detail_model.dart';
 import 'package:el_race/data/models/report_model.dart';
 import 'package:el_race/data/repositories/company_repository.dart';
 import 'package:el_race/report_module/data/models/company_model.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -16,8 +17,22 @@ class PdfService {
     required String subject,
     required String projectName,
   }) async {
-    final pdf = pw.Document();
+    final pw.Font baseFont = await _loadPdfFont();
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: baseFont,
+        bold: baseFont,
+        italic: baseFont,
+        boldItalic: baseFont,
+      ),
+    );
     CompanyModel companyData = CompanyRepository.company!;
+    final String userName = _getUserName(companyData);
+
+    // Log the resolved user name and sources for troubleshooting.
+    final loginName = SharedPref.getLoginDataOrNull()?.result?.data?.name ?? "";
+    print(
+        'PDF user name resolved: $userName (company: ${companyData.employeeName}, login: $loginName)');
 
     Uint8List logo = await _loadAssetAsBytes(companyData.logo);
     pdf.addPage(
@@ -25,18 +40,25 @@ class PdfService {
         pageFormat: PdfPageFormat.a4,
         margin:
             const pw.EdgeInsets.only(left: 32, right: 32, bottom: 20, top: 5),
-        header: (context) => _buildHeader(
-            context, logo, report, reportDetail, projectName, subject),
-        footer: (context) => _buildFooter(context),
-        build: (context) => _buildBody(context, logo, report, reportDetail),
+        header: (context) => _buildHeader(context, logo, report, reportDetail,
+            projectName, subject, userName),
+        footer: (context) => _buildFooter(context, userName),
+        build: (context) =>
+            _buildBody(context, logo, report, reportDetail, userName),
       ),
     );
 
     return pdf.save();
   }
 
-  _buildHeader(context, logo, ReportModel report,
-      ReportDetailModel reportDetail, String projectName, String subject) {
+  pw.Widget _buildHeader(
+      context,
+      logo,
+      ReportModel report,
+      ReportDetailModel reportDetail,
+      String projectName,
+      String subject,
+      String userName) {
     CompanyModel companyData = CompanyRepository.company!;
     bool needToShowCover = (context.pageNumber == 1 &&
         reportDetail.coverPage != null &&
@@ -53,19 +75,27 @@ class PdfService {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Image(pw.MemoryImage(logo), height: 50, width: 100),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Text(
-                    "Site Report",
-                    textAlign: pw.TextAlign.center,
-                    style: pw.TextStyle(
-                      fontSize: 18,
-                      fontWeight: pw.FontWeight.bold,
+                pw.Image(pw.MemoryImage(logo), height: 90, width: 170),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      "Report",
+                      style: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ),
-                pw.SizedBox(width: 100)
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      "No. ${_getReportNumber(report)}",
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                )
               ],
             ),
             pw.SizedBox(height: 2),
@@ -77,7 +107,7 @@ class PdfService {
               child: pw.Row(
                 mainAxisSize: pw.MainAxisSize.min,
                 children: [
-                  if (companyData.employeeName != "")
+                  if (userName.isNotEmpty)
                     pw.Expanded(
                       child: pw.Column(
                           mainAxisAlignment: pw.MainAxisAlignment.start,
@@ -161,7 +191,7 @@ class PdfService {
   }
 
   _buildBody(pw.Context context, logo, ReportModel report,
-      ReportDetailModel reportDetail) {
+      ReportDetailModel reportDetail, String userName) {
     List<pw.Widget> content = [];
     CompanyModel companyData = CompanyRepository.company!;
     bool needToShowCover =
@@ -209,7 +239,7 @@ class PdfService {
                                       ),
                                     ),
                                     pw.Text(
-                                      " ${companyData.employeeName}",
+                                      " $userName",
                                       textAlign: pw.TextAlign.center,
                                       style: const pw.TextStyle(
                                         fontSize: 15,
@@ -344,18 +374,16 @@ class PdfService {
     return content;
   }
 
-  _buildFooter(context) {
-    CompanyModel companyData = CompanyRepository.company!;
-
+  _buildFooter(context, String userName) {
     return pw.Container(
-        decoration:
-            const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(width: 2))),
+        decoration: const pw.BoxDecoration(
+            border: pw.Border(top: pw.BorderSide(width: 2))),
         padding: const pw.EdgeInsets.only(top: 10, left: 20, right: 20),
         child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                '${companyData.employeeName}-${companyData.employeeID}',
+                'User: $userName',
                 style: const pw.TextStyle(fontSize: 12),
               ),
               pw.Text(
@@ -363,6 +391,62 @@ class PdfService {
                 style: const pw.TextStyle(fontSize: 12),
               ),
             ]));
+  }
+
+  String _getUserName(CompanyModel companyData) {
+    final loginData = SharedPref.getLoginDataOrNull();
+    final loginName =
+        loginData?.result?.data?.name ?? loginData?.result?.data?.username;
+
+    if (companyData.employeeName.isNotEmpty) return companyData.employeeName;
+    if (loginName != null && loginName.isNotEmpty) return loginName;
+    return 'Unknown User';
+  }
+
+  int _getReportNumber(ReportModel report) {
+    final parsedId = int.tryParse(report.id) ?? 0;
+    if (parsedId <= 0) return 1001;
+    return 1000 + parsedId;
+  }
+
+  pw.Widget _buildBulletList(String description) {
+    final lines = description
+        .split(RegExp(r'\r?\n'))
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .map((line) => line.replaceFirst(RegExp(r'^[•\-*]+\s*'), ''))
+        .toList();
+
+    if (lines.isEmpty) {
+      return pw.Text(description, style: const pw.TextStyle(fontSize: 13));
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        for (final line in lines)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 2),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('• ', style: const pw.TextStyle(fontSize: 13)),
+                pw.Expanded(
+                  child:
+                      pw.Text(line, style: const pw.TextStyle(fontSize: 13)),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<pw.Font> _loadPdfFont() async {
+    // Use a Unicode-capable font to render names with non-Latin characters.
+    final ByteData data =
+        await rootBundle.load('assets/fonts/arbicsupport.ttf');
+    return pw.Font.ttf(data);
   }
 
   Future<Uint8List> _loadAssetAsBytes(String assetPath) async {
@@ -409,10 +493,10 @@ class PdfService {
               // Content column with created date, title, and description.
               pw.Container(
                 height: rowHeight,
-                padding: const pw.EdgeInsets.all(4),
-                alignment: pw.Alignment.centerLeft,
+                padding: const pw.EdgeInsets.all(6),
+                alignment: pw.Alignment.topLeft,
                 child: pw.Column(
-                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  mainAxisAlignment: pw.MainAxisAlignment.start,
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     if (reportDetail.items[i].sectionName != null &&
@@ -425,8 +509,7 @@ class PdfService {
                       pw.SizedBox(height: 4),
                     if (reportDetail.items[i].description != null &&
                         reportDetail.items[i].description != "")
-                      pw.Text("${reportDetail.items[i].description}",
-                          style: const pw.TextStyle(fontSize: 13)),
+                      _buildBulletList(reportDetail.items[i].description!),
                   ],
                 ),
               ),

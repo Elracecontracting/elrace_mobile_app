@@ -60,6 +60,8 @@ class Employee {
   final dynamic mobilePhone;
   final dynamic jobId;
   final String? profilePhotoUrl;
+  final String? empId;
+  final String? department;
 
   Employee({
     this.id,
@@ -67,21 +69,43 @@ class Employee {
     this.mobilePhone,
     this.jobId,
     this.profilePhotoUrl,
+    this.empId,
+    this.department,
   });
 
-  factory Employee.fromJson(Map<String, dynamic> json) => Employee(
-        id: json["id"],
-        name: json["name"],
-        mobilePhone: json["mobile_phone"],
-        jobId: json["job_id"],
-        profilePhotoUrl: json["profile_photo_url"],
-      );
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    // Extract employee ID from name (format: "2879 Name Surname")
+    String? extractedEmpId;
+    final name = json["name"]?.toString();
+    if (name != null && name.isNotEmpty) {
+      final parts = name.split(' ');
+      if (parts.isNotEmpty) {
+        // Check if first part is a number
+        final firstPart = parts[0];
+        if (int.tryParse(firstPart) != null) {
+          extractedEmpId = firstPart;
+        }
+      }
+    }
+
+    return Employee(
+      id: json["id"],
+      name: json["name"],
+      mobilePhone: json["mobile_phone"],
+      jobId: json["job_id"],
+      profilePhotoUrl: json["profile_photo_url"],
+      empId: json["emp_id"]?.toString() ?? extractedEmpId,
+      department: json["department_id"] ?? json["department"],
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         "id": id,
         "name": name,
         "mobile_phone": mobilePhone,
         "job_id": jobId,
+        "emp_id": empId,
         "profile_photo_url": profilePhotoUrl,
+        "department": department,
       };
 }

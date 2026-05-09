@@ -29,7 +29,7 @@ class RequestsBloc extends Bloc<RequestsEvent, RequestsState> {
         "jsonrpc": "2.0",
         "params": {"keyword": ""},
       });
-      final url = Uri.parse("https://test.elrace.com/api/my_requests");
+      final url = Uri.parse("https://erp.elrace.com/api/my_requests");
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
         ..body = body;

@@ -33,4 +33,4 @@ final class DeleteNote extends NotesEvent {
   
   @override
   List<Object> get props => [noteId];
-} 
+}

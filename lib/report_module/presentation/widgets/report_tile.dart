@@ -10,11 +10,11 @@ import 'package:intl/intl.dart';
 class ReportTile extends StatelessWidget {
   final ReportModel report;
   final String folderName;
-  final VoidCallback onMoreClicked;
+  final ValueChanged<String> onMenuSelected;
   const ReportTile(
       {super.key,
       required this.report,
-      required this.onMoreClicked,
+      required this.onMenuSelected,
       required this.folderName});
 
   @override
@@ -51,8 +51,21 @@ class ReportTile extends StatelessWidget {
                       ),
                     ),
                     InkWell(
-                      onTap: onMoreClicked,
-                      child: const Icon(Icons.more_vert_rounded),
+                      child: PopupMenuButton<String>(
+                        tooltip: 'More options',
+                        icon: const Icon(Icons.more_vert_rounded),
+                        onSelected: onMenuSelected,
+                        itemBuilder: (context) => const [
+                          PopupMenuItem<String>(
+                            value: 'rename',
+                            child: Text('Rename'),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Text('Delete'),
+                          ),
+                        ],
+                      ),
                     )
                   ],
                 ),
@@ -63,23 +76,10 @@ class ReportTile extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: CustomColors.blue,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 2, horizontal: 12),
-                      child: Text(
-                        "Report",
-                        style: CustomTextStyle.smallWhite,
-                      ),
-                    ),
                     FutureBuilder<ReportDetailModel?>(
                         future: reportProvider.getReportDetail(report),
                         builder: (context, snapshot) {
                           return Container(
-                            margin: const EdgeInsets.only(left: 5),
                             decoration: BoxDecoration(
                               color: CustomColors.blue,
                               borderRadius: BorderRadius.circular(8),

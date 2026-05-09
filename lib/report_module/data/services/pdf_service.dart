@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 
 import 'package:el_race/report_module/data/models/company_model.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
@@ -6,7 +8,6 @@ import 'package:el_race/report_module/data/models/report_item_model.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -17,30 +18,75 @@ class PdfService {
   Future<Uint8List> generateReportPdf({
     required ReportDetailModel report,
     required String projectName,
+    String? companyName,
+    String templateType = 'template1',
   }) async {
     final pdf = pw.Document();
-    CompanyModel companyData = CompanyRepository.company!;
-    LoginResponseModel? userData = (await userRepo.getLoginResponse());
+    final logoPath = _resolveCompanyLogoPath(
+      companyName,
+      fallbackPath: CompanyRepository.company?.logo,
+    );
 
-    final imageMap = await loadReportImages(report.reportItems);
-    Uint8List logo = await _loadAssetAsBytes(companyData.logo);
-    final supportedFont =
-        await rootBundle.load("assets/fonts/arbicsupport.ttf");
-    final notoSanArabic = pw.Font.ttf(supportedFont);
+    // Run all async operations in parallel
+    final results = await Future.wait([
+      userRepo.getLoginResponse(),
+      loadReportImages(report.reportItems),
+      _loadAssetAsBytes(logoPath),
+      rootBundle.load("assets/fonts/arbicsupport.ttf"),
+    ]);
+
+    final LoginResponseModel? userData = results[0] as LoginResponseModel?;
+    final imageMap = results[1] as Map<String, pw.MemoryImage>;
+    final Uint8List logo = results[2] as Uint8List;
+    final notoSanArabic = pw.Font.ttf(results[3] as ByteData);
+    final String userName = userData?.result?.data?.name ??
+        userData?.result?.data?.username ??
+        userData?.result?.data?.emp_name ??
+        '';
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin:
-            const pw.EdgeInsets.only(left: 32, right: 32, bottom: 20, top: 5),
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat.a4,
+          margin:
+              const pw.EdgeInsets.only(left: 32, right: 32, bottom: 20, top: 5),
+        ),
         header: (context) =>
             _buildHeader(context, logo, report, projectName, notoSanArabic),
-        footer: (context) => _buildFooter(context),
-        build: (context) => _buildBody(
-            context, logo, report, imageMap, userData, notoSanArabic),
+        footer: (context) => _buildFooter(context, userName),
+        build: (context) => _buildBody(context, logo, report, imageMap,
+            userData, notoSanArabic, templateType),
       ),
     );
 
     return pdf.save();
+  }
+
+  String _resolveCompanyLogoPath(String? companyName, {String? fallbackPath}) {
+    final normalized = (companyName ?? '').trim().toLowerCase();
+
+    if (normalized == 'colors') {
+      return 'assets/newapp/Colors.png';
+    }
+    if (normalized == 'hcni') {
+      return 'assets/newapp/HCNI NBG.png';
+    }
+    if (normalized == '85 eighty five' ||
+        normalized == '85' ||
+        normalized == 'eighty five') {
+      return 'assets/newapp/png-logo-85.png';
+    }
+
+    if (normalized == 'rcc' || normalized.contains('el race')) {
+      return 'assets/logo/logo.png';
+    }
+    if (normalized.contains('al hewar')) {
+      return 'assets/logo/logo2.png';
+    }
+
+    if (fallbackPath != null && fallbackPath.trim().isNotEmpty) {
+      return fallbackPath;
+    }
+    return 'assets/logo/logo.png';
   }
 
   _buildHeader(context, logo, ReportDetailModel report, String projectName,
@@ -60,19 +106,29 @@ class PdfService {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Image(pw.MemoryImage(logo), height: 50, width: 100),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Text(
-                    "Report",
-                    textAlign: pw.TextAlign.center,
-                    style: pw.TextStyle(
-                      font: font,
-                      fontSize: 18,
-                      fontWeight: pw.FontWeight.bold,
+                pw.Image(pw.MemoryImage(logo), height: 90, width: 170),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      "Report",
+                      style: pw.TextStyle(
+                        font: font,
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      "No. ${_getReportNumber(report)}",
+                      style: pw.TextStyle(
+                        font: font,
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                )
               ],
             ),
             pw.SizedBox(height: 2),
@@ -182,18 +238,72 @@ class PdfService {
 
   Future<Map<String, pw.MemoryImage>> loadReportImages(
       List<ReportItemModel> items) async {
+    final imageItems = items.where((item) => item.type == 'image').toList();
     final Map<String, pw.MemoryImage> imageMap = {};
-    for (final item in items) {
-      if (item.type == 'image') {
-        imageMap[item.image] =
-            pw.MemoryImage(await File(item.image).readAsBytes());
+
+    // Process in batches of 3 to avoid saturating mobile bandwidth
+    const batchSize = 3;
+    for (int i = 0; i < imageItems.length; i += batchSize) {
+      final batch = imageItems.skip(i).take(batchSize).toList();
+      final batchResults = await Future.wait(
+        batch.map((item) async {
+          try {
+            Uint8List imageBytes;
+            if (item.image.startsWith('http://') ||
+                item.image.startsWith('https://')) {
+              final response = await http
+                  .get(Uri.parse(item.image))
+                  .timeout(const Duration(seconds: 45));
+              if (response.statusCode == 200) {
+                imageBytes = response.bodyBytes;
+              } else {
+                return null;
+              }
+            } else {
+              imageBytes = await File(item.image).readAsBytes();
+            }
+            // Resize image to max 800px to reduce PDF size & generation time
+            imageBytes = _resizeImage(imageBytes);
+            return MapEntry(item.image, pw.MemoryImage(imageBytes));
+          } catch (e) {
+            print('Error loading image ${item.image}: $e');
+            return null;
+          }
+        }),
+      );
+      for (final entry in batchResults) {
+        if (entry != null) imageMap[entry.key] = entry.value;
       }
     }
+
     return imageMap;
   }
 
-  _buildBody(pw.Context context, logo, ReportDetailModel reportDetail,
-      Map imageMap, LoginResponseModel? userData, pw.Font font) {
+  Uint8List _resizeImage(Uint8List bytes) {
+    try {
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return bytes;
+      if (decoded.width <= 800 && decoded.height <= 800) return bytes;
+      final resized = img.copyResize(
+        decoded,
+        width: decoded.width > decoded.height ? 800 : -1,
+        height: decoded.height >= decoded.width ? 800 : -1,
+        interpolation: img.Interpolation.linear,
+      );
+      return Uint8List.fromList(img.encodeJpg(resized, quality: 75));
+    } catch (e) {
+      return bytes;
+    }
+  }
+
+  _buildBody(
+      pw.Context context,
+      logo,
+      ReportDetailModel reportDetail,
+      Map imageMap,
+      LoginResponseModel? userData,
+      pw.Font font,
+      String templateType) {
     List<pw.Widget> content = [];
     // CompanyModel companyData = CompanyRepository.company!;
 
@@ -373,7 +483,7 @@ class PdfService {
             pw.SizedBox(height: 20),
             pw.Text(reportDetail.coverPage!.title,
                 textDirection: RegExp(r'[\u0600-\u06FF]').hasMatch(
-                  reportDetail.coverPage!.title!,
+                  reportDetail.coverPage!.title,
                 )
                     ? pw.TextDirection.rtl
                     : pw.TextDirection.ltr,
@@ -396,13 +506,220 @@ class PdfService {
       ));
       // content.add(pw.PageBreak());
     }
-    content.add(buildTableBody(reportDetail, imageMap, font));
+    content.add(_buildTemplateBody(templateType, reportDetail, imageMap, font));
     return content;
   }
 
-  _buildFooter(context) {
-    CompanyModel companyData = CompanyRepository.company!;
+  pw.Widget _buildTemplateBody(String templateType, ReportDetailModel report,
+      Map imageMap, pw.Font font) {
+    switch (templateType) {
+      case 'template2':
+        return _buildTemplate2Body(report, imageMap, font);
+      case 'template3':
+        return _buildTemplate3Body(report, imageMap, font);
+      case 'template4':
+        return _buildTemplate4Body(report, imageMap, font);
+      case 'template1':
+      default:
+        return _buildTemplate1Body(report, imageMap, font);
+    }
+  }
 
+  pw.Widget _buildTemplate1Body(
+      ReportDetailModel reportDetail, Map imageMap, pw.Font font) {
+    final items = reportDetail.reportItems;
+
+    return pw.Column(
+      children: [
+        for (int i = 0; i < items.length; i++)
+          pw.Container(
+            margin: const pw.EdgeInsets.only(bottom: 12),
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Item ${i + 1}',
+                    style: pw.TextStyle(
+                        fontSize: 11,
+                        fontWeight: pw.FontWeight.bold,
+                        font: font)),
+                pw.SizedBox(height: 6),
+                _buildReportImage(items[i], imageMap, height: 190),
+                pw.SizedBox(height: 8),
+                _buildTemplateText(items[i], font),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  pw.Widget _buildTemplate2Body(
+      ReportDetailModel reportDetail, Map imageMap, pw.Font font) {
+    final items = reportDetail.reportItems;
+
+    return pw.Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        for (int i = 0; i < items.length; i++)
+          pw.Container(
+            width: 250,
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Item ${i + 1}',
+                    style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: font)),
+                pw.SizedBox(height: 4),
+                _buildReportImage(items[i], imageMap, height: 130),
+                pw.SizedBox(height: 6),
+                _buildTemplateText(items[i], font),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  pw.Widget _buildTemplate3Body(
+      ReportDetailModel reportDetail, Map imageMap, pw.Font font) {
+    final items = reportDetail.reportItems;
+
+    return pw.Column(
+      children: [
+        for (int i = 0; i < items.length; i++)
+          pw.Container(
+            margin: const pw.EdgeInsets.only(bottom: 10),
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.SizedBox(
+                  width: 190,
+                  child: _buildReportImage(items[i], imageMap, height: 130),
+                ),
+                pw.SizedBox(width: 10),
+                pw.Expanded(child: _buildTemplateText(items[i], font)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  pw.Widget _buildTemplate4Body(
+      ReportDetailModel reportDetail, Map imageMap, pw.Font font) {
+    final items = reportDetail.reportItems;
+
+    return pw.Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (int i = 0; i < items.length; i++)
+          pw.Container(
+            width: 170,
+            padding: const pw.EdgeInsets.all(6),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Item ${i + 1}',
+                    style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: font)),
+                pw.SizedBox(height: 4),
+                _buildReportImage(items[i], imageMap, height: 95),
+                pw.SizedBox(height: 6),
+                _buildTemplateText(items[i], font),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  pw.Widget _buildReportImage(ReportItemModel item, Map imageMap,
+      {required double height}) {
+    final image = imageMap[item.image];
+    if (item.type == 'text' || image == null) {
+      return pw.Container(
+        height: height,
+        alignment: pw.Alignment.center,
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey300),
+          color: PdfColors.grey100,
+        ),
+        child: pw.Text('No image'),
+      );
+    }
+    final squareSide = height;
+    return pw.Container(
+      height: height,
+      width: double.infinity,
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        color: PdfColors.grey100,
+      ),
+      child: pw.Center(
+        child: pw.SizedBox(
+          width: squareSide,
+          height: squareSide,
+          child: pw.Image(
+            image,
+            fit: pw.BoxFit.contain,
+          ),
+        ),
+      ),
+    );
+  }
+
+  pw.Widget _buildTemplateText(ReportItemModel item, pw.Font font) {
+    final location = item.location.trim();
+    final description = item.description.trim();
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        if (location.isNotEmpty) ...[
+          pw.Text('Location:',
+              style: pw.TextStyle(
+                  fontSize: 10, fontWeight: pw.FontWeight.bold, font: font)),
+          _buildBulletList(location, font),
+          pw.SizedBox(height: 4),
+        ],
+        if (description.isNotEmpty) ...[
+          pw.Text('Description:',
+              style: pw.TextStyle(
+                  fontSize: 10, fontWeight: pw.FontWeight.bold, font: font)),
+          _buildBulletList(description, font),
+        ],
+        if (location.isEmpty && description.isEmpty)
+          pw.Text('-', style: pw.TextStyle(fontSize: 10, font: font)),
+      ],
+    );
+  }
+
+  _buildFooter(context, String userName) {
     return pw.Container(
         decoration: const pw.BoxDecoration(
             border: pw.Border(top: pw.BorderSide(width: 2))),
@@ -410,10 +727,11 @@ class PdfService {
         child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text(
-                '${companyData.employeeName}-${companyData.employeeID}',
-                style: const pw.TextStyle(fontSize: 12),
-              ),
+              if (userName.isNotEmpty)
+                pw.Text(
+                  userName,
+                  style: const pw.TextStyle(fontSize: 12),
+                ),
               pw.Text(
                 'Page ${context.pageNumber} of ${context.pagesCount}',
                 style: const pw.TextStyle(fontSize: 12),
@@ -424,6 +742,48 @@ class PdfService {
   Future<Uint8List> _loadAssetAsBytes(String assetPath) async {
     final ByteData data = await rootBundle.load(assetPath);
     return data.buffer.asUint8List();
+  }
+
+  pw.Widget _buildWatermark(pw.Context context, String watermarkText) {
+    if (watermarkText.isEmpty) return pw.SizedBox();
+
+    const double angle = -0.5236; // -30 degrees
+    const double fontSize = 22;
+    const int cols = 3;
+    const int rows = 6;
+
+    final textStyle = pw.TextStyle(
+      color: PdfColors.grey200,
+      fontSize: fontSize,
+      fontWeight: pw.FontWeight.normal,
+    );
+
+    return pw.FullPage(
+      ignoreMargins: true,
+      child: pw.Column(
+        children: List.generate(
+          rows,
+          (row) => pw.Expanded(
+            child: pw.Row(
+              children: List.generate(
+                cols,
+                (col) => pw.Expanded(
+                  child: pw.Center(
+                    child: pw.Transform.rotate(
+                      angle: angle,
+                      child: pw.Text(
+                        watermarkText,
+                        style: textStyle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   pw.Widget buildTableBody(
@@ -450,34 +810,77 @@ class PdfService {
               pw.Container(
                 height: rowHeight,
                 alignment: pw.Alignment.center,
-                child: (reportDetail.reportItems[i].type != "text")
-                    ? pw.Image(imageMap[reportDetail.reportItems[i].image]!)
-                    : pw.Text(""),
+                child: () {
+                  final img = imageMap[reportDetail.reportItems[i].image];
+                  if (reportDetail.reportItems[i].type != 'text' &&
+                      img != null) {
+                    return pw.Image(img);
+                  }
+                  return pw.Text('');
+                }(),
               ),
               pw.Container(
                 height: rowHeight,
-                alignment: pw.Alignment.bottomLeft,
-                padding: const pw.EdgeInsets.all(4),
-                child: pw.Text(reportDetail.reportItems[i].location,
-                    textDirection: RegExp(r'[\u0600-\u06FF]')
-                            .hasMatch(reportDetail.reportItems[i].location)
-                        ? pw.TextDirection.rtl
-                        : pw.TextDirection.ltr,
-                    style: pw.TextStyle(fontSize: 13, font: font)),
+                alignment: pw.Alignment.topLeft,
+                padding: const pw.EdgeInsets.all(6),
+                child: _buildBulletList(
+                    reportDetail.reportItems[i].location, font),
               ),
               // Content column with created date, title, and description.
               pw.Container(
                 height: rowHeight,
-                padding: const pw.EdgeInsets.all(4),
-                alignment: pw.Alignment.bottomLeft,
-                child: pw.Text(reportDetail.reportItems[i].description,
-                    textDirection: RegExp(r'[\u0600-\u06FF]')
-                            .hasMatch(reportDetail.reportItems[i].description)
-                        ? pw.TextDirection.rtl
-                        : pw.TextDirection.ltr,
-                    style: pw.TextStyle(fontSize: 13, font: font)),
+                padding: const pw.EdgeInsets.all(6),
+                alignment: pw.Alignment.topLeft,
+                child: _buildBulletList(
+                    reportDetail.reportItems[i].description, font),
               ),
             ],
+          ),
+      ],
+    );
+  }
+
+  int _getReportNumber(ReportDetailModel report) {
+    final parsedId = int.tryParse(report.report.id) ?? 0;
+    if (parsedId <= 0) return 1001;
+    return 1000 + parsedId;
+  }
+
+  pw.Widget _buildBulletList(String description, pw.Font font) {
+    final lines = description
+        .split(RegExp(r'\r?\n'))
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .map((line) => line.replaceFirst(RegExp(r'^[•\-*]+\s*'), ''))
+        .toList();
+
+    if (lines.isEmpty) {
+      return pw.Text(description,
+          textDirection: RegExp(r'[\u0600-\u06FF]').hasMatch(description)
+              ? pw.TextDirection.rtl
+              : pw.TextDirection.ltr,
+          style: pw.TextStyle(fontSize: 13, font: font));
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        for (final line in lines)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 2),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('• ', style: pw.TextStyle(fontSize: 13, font: font)),
+                pw.Expanded(
+                  child: pw.Text(line,
+                      textDirection: RegExp(r'[\u0600-\u06FF]').hasMatch(line)
+                          ? pw.TextDirection.rtl
+                          : pw.TextDirection.ltr,
+                      style: pw.TextStyle(fontSize: 13, font: font)),
+                ),
+              ],
+            ),
           ),
       ],
     );

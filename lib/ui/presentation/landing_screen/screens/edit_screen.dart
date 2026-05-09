@@ -50,15 +50,15 @@ class _AnimatedListViewState extends State<AnimatedListView>
             children: [
               // HeaderWidget(username: widget.userName),
               const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
                     Icon(
                       CupertinoIcons.floppy_disk,
                       color: shadowBlueDark,
                     ),
-                    const SizedBox(width: 5),
+                    SizedBox(width: 5),
                     Text(
                       'Save',
                       style: TextStyle(color: shadowBlueDark),
@@ -80,7 +80,7 @@ class _AnimatedListViewState extends State<AnimatedListView>
                           width: 345,
                           decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(20),
-                              gradient: LinearGradient(colors: [
+                              gradient: const LinearGradient(colors: [
                                 buttonLight,
                                 Colors.white,
                                 buttonDark
@@ -102,7 +102,8 @@ class _AnimatedListViewState extends State<AnimatedListView>
                                             end: Alignment.bottomCenter,
                                             colors: [
                                               buttonLight,
-                                              buttonDark.withAlpha((0.2 * 255).toInt())
+                                              buttonDark.withAlpha(
+                                                  (0.2 * 255).toInt())
                                             ])),
                                     child: const SizedBox(
                                       height: 160,
@@ -118,7 +119,8 @@ class _AnimatedListViewState extends State<AnimatedListView>
                                             begin: Alignment.topCenter,
                                             colors: [
                                               buttonLight,
-                                              buttonDark.withAlpha((0.2 * 255).toInt())
+                                              buttonDark.withAlpha(
+                                                  (0.2 * 255).toInt())
                                             ])),
                                     child: const SizedBox(
                                       height: 160,

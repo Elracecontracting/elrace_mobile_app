@@ -23,6 +23,9 @@ class ReportModel extends HiveObject {
   @HiveField(5)
   final DateTime updatedAt;
 
+  @HiveField(6)
+  final String? reportType;
+
   ReportModel({
     required this.id,
     required this.name,
@@ -30,17 +33,29 @@ class ReportModel extends HiveObject {
     required this.folderId,
     required this.createdAt,
     required this.updatedAt,
+    this.reportType,
   });
 
   factory ReportModel.fromJson(Map<String, dynamic> json) {
     return ReportModel(
       id: json['id'].toString(),
-      name: json['name'] as String,
-      folderId: json['folder_id'].toString(),
-      companyId: json['company_id'].toString(),
-      createdAt:
-          DateTime.parse(json['created_at'] ?? json['create_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      name: (json['name'] ?? '').toString(),
+      folderId: (json['folder_id'] ?? '').toString(),
+      companyId: (json['company_id'] == false || json['company_id'] == null)
+          ? ''
+          : json['company_id'].toString(),
+      createdAt: DateTime.tryParse(
+              (json['created_at'] ?? json['create_at'] ?? '').toString()) ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse((json['updated_at'] ??
+                  json['created_at'] ??
+                  json['create_at'] ??
+                  '')
+              .toString()) ??
+          DateTime.now(),
+      reportType: (json['report_type'] != null && json['report_type'] != false)
+          ? json['report_type'].toString()
+          : null,
     );
   }
 
@@ -52,6 +67,7 @@ class ReportModel extends HiveObject {
       'folder_id': folderId,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'report_type': reportType,
     };
   }
 }
