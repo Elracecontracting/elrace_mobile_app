@@ -1442,13 +1442,30 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
   ];
   late String _selectedCompany;
 
+  static String _companyKey(String company) =>
+      company.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+
+  static List<String> get _companyOptions {
+    final seen = <String>{};
+    return _companies.where((company) {
+      final key = _companyKey(company);
+      if (key.isEmpty || seen.contains(key)) return false;
+      seen.add(key);
+      return true;
+    }).toList(growable: false);
+  }
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.folderName);
     final currentCompany = CompanyRepository.company?.companyName ?? '';
-    _selectedCompany =
-        _companies.contains(currentCompany) ? currentCompany : _companies.first;
+    final options = _companyOptions;
+    _selectedCompany = options.any((company) =>
+            _companyKey(company) == _companyKey(currentCompany))
+        ? options.firstWhere(
+            (company) => _companyKey(company) == _companyKey(currentCompany))
+        : options.first;
     _loadPdfHistory();
   }
 
@@ -1834,7 +1851,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                             color: Colors.white,
                           ),
                         ),
-                        items: _companies
+                        items: _companyOptions
                             .map((c) => DropdownMenuItem(
                                   value: c,
                                   child: Text(c,

@@ -131,6 +131,43 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
     return const <Map<String, dynamic>>[];
   }
 
+  int? _userEmployeeIdFrom(Map<String, dynamic> user) {
+    return int.tryParse(
+      (user['employee_id'] ?? user['emp_id'] ?? user['id'] ?? '').toString(),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _enrichUsersWithTeamMembers(
+    List<Map<String, dynamic>> users,
+  ) async {
+    if (users.isEmpty) return users;
+
+    try {
+      final members = await TeamMembersApiService.instance.getTeamMembers();
+      final byEmployeeId = <int, TeamMember>{};
+      for (final member in members) {
+        final id = member.employeeId ?? member.id;
+        byEmployeeId[id] = member;
+      }
+
+      return users.map((user) {
+        final employeeId = _userEmployeeIdFrom(user);
+        final member = employeeId == null ? null : byEmployeeId[employeeId];
+        if (member == null) return user;
+
+        return {
+          ...user,
+          'employee_id': user['employee_id'] ?? member.employeeId ?? member.id,
+          'name': user['name'] ?? user['employee_name'] ?? member.name,
+          'employee_name': user['employee_name'] ?? user['name'] ?? member.name,
+          'image_url': user['image_url'] ?? user['employee_image'] ?? member.image,
+        };
+      }).toList(growable: false);
+    } catch (_) {
+      return users;
+    }
+  }
+
   Future<void> _fetchSharedFolders({dynamic focusFolderId}) async {
     if (!mounted) return;
     setState(() {
@@ -186,17 +223,19 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
         throw Exception('Invalid shared folders response format');
       }
 
-      final folders = _toMapList(rawData)
-          .map((folder) {
-            final mapped = Map<String, dynamic>.from(folder);
-            mapped['id'] = _folderIdFrom(folder);
-            mapped['name'] = _folderNameFrom(folder);
-            mapped['allowed_users'] = _toMapList(folder['allowed_users']);
-            mapped['activities'] = _toMapList(folder['activities']);
-            return mapped;
-          })
-          .where((folder) => folder['id'] != null)
-          .toList(growable: false);
+      final folders = <Map<String, dynamic>>[];
+      for (final folder in _toMapList(rawData)) {
+        final mapped = Map<String, dynamic>.from(folder);
+        mapped['id'] = _folderIdFrom(folder);
+        mapped['name'] = _folderNameFrom(folder);
+        mapped['allowed_users'] =
+            await _enrichUsersWithTeamMembers(_toMapList(folder['allowed_users']));
+        mapped['activities'] = await _enrichUsersWithTeamMembers(
+            _toMapList(folder['activities']));
+        if (mapped['id'] != null) {
+          folders.add(mapped);
+        }
+      }
 
       var targetIndex = 0;
       if (folders.isNotEmpty) {
@@ -395,6 +434,11 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
         ? Map<String, dynamic>.from(envelope['folder'] as Map)
         : <String, dynamic>{};
 
+    final allowedUsers =
+        await _enrichUsersWithTeamMembers(_toMapList(envelope['allowed_users']));
+    final activities =
+        await _enrichUsersWithTeamMembers(_toMapList(envelope['activities']));
+
     final detailedFolder = {
       ...baseFolder,
       ...folderPayload,
@@ -403,8 +447,8 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
       'name': _folderNameFrom(
           folderPayload.isNotEmpty ? folderPayload : baseFolder),
       'attachments': _toMapList(envelope['attachments']),
-      'allowed_users': _toMapList(envelope['allowed_users']),
-      'activities': _toMapList(envelope['activities']),
+      'allowed_users': allowedUsers,
+      'activities': activities,
     };
 
     debugPrint(
@@ -475,6 +519,36 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
           _isLoadingFolderContents = false;
         });
       }
+    }
+  }
+
+  Future<void> _refreshActiveFolderDetails(
+    Map<String, dynamic> folder,
+    dynamic folderId,
+  ) async {
+    final detailedFolder = await _fetchSharedFolderDetails(
+      folder,
+      limit: 10,
+      offset: 0,
+    );
+    final extracted = _extractAttachments(detailedFolder);
+
+    if (!mounted) return;
+    setState(() {
+      _selectedFolder = detailedFolder;
+      _selectedFolderAttachments = extracted;
+    });
+
+    final selectedIndex = _folders.indexWhere(
+      (f) => _folderIdFrom(f).toString() == folderId.toString(),
+    );
+    if (selectedIndex >= 0) {
+      _folders[selectedIndex] = {
+        ..._folders[selectedIndex],
+        ...detailedFolder,
+        'allowed_users': _toMapList(detailedFolder['allowed_users']),
+        'attachments': _toMapList(detailedFolder['attachments']),
+      };
     }
   }
 
@@ -1228,6 +1302,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
       }
 
       await _fetchSharedFolders(focusFolderId: folderId);
+      await _refreshActiveFolderDetails(_activeFolder ?? folder, folderId);
 
       if (successCount > 0 && failed.isEmpty) {
         _showSnackMessage('Users added successfully');
@@ -1293,6 +1368,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
 
       _showSnackMessage('User added successfully');
       await _fetchSharedFolders(focusFolderId: folderId);
+      await _refreshActiveFolderDetails(_activeFolder ?? folder, folderId);
     } catch (e) {
       _showSnackMessage(e.toString());
     } finally {
@@ -1318,6 +1394,10 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
     final candidates = [
       user['image_1920'],
       user['image_url'],
+      user['employee_image'],
+      user['profile_photo_url'],
+      user['profile_image'],
+      user['avatar_url'],
       user['avatar'],
       user['photo'],
     ];
@@ -1929,6 +2009,10 @@ class _SharedFolderCard extends StatelessWidget {
     final candidates = [
       user['image_1920'],
       user['image_url'],
+      user['employee_image'],
+      user['profile_photo_url'],
+      user['profile_image'],
+      user['avatar_url'],
       user['avatar'],
       user['photo'],
     ];

@@ -414,6 +414,7 @@ class FirebaseChatAuthService {
           'firebase_uid': session.firebaseUid,
           'odoo_user_id': session.odooUserId,
           'employee_id': session.employeeId,
+          'employee_file_number': session.employeeFileNumber,
           'name': session.name,
           'email': session.email,
           'role_id': session.roleId,

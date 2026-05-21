@@ -7,6 +7,7 @@ import 'package:el_race/ui/presentation/tasks_dashboard/services/teams_api_servi
 class TeamMember {
   final int id;
   final int? employeeId;
+  final int? employeeFileNumber;
   final int? odooUserId;
   final String name;
   final String? email;
@@ -18,6 +19,7 @@ class TeamMember {
   const TeamMember({
     required this.id,
     this.employeeId,
+    this.employeeFileNumber,
     this.odooUserId,
     required this.name,
     this.email,
@@ -41,6 +43,13 @@ class TeamMember {
       id: id,
       employeeId:
           _asInt(json['employee_id'] ?? json['emp_id'] ?? json['id']) ?? id,
+      employeeFileNumber: _asInt(
+        json['emp_id'] ??
+            json['employee_file_number'] ??
+            json['file_number'] ??
+            json['file_no'] ??
+            json['file_id'],
+      ),
       odooUserId: _asInt(json['odoo_user_id'] ?? json['user_id']),
       name: _asString(
             json['name'] ??
@@ -89,6 +98,7 @@ class TeamMember {
     return {
       'id': id,
       'employee_id': employeeId,
+      'employee_file_number': employeeFileNumber,
       'odoo_user_id': odooUserId,
       'name': name,
       'email': email,
@@ -102,6 +112,7 @@ class TeamMember {
   TeamMember copyWith({
     int? id,
     int? employeeId,
+    int? employeeFileNumber,
     int? odooUserId,
     String? name,
     String? email,
@@ -113,6 +124,7 @@ class TeamMember {
     return TeamMember(
       id: id ?? this.id,
       employeeId: employeeId ?? this.employeeId,
+      employeeFileNumber: employeeFileNumber ?? this.employeeFileNumber,
       odooUserId: odooUserId ?? this.odooUserId,
       name: name ?? this.name,
       email: email ?? this.email,
@@ -156,7 +168,6 @@ class TeamMembersApiService {
 
   static const String _baseUrl = 'https://erp.elrace.com/api';
   static const String _employeeListEndpoint = '/employee/listx';
-  static const String _employeeListLegacyEndpoint = '/employee/list';
 
   // Cache for team members
   List<TeamMember>? _cachedMembers;
@@ -192,28 +203,20 @@ class TeamMembersApiService {
         'jsonrpc': '2.0',
         'params': {},
       });
-      final requestAttempts = <Future<http.Response>>[
-        _sendJsonRequest('GET', '$_baseUrl$_employeeListEndpoint', headers, body),
-        _sendJsonRequest('POST', '$_baseUrl$_employeeListLegacyEndpoint', headers, body),
-      ];
+      final response = await _sendJsonRequest(
+        'GET',
+        '$_baseUrl$_employeeListEndpoint',
+        headers,
+        body,
+      );
+      print(
+          '📡 TeamMembersApiService: GET $_employeeListEndpoint -> ${response.statusCode}');
 
-      http.Response? successfulResponse;
-      int? lastStatusCode;
-
-      for (final attempt in requestAttempts) {
-        final response = await attempt;
-        lastStatusCode = response.statusCode;
-        if (response.statusCode == 200) {
-          successfulResponse = response;
-          break;
-        }
+      if (response.statusCode != 200) {
+        throw Exception('Failed to fetch members: ${response.statusCode}');
       }
 
-      if (successfulResponse == null) {
-        throw Exception('Failed to fetch members: ${lastStatusCode ?? 'unknown'}');
-      }
-
-      final data = jsonDecode(successfulResponse.body);
+      final data = jsonDecode(response.body);
       final employeesList = data['result']?['employees'] as List<dynamic>? ?? [];
 
         final parsedMembers = employeesList
