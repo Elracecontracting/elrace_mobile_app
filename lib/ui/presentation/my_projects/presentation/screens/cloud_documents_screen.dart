@@ -134,7 +134,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
       await openProjectFileInApp(
         context,
         rawUrl: resolvedUrl,
-        fileName: response.name.isNotEmpty ? response.name : file.name,
+        fileName: file.name.trim().isNotEmpty ? file.name : response.name,
       );
     } catch (e) {
       if (mounted && isLoadingDialogVisible) {

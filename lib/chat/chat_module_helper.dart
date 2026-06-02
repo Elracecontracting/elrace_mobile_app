@@ -158,6 +158,8 @@ class ChatModuleHelper {
               backendJwt: '',
               odooUserId: cachedSession.sessionData['odoo_user_id'] ?? 0,
               employeeId: cachedSession.sessionData['employee_id'],
+              employeeFileNumber:
+                  cachedSession.sessionData['employee_file_number'],
               name: cachedSession.sessionData['name'] ?? '',
               email: cachedSession.sessionData['email'],
               roleId: cachedSession.sessionData['role_id'] ?? 0,

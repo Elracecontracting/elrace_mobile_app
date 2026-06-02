@@ -40,6 +40,7 @@ class UserRepository {
     final data = <String, dynamic>{
       'odoo_user_id': session.odooUserId,
       'employee_id': session.employeeId,
+      'employee_file_number': session.employeeFileNumber,
       'name': session.name,
       'role_name': session.roleName,
       'role_id': session.roleId,
@@ -131,6 +132,28 @@ class UserRepository {
     return text;
   }
 
+  int? _readInt(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value == null || value == false) continue;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      final parsed = int.tryParse(value.toString().trim());
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  Iterable<String> _readSearchCandidateStrings(
+    Map<String, dynamic> data,
+    List<String> keys,
+  ) sync* {
+    for (final key in keys) {
+      final normalized = _normalizeNullableString(data[key]?.toString());
+      if (normalized != null) yield normalized.toLowerCase();
+    }
+  }
+
   /// Get a user by UID (cached)
   Future<ChatUser?> getUser(String uid) async {
     // Check cache first
@@ -187,8 +210,9 @@ class UserRepository {
     final needsEmail = _normalizeNullableString(user.email) == null;
     final needsPhone = _normalizeNullableString(user.phoneNumber) == null;
     final needsJob = _normalizeNullableString(user.jobTitle) == null;
+    final needsFileNumber = user.employeeFileNumber == null;
 
-    if (!needsEmail && !needsPhone && !needsJob) {
+    if (!needsEmail && !needsPhone && !needsJob && !needsFileNumber) {
       return false;
     }
 
@@ -209,6 +233,7 @@ class UserRepository {
       final resolvedEmail = _normalizeNullableString(match.email);
       final resolvedPhone = _normalizeNullableString(match.phone);
       final resolvedJob = _normalizeNullableString(match.jobPosition);
+      final resolvedFileNumber = match.employeeFileNumber;
 
       final patch = <String, dynamic>{
         'updated_at': FieldValue.serverTimestamp(),
@@ -224,6 +249,9 @@ class UserRepository {
       }
       if (needsJob && resolvedJob != null) {
         patch['job_title'] = resolvedJob;
+      }
+      if (needsFileNumber && resolvedFileNumber != null) {
+        patch['employee_file_number'] = resolvedFileNumber;
       }
 
       if (patch.length == 1) {
@@ -249,7 +277,20 @@ class UserRepository {
     final employeeId = user.employeeId;
     if (employeeId != null) {
       for (final member in members) {
-        if (member.employeeId == employeeId || member.id == employeeId) {
+        if (member.employeeId == employeeId ||
+            member.employeeFileNumber == employeeId ||
+            member.id == employeeId) {
+          return member;
+        }
+      }
+    }
+
+    final employeeFileNumber = user.employeeFileNumber;
+    if (employeeFileNumber != null) {
+      for (final member in members) {
+        if (member.employeeFileNumber == employeeFileNumber ||
+            member.id == employeeFileNumber ||
+            member.employeeId == employeeFileNumber) {
           return member;
         }
       }
@@ -295,15 +336,28 @@ class UserRepository {
         final email = _normalizeNullableString(data['email']?.toString() ?? data['work_email']?.toString());
         final phone = _normalizeNullableString(data['phone']?.toString() ?? data['mobile_phone']?.toString());
         final job = _normalizeNullableString(data['job_title']?.toString());
+        final employeeFileNumber = _readInt(data, const [
+          'employee_file_number',
+          'emp_id',
+          'file_number',
+          'file_no',
+          'file_id',
+        ]);
 
         // Skip if already has all fields
-        if (email != null && phone != null && job != null) continue;
+        if (email != null &&
+            phone != null &&
+            job != null &&
+            employeeFileNumber != null) {
+          continue;
+        }
 
         // Build a lightweight ChatUser for matching
         final tempUser = ChatUser(
           uid: doc.id,
           odooUserId: data['odoo_user_id'] ?? 0,
           employeeId: data['employee_id'],
+          employeeFileNumber: employeeFileNumber,
           name: data['name'] ?? '',
           email: email,
           phoneNumber: phone,
@@ -324,6 +378,7 @@ class UserRepository {
         final resolvedEmail = _normalizeNullableString(match.email);
         final resolvedPhone = _normalizeNullableString(match.phone);
         final resolvedJob = _normalizeNullableString(match.jobPosition);
+        final resolvedFileNumber = match.employeeFileNumber;
 
         if (email == null && resolvedEmail != null) {
           patch['email'] = resolvedEmail;
@@ -335,6 +390,9 @@ class UserRepository {
         }
         if (job == null && resolvedJob != null) {
           patch['job_title'] = resolvedJob;
+        }
+        if (employeeFileNumber == null && resolvedFileNumber != null) {
+          patch['employee_file_number'] = resolvedFileNumber;
         }
 
         if (patch.length <= 1) continue; // only 'updated_at'
@@ -378,17 +436,34 @@ class UserRepository {
 
       final snapshot = await queryBuilder.get();
 
-      // Filter client-side by name, email, employee ID, or odoo user ID
-      final allUsers =
-          snapshot.docs.map((doc) => ChatUser.fromFirestore(doc)).where((user) {
+      // Filter client-side by name, email, employee ID, file number, or odoo user ID.
+      final allUsers = snapshot.docs.where((doc) {
+        final data = doc.data();
+        final user = ChatUser.fromFirestore(doc);
         final name = user.name.toLowerCase();
         final email = (user.email ?? '').toLowerCase();
-        final employeeId = user.employeeId?.toString() ?? '';
-        final odooUserId = user.odooUserId.toString();
+        final numericCandidates = <String>{
+          if (user.employeeId != null) user.employeeId.toString(),
+          if (user.employeeFileNumber != null)
+            user.employeeFileNumber.toString(),
+          if (user.odooUserId > 0) user.odooUserId.toString(),
+          ..._readSearchCandidateStrings(data, const [
+            'employee_id',
+            'employee_file_number',
+            'emp_id',
+            'emp_profile_id',
+            'file_number',
+            'file_no',
+            'file_id',
+            'odoo_user_id',
+            'user_id',
+          ]),
+        };
         return name.contains(searchTerm) ||
             email.contains(searchTerm) ||
-            employeeId == searchTerm ||
-            odooUserId == searchTerm;
+            numericCandidates.any((value) => value.contains(searchTerm));
+      }).map((doc) {
+        return ChatUser.fromFirestore(doc);
       }).toList();
 
       // Sort by name

@@ -13,6 +13,9 @@ class ChatUserSession {
   /// Employee ID (optional)
   final int? employeeId;
 
+  /// Employee file number (optional, usually backend emp_id)
+  final int? employeeFileNumber;
+
   /// User's display name
   final String name;
 
@@ -53,6 +56,7 @@ class ChatUserSession {
     required this.backendJwt,
     required this.odooUserId,
     this.employeeId,
+    this.employeeFileNumber,
     required this.name,
     this.email,
     required this.roleId,
@@ -169,6 +173,10 @@ class ChatUserSession {
       odooUserId: odooUserId,
       employeeId:
           _extractInt(data['employee_id']) ?? _extractInt(data['emp_id']),
+      employeeFileNumber: _extractInt(data['emp_id']) ??
+          _extractInt(data['file_number']) ??
+          _extractInt(data['file_no']) ??
+          _extractInt(data['file_id']),
       name: data['name']?.toString() ??
           data['emp_name']?.toString() ??
           data['username']?.toString() ??
@@ -282,6 +290,7 @@ class ChatUserSession {
         'backend_jwt': backendJwt,
         'odoo_user_id': odooUserId,
         'employee_id': employeeId,
+        'employee_file_number': employeeFileNumber,
         'name': name,
         'email': email,
         'role_id': roleId,
@@ -301,6 +310,7 @@ class ChatUserSession {
         backendJwt: json['backend_jwt'] ?? '',
         odooUserId: json['odoo_user_id'] ?? 0,
         employeeId: json['employee_id'],
+        employeeFileNumber: json['employee_file_number'] ?? json['emp_id'],
         name: json['name'] ?? '',
         email: json['email'],
         roleId: json['role_id'] ?? 0,

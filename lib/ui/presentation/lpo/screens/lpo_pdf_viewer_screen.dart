@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:el_race/core/utils/shared_pref.dart';
@@ -6,6 +7,7 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
@@ -132,23 +134,25 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
   Future<void> _sharePdf() async {
     if (_pdfBytes == null) return;
 
-    final rawName = widget.title?.trim() ?? 'lpo_report';
-    // Only strip characters that are truly invalid in file names, keep spaces and dots
-    final safeName = rawName.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
-    final fileName = safeName.toLowerCase().endsWith('.pdf') ? safeName : '$safeName.pdf';
-
     final renderObject = context.findRenderObject();
     final shareOrigin = renderObject is RenderBox
         ? (renderObject.localToGlobal(Offset.zero) & renderObject.size)
         : const Rect.fromLTWH(1, 1, 1, 1);
+    final rawName = widget.title?.trim() ?? 'lpo_report';
+    // Only strip characters that are truly invalid in file names, keep spaces and dots
+    final safeName = rawName.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+    final fileName =
+        safeName.toLowerCase().endsWith('.pdf') ? safeName : '$safeName.pdf';
+    final tempDir = await getTemporaryDirectory();
+    final file = File('${tempDir.path}/$fileName');
+    await file.writeAsBytes(_pdfBytes!, flush: true);
 
-    await Share.shareXFiles([
-      XFile.fromData(
-        _pdfBytes!,
-        name: fileName,
-        mimeType: 'application/pdf',
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, mimeType: 'application/pdf')],
+        sharePositionOrigin: shareOrigin,
       ),
-    ], sharePositionOrigin: shareOrigin);
+    );
   }
 
   @override

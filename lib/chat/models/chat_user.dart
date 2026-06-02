@@ -6,6 +6,7 @@ class ChatUser {
   final String uid;
   final int odooUserId;
   final int? employeeId;
+  final int? employeeFileNumber;
   final String name;
   final String? email;
   final String? roleName;
@@ -25,6 +26,7 @@ class ChatUser {
     required this.uid,
     required this.odooUserId,
     this.employeeId,
+    this.employeeFileNumber,
     required this.name,
     this.email,
     this.roleName,
@@ -123,6 +125,13 @@ class ChatUser {
       uid: doc.id,
       odooUserId: data['odoo_user_id'] ?? 0,
       employeeId: data['employee_id'],
+      employeeFileNumber: _readInt(data, const [
+        'employee_file_number',
+        'emp_id',
+        'file_number',
+        'file_no',
+        'file_id',
+      ]),
       name: data['name'] ?? '',
       email: resolvedEmail,
       roleName: data['role_name']?.toString(),
@@ -158,10 +167,23 @@ class ChatUser {
     return null;
   }
 
+  static int? _readInt(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value == null || value == false) continue;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      final parsed = int.tryParse(value.toString().trim());
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
   Map<String, dynamic> toFirestore({bool isUpdate = false}) {
     final map = <String, dynamic>{
       'odoo_user_id': odooUserId,
       'employee_id': employeeId,
+      'employee_file_number': employeeFileNumber,
       'name': name,
       'email': email,
       'role_name': roleName,
@@ -187,6 +209,7 @@ class ChatUser {
     String? uid,
     int? odooUserId,
     int? employeeId,
+    int? employeeFileNumber,
     String? name,
     String? email,
     String? roleName,
@@ -206,6 +229,7 @@ class ChatUser {
       uid: uid ?? this.uid,
       odooUserId: odooUserId ?? this.odooUserId,
       employeeId: employeeId ?? this.employeeId,
+      employeeFileNumber: employeeFileNumber ?? this.employeeFileNumber,
       name: name ?? this.name,
       email: email ?? this.email,
       roleName: roleName ?? this.roleName,

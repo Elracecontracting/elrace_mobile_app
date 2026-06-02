@@ -40,11 +40,6 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
   final _scrollController = ScrollController();
   late ProjectListBloc bloc;
 
-  _ProjectFilterTab _activeTab = _ProjectFilterTab.all;
-  final GlobalKey _allTabKey = GlobalKey();
-  final GlobalKey _inProgressTabKey = GlobalKey();
-  final GlobalKey _completedTabKey = GlobalKey();
-
   @override
   void initState() {
     super.initState();
@@ -72,64 +67,6 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     } else {
       bloc.add(LoadProjectsEvent());
     }
-  }
-
-  void _setActiveTab(_ProjectFilterTab tab) {
-    if (_activeTab == tab) return;
-    setState(() => _activeTab = tab);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final BuildContext? ctx;
-      switch (tab) {
-        case _ProjectFilterTab.all:
-          ctx = _allTabKey.currentContext;
-          break;
-        case _ProjectFilterTab.inProgress:
-          ctx = _inProgressTabKey.currentContext;
-          break;
-        case _ProjectFilterTab.completed:
-          ctx = _completedTabKey.currentContext;
-          break;
-      }
-      if (ctx == null) return;
-      Scrollable.ensureVisible(
-        ctx,
-        alignment: 0.5,
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOut,
-      );
-    });
-  }
-
-  String _normalizedProjectStatus(dynamic raw) {
-    final s = (raw ?? '').toString().trim().toLowerCase();
-    return s.replaceAll('_', ' ');
-  }
-
-  bool _isCompletedStatus(String status) {
-    return status.contains('completed') ||
-        status.contains('complete') ||
-        status.contains('done') ||
-        status.contains('closed') ||
-        status.contains('finish') ||
-        status.contains('finished');
-  }
-
-  bool _matchesTab(ProjectEntity project) {
-    final status = _normalizedProjectStatus(project.projectStatus);
-    switch (_activeTab) {
-      case _ProjectFilterTab.all:
-        return true;
-      case _ProjectFilterTab.completed:
-        return _isCompletedStatus(status);
-      case _ProjectFilterTab.inProgress:
-        // Treat anything that is not explicitly completed as "in progress".
-        return !_isCompletedStatus(status);
-    }
-  }
-
-  List<ProjectEntity> _filteredProjects(List<ProjectEntity> projects) {
-    if (_activeTab == _ProjectFilterTab.all) return projects;
-    return projects.where(_matchesTab).toList();
   }
 
   void _onScroll() {
@@ -308,11 +245,6 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w),
-                  child: _buildProjectFilterTabs(),
-                ),
                 SizedBox(height: 10.h),
               ],
             ),
@@ -332,7 +264,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                 );
               } else if (state is ProjectListLoaded ||
                   bloc.visibleProjects.isNotEmpty) {
-                final list = _filteredProjects(bloc.visibleProjects);
+                final list = bloc.visibleProjects;
                 return SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -357,79 +289,6 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
           ),
           // Bottom padding
           SliverPadding(padding: EdgeInsets.only(bottom: 100.h)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProjectFilterTabs() {
-    const unfocusedStart = Color(0xFFD6D6D6);
-    const unfocusedEnd = Color(0xFFADB2BD);
-    // Provided as #1B1F26B8 (RRGGBBAA) -> Flutter uses AARRGGBB.
-    const focusedStart = Color(0xB81B1F26);
-    const focusedEnd = Color(0xFF717171);
-
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final contentWidth = screenWidth - 24.w;
-    final tabWidth = contentWidth * 0.40;
-    final effectiveTabWidth = tabWidth < 120.w ? 120.w : tabWidth;
-
-    Widget buildTab({
-      required _ProjectFilterTab tab,
-      required Key tabKey,
-      required String text,
-    }) {
-      final isActive = _activeTab == tab;
-      return InkWell(
-        borderRadius: BorderRadius.circular(22.r),
-        onTap: () => _setActiveTab(tab),
-        child: Container(
-          key: tabKey,
-          width: effectiveTabWidth,
-          height: 44.h,
-          padding: EdgeInsets.symmetric(horizontal: 18.w),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22.r),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: isActive
-                  ? const [focusedStart, focusedEnd]
-                  : const [unfocusedStart, unfocusedEnd],
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            text,
-            style: GoogleFonts.poppins(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-              letterSpacing: 1.2,
-            ),
-            maxLines: null,
-            overflow: TextOverflow.visible,
-          ),
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: [
-          buildTab(tab: _ProjectFilterTab.all, tabKey: _allTabKey, text: 'ALL'),
-          SizedBox(width: 10.w),
-          buildTab(
-              tab: _ProjectFilterTab.inProgress,
-              tabKey: _inProgressTabKey,
-              text: 'IN PROGRESS'),
-          SizedBox(width: 10.w),
-          buildTab(
-              tab: _ProjectFilterTab.completed,
-              tabKey: _completedTabKey,
-              text: 'COMPLETED'),
         ],
       ),
     );
@@ -664,10 +523,4 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     }
     return '0';
   }
-}
-
-enum _ProjectFilterTab {
-  all,
-  inProgress,
-  completed,
 }

@@ -37,7 +37,8 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
 
   Future<void> _fetchDropdownEmployees() async {
     try {
-      final members = await TeamMembersApiService.instance.getTeamMembers();
+      final members =
+          await TeamMembersApiService.instance.getTeamMembers(forceRefresh: true);
       if (!mounted) return;
       final names = members
           .map((m) => m.name.replaceFirst(RegExp(r'^\d+\s+'), '').trim())
@@ -45,7 +46,7 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
           .toSet()
           .toList()
         ..sort();
-      debugPrint('👥 Dropdown employees from API (${names.length}): $names');
+      debugPrint('👥 Dropdown employees from listx: ${names.length}');
       setState(() => _dropdownEmployees = names);
     } catch (e) {
       debugPrint('❌ Failed to load dropdown employees: $e');
@@ -106,7 +107,7 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
       }
     });
 
-    debugPrint('\n📡 ===== EMPLOYEE DROPDOWN API =====');
+    debugPrint('\n📡 ===== TASK LIST API =====');
     debugPrint('URL: $url');
     debugPrint('METHOD: POST');
     debugPrint('HEADERS: {Content-Type: ${headers["Content-Type"]}, Authorization: Bearer ***}');
